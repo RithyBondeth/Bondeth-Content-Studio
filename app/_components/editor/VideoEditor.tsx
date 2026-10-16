@@ -2,7 +2,9 @@
 
 import type { PlayerRef } from "@remotion/player";
 import {
+  type LucideIcon,
   ArrowLeft,
+  AudioLines,
   Captions,
   Check,
   CircleAlert,
@@ -140,6 +142,44 @@ const FormatToggle = ({
       </button>
     ))}
   </div>
+);
+
+/** A labelled on/off switch for a video-wide setting. */
+const SettingSwitch = ({
+  icon: Icon,
+  label,
+  description,
+  checked,
+  onChange,
+}: {
+  icon: LucideIcon;
+  label: string;
+  description: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) => (
+  <label className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl border border-line bg-surface/60 p-4">
+    <span className="flex items-center gap-3">
+      <span className="grid size-9 place-items-center rounded-xl bg-raised text-accent-bright">
+        <Icon className="size-4" aria-hidden />
+      </span>
+      <span>
+        <span className="block text-sm font-medium">{label}</span>
+        <span className="block text-xs text-faint">{description}</span>
+      </span>
+    </span>
+    <input
+      type="checkbox"
+      role="switch"
+      checked={checked}
+      onChange={(event) => onChange(event.target.checked)}
+      className="peer sr-only"
+    />
+    <span
+      aria-hidden
+      className="relative h-6 w-11 shrink-0 rounded-full bg-line-strong transition-colors peer-checked:bg-accent peer-focus-visible:ring-2 peer-focus-visible:ring-accent-bright after:absolute after:top-0.5 after:left-0.5 after:size-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:after:translate-x-5"
+    />
+  </label>
 );
 
 const isTyping = (target: EventTarget | null) =>
@@ -495,35 +535,22 @@ export const VideoEditor = ({
                 }
               />
             ) : null}
-            <label className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl border border-line bg-surface/60 p-4">
-              <span className="flex items-center gap-3">
-                <span className="grid size-9 place-items-center rounded-xl bg-raised text-accent-bright">
-                  <Captions className="size-4" aria-hidden />
-                </span>
-                <span>
-                  <span className="block text-sm font-medium">Captions</span>
-                  <span className="block text-xs text-faint">
-                    Word-by-word captions for the whole video
-                  </span>
-                </span>
-              </span>
-              <input
-                type="checkbox"
-                role="switch"
-                checked={spec.captions ?? true}
-                onChange={(event) =>
-                  setSpec((current) => ({
-                    ...current,
-                    captions: event.target.checked,
-                  }))
-                }
-                className="peer sr-only"
-              />
-              <span
-                aria-hidden
-                className="relative h-6 w-11 shrink-0 rounded-full bg-line-strong transition-colors peer-checked:bg-accent peer-focus-visible:ring-2 peer-focus-visible:ring-accent-bright after:absolute after:top-0.5 after:left-0.5 after:size-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:after:translate-x-5"
-              />
-            </label>
+            <SettingSwitch
+              icon={Captions}
+              label="Captions"
+              description="Word-by-word captions for the whole video"
+              checked={spec.captions ?? true}
+              onChange={(captions) =>
+                setSpec((current) => ({ ...current, captions }))
+              }
+            />
+            <SettingSwitch
+              icon={AudioLines}
+              label="Sound effects"
+              description="Whooshes on transitions and pops as items appear"
+              checked={spec.sfx ?? true}
+              onChange={(sfx) => setSpec((current) => ({ ...current, sfx }))}
+            />
           </div>
         </section>
 
