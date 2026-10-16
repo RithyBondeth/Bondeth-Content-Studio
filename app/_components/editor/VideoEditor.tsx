@@ -30,6 +30,7 @@ import type { RenderFile } from "../../../studio/server/projects";
 import { recordVoiceAction, saveSpecAction } from "../../actions";
 import { useToast } from "../Toast";
 import { Alert, Button, Skeleton, cx } from "../ui";
+import { MusicSetting } from "./MusicSetting";
 import { RenderPanel } from "./RenderPanel";
 import { convertScene, SCENE_META, SCENE_SETTLE_FRAMES } from "./scene-meta";
 import { SceneForm } from "./SceneForm";
@@ -550,6 +551,14 @@ export const VideoEditor = ({
               description="Whooshes on transitions and pops as items appear"
               checked={spec.sfx ?? true}
               onChange={(sfx) => setSpec((current) => ({ ...current, sfx }))}
+            />
+            <MusicSetting
+              slug={slug}
+              index={index}
+              music={spec.music}
+              onChange={(music) =>
+                setSpec((current) => ({ ...current, music }))
+              }
             />
           </div>
         </section>

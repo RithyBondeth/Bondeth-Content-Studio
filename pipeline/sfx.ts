@@ -5,34 +5,13 @@
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { makeBandPass, makeNoise, toWav } from "./synth";
 
 const SAMPLE_RATE = 44100;
 /** Peak level of each file; playback volume is set in src/lib/sfx.ts. */
 const PEAK = 0.7;
 
-/** Small seeded PRNG (mulberry32), so the noise is the same on every run. */
-const makeNoise = (seed: number) => {
-  let state = seed;
-  return () => {
-    state = (state + 0x6d2b79f5) | 0;
-    let t = Math.imul(state ^ (state >>> 15), 1 | state);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 2147483648 - 1;
-  };
-};
-
-/** Band-pass filter (Chamberlin state-variable) with a cutoff that can change every sample. */
-const makeBandPass = (q: number) => {
-  let low = 0;
-  let band = 0;
-  return (input: number, cutoff: number) => {
-    const f = 2 * Math.sin((Math.PI * cutoff) / SAMPLE_RATE);
-    low += f * band;
-    const high = input - low - q * band;
-    band += f * high;
-    return band;
-  };
-};
+const bandPass = (q: number) => makeBandPass(q, SAMPLE_RATE);
 
 const render = (seconds: number, sample: (t: number, p: number) => number) => {
   const length = Math.round(seconds * SAMPLE_RATE);
@@ -53,32 +32,6 @@ const render = (seconds: number, sample: (t: number, p: number) => number) => {
   return samples;
 };
 
-/** Mono 16-bit PCM WAV. */
-const toWav = (samples: Float32Array) => {
-  const data = Buffer.alloc(samples.length * 2);
-  samples.forEach((value, i) => {
-    data.writeInt16LE(
-      Math.round(Math.max(-1, Math.min(1, value)) * 32767),
-      i * 2,
-    );
-  });
-  const header = Buffer.alloc(44);
-  header.write("RIFF", 0);
-  header.writeUInt32LE(36 + data.length, 4);
-  header.write("WAVE", 8);
-  header.write("fmt ", 12);
-  header.writeUInt32LE(16, 16);
-  header.writeUInt16LE(1, 20); // PCM
-  header.writeUInt16LE(1, 22); // mono
-  header.writeUInt32LE(SAMPLE_RATE, 24);
-  header.writeUInt32LE(SAMPLE_RATE * 2, 28);
-  header.writeUInt16LE(2, 32);
-  header.writeUInt16LE(16, 34);
-  header.write("data", 36);
-  header.writeUInt32LE(data.length, 40);
-  return Buffer.concat([header, data]);
-};
-
 /** Smooth rise then fall, peaking at `peakAt` (0–1). */
 const swell = (p: number, peakAt: number) =>
   p < peakAt
@@ -90,8 +43,8 @@ const sounds: Record<string, () => Float32Array> = {
   whoosh: () => {
     const noise = makeNoise(1);
     // Two filters in a row, so the whoosh is soft rather than hissy.
-    const first = makeBandPass(0.9);
-    const second = makeBandPass(0.9);
+    const first = bandPass(0.9);
+    const second = bandPass(0.9);
     return render(0.5, (_, p) => {
       const cutoff = 300 + 1600 * Math.sin(p * Math.PI) ** 1.5;
       return second(first(noise(), cutoff), cutoff) * swell(p, 0.45);
@@ -110,7 +63,7 @@ const sounds: Record<string, () => Float32Array> = {
   // A clock tick: a short high click with a little noise on the attack.
   tick: () => {
     const noise = makeNoise(2);
-    const filter = makeBandPass(0.4);
+    const filter = bandPass(0.4);
     return render(0.06, (t) => {
       const tone = Math.sin(2 * Math.PI * 2400 * t) * Math.exp(-t / 0.008);
       const click = filter(noise(), 5000) * Math.exp(-t / 0.002);
@@ -120,8 +73,8 @@ const sounds: Record<string, () => Float32Array> = {
   // A soft riser: a gliding tone over swelling noise, cut off just after the peak.
   rise: () => {
     const noise = makeNoise(3);
-    const first = makeBandPass(1.2);
-    const second = makeBandPass(1.2);
+    const first = bandPass(1.2);
+    const second = bandPass(1.2);
     let phase = 0;
     return render(0.6, (_, p) => {
       const frequency = 220 * 2 ** (p * 1.5);
@@ -138,6 +91,6 @@ const outDir = path.join(import.meta.dirname, "..", "public", "sfx");
 mkdirSync(outDir, { recursive: true });
 for (const [name, make] of Object.entries(sounds)) {
   const file = path.join(outDir, `${name}.wav`);
-  writeFileSync(file, toWav(make()));
+  writeFileSync(file, toWav(make(), SAMPLE_RATE));
   console.log(`Wrote ${path.relative(process.cwd(), file)}`);
 }
