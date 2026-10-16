@@ -1,15 +1,17 @@
-import { Easing, interpolate, useCurrentFrame } from "remotion";
+import { Easing, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import { Emoji } from "../components/Emoji";
 import { SceneFrame } from "../components/SceneFrame";
 import { progressBetween, riseIn, useEnter } from "../lib/animation";
+import { getSceneWords } from "../lib/captions";
+import { getCueFrame } from "../lib/cues";
 import { useLayout } from "../lib/use-layout";
 import { theme } from "../theme/tokens";
 import type { SceneProps } from "./types";
 
 const COUNT_FRAMES = 36;
 
-/** Counts the numeric part of values like "73%", "$1,200", or "2.5x" up from zero. */
-const useCountUp = (value: string) => {
+/** Counts the numeric part of values like "73%", "$1,200", or "2.5x" up from zero, starting at `start`. */
+const useCountUp = (value: string, start: number) => {
   const frame = useCurrentFrame();
   const match = /^(\D*?)(\d[\d,]*(?:\.\d+)?)(.*)$/.exec(value);
   if (!match) {
@@ -21,11 +23,16 @@ const useCountUp = (value: string) => {
   const decimals = digits.split(".")[1]?.length ?? 0;
   const useGrouping = digits.includes(",");
 
-  const current = interpolate(frame, [4, 4 + COUNT_FRAMES], [0, target], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.out(Easing.cubic),
-  });
+  const current = interpolate(
+    frame,
+    [start, start + COUNT_FRAMES],
+    [0, target],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.out(Easing.cubic),
+    },
+  );
 
   const formatted = current.toLocaleString("en-US", {
     minimumFractionDigits: decimals,
@@ -41,8 +48,11 @@ export const StatScene: React.FC<SceneProps<"stat">> = ({
   reserveCaptions,
 }) => {
   const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
   const { unit, isVertical } = useLayout();
-  const display = useCountUp(scene.value);
+  // The count-up starts as the number is spoken.
+  const countStart = getCueFrame(getSceneWords(scene), scene.cue, 4, fps);
+  const display = useCountUp(scene.value, countStart);
   const pop = useEnter(0, 14);
   const valueSize = (scene.value.length > 6 ? 190 : 260) * unit;
 

@@ -15,4 +15,15 @@ export default [
     files: ["app/**", "studio/**"],
     rules: remotionRulesOff,
   },
+  {
+    // This rule reads any `transition` key as a CSS transition. In video specs
+    // it's the scene transition, which is plain data.
+    files: [
+      "pipeline/**",
+      "src/spec/**",
+      "src/examples/**",
+      "src/**/*.test.ts",
+    ],
+    rules: { "@remotion/non-pure-animation": "off" },
+  },
 ];

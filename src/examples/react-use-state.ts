@@ -30,6 +30,7 @@ export function Counter() {
         },
         {
           highlight: "1,4",
+          cue: "call useState",
           code: `
 import { useState } from "react";
 
@@ -42,6 +43,7 @@ export function Counter() {
         },
         {
           highlight: "7",
+          cue: "call the setter",
           code: `
 import { useState } from "react";
 

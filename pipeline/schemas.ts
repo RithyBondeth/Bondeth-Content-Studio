@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { SUPPORTED_LANGUAGES } from "../src/lib/languages";
+import { TRANSITIONS } from "../src/spec/schema";
 
 /**
  * Shapes Claude must return. Structured outputs need every field to be
@@ -57,6 +58,11 @@ const sceneFields = {
     .string()
     .describe("Exactly what the voice-over says in this scene"),
   emoji: nullableString.describe("One emoji as the scene's visual, or null"),
+  transition: z
+    .enum(TRANSITIONS)
+    .describe(
+      "How this scene replaces the previous one; ignored on the first scene",
+    ),
 };
 
 const titleDraft = z.object({
@@ -79,6 +85,12 @@ const listDraft = z.object({
   type: z.literal("list"),
   heading: z.string(),
   items: z.array(z.string()).describe("2-5 short items"),
+  cues: z
+    .array(z.string())
+    .nullable()
+    .describe(
+      "For each item, in order, the first 1-4 words of the narration where it comes up, copied exactly; or null",
+    ),
   style: z.enum(["bullets", "numbered", "checks"]),
   ...sceneFields,
 });
@@ -88,6 +100,9 @@ const statDraft = z.object({
   value: z.string().describe("The number as shown, e.g. '73%', '$1.2M', '10x'"),
   label: z.string(),
   source: nullableString.describe("Where the number comes from, or null"),
+  cue: nullableString.describe(
+    "The 1-4 words of the narration where the number is spoken, copied exactly, or null",
+  ),
   ...sceneFields,
 });
 
@@ -98,11 +113,19 @@ const quoteDraft = z.object({
   ...sceneFields,
 });
 
+const comparisonSideDraft = z.object({
+  label: z.string(),
+  points: z.array(z.string()),
+  cue: nullableString.describe(
+    "The first 1-4 words of the narration where this side comes up, copied exactly, or null",
+  ),
+});
+
 const comparisonDraft = z.object({
   type: z.literal("comparison"),
   heading: nullableString,
-  left: z.object({ label: z.string(), points: z.array(z.string()) }),
-  right: z.object({ label: z.string(), points: z.array(z.string()) }),
+  left: comparisonSideDraft,
+  right: comparisonSideDraft,
   ...sceneFields,
 });
 
@@ -115,6 +138,9 @@ const codeDraft = z.object({
       code: z.string().describe("The full code at this step"),
       highlight: nullableString.describe(
         "1-based lines to focus, e.g. '2,4-6', or null",
+      ),
+      cue: nullableString.describe(
+        "The first 1-4 words of the narration about this step, copied exactly; null for the first step",
       ),
     }),
   ),

@@ -3,6 +3,7 @@ import {
   type Scene,
   type VideoSpecInput,
 } from "../src/spec/schema";
+import { findUnmatchedCues } from "../src/lib/cues";
 import { countWords } from "../src/lib/timing";
 import { generateStructured } from "./claude";
 import { SCRIPT_SYSTEM, scriptPrompt } from "./prompts";
@@ -11,11 +12,20 @@ import type { PlanFile } from "./store";
 
 const orUndefined = <T>(value: T | null): T | undefined => value ?? undefined;
 
+type ComparisonSideDraft = Extract<SceneDraft, { type: "comparison" }>["left"];
+
+const toComparisonSide = (side: ComparisonSideDraft) => ({
+  label: side.label,
+  points: side.points.slice(0, 4),
+  cue: orUndefined(side.cue),
+});
+
 /** Converts one scene from Claude's draft format to the spec format. */
 const toScene = (draft: SceneDraft): Scene => {
   const base = {
     narration: draft.narration.trim(),
     emoji: orUndefined(draft.emoji),
+    transition: draft.transition,
   };
 
   switch (draft.type) {
@@ -40,6 +50,7 @@ const toScene = (draft: SceneDraft): Scene => {
         type: "list",
         heading: draft.heading,
         items: draft.items.slice(0, 6),
+        cues: orUndefined(draft.cues)?.slice(0, 6),
         style: draft.style,
       };
     case "stat":
@@ -49,6 +60,7 @@ const toScene = (draft: SceneDraft): Scene => {
         value: draft.value,
         label: draft.label,
         source: orUndefined(draft.source),
+        cue: orUndefined(draft.cue),
       };
     case "quote":
       return {
@@ -62,8 +74,8 @@ const toScene = (draft: SceneDraft): Scene => {
         ...base,
         type: "comparison",
         heading: orUndefined(draft.heading),
-        left: { ...draft.left, points: draft.left.points.slice(0, 4) },
-        right: { ...draft.right, points: draft.right.points.slice(0, 4) },
+        left: toComparisonSide(draft.left),
+        right: toComparisonSide(draft.right),
       };
     case "code":
       return {
@@ -74,6 +86,7 @@ const toScene = (draft: SceneDraft): Scene => {
         steps: draft.steps.map((step) => ({
           code: step.code,
           highlight: orUndefined(step.highlight),
+          cue: orUndefined(step.cue),
         })),
       };
     case "cta":
@@ -107,6 +120,32 @@ export const draftToSpec = (
   return spec;
 };
 
+/** Reads a value at a dotted path such as "steps.1.cue". */
+const valueAt = (value: unknown, path: string): unknown =>
+  path
+    .split(".")
+    .reduce<unknown>(
+      (current, key) =>
+        current && typeof current === "object"
+          ? (current as Record<string, unknown>)[key]
+          : undefined,
+      value,
+    );
+
+/**
+ * One warning for each cue that isn't in its scene's narration. Those cues
+ * still work, but their visuals fall back to fixed timing.
+ */
+export const describeUnmatchedCues = (spec: VideoSpecInput): string[] =>
+  videoSpecSchema
+    .parse(spec)
+    .scenes.flatMap((scene, index) =>
+      findUnmatchedCues(scene).map(
+        (path) =>
+          `Scene ${index + 1} (${scene.type}): cue "${String(valueAt(scene, path))}" at ${path} isn't in the narration, so it will use fixed timing.`,
+      ),
+    );
+
 export type ScriptOptions = {
   seconds: number;
 };
@@ -129,6 +168,9 @@ export const createVideoSpec = async (
   });
 
   const spec = draftToSpec(draft, plan.options.language);
+  for (const warning of describeUnmatchedCues(spec)) {
+    console.warn(`  ⚠ ${video.title}: ${warning}`);
+  }
   const words = spec.scenes.reduce(
     (sum, scene) => sum + countWords(scene.narration),
     0,

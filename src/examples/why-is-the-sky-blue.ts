@@ -24,6 +24,7 @@ export const whyIsTheSkyBlue: VideoSpecInput = {
     },
     {
       type: "list",
+      transition: "slide",
       heading: "When sunlight hits the air",
       style: "numbered",
       items: [
@@ -31,20 +32,24 @@ export const whyIsTheSkyBlue: VideoSpecInput = {
         "Short blue waves scatter the most",
         "That blue reaches you from every direction",
       ],
+      cues: ["bumps into", "short blue waves", "blue light reaches"],
       narration:
         "When sunlight enters the atmosphere, it bumps into tiny gas molecules. Short blue waves get scattered far more than the others, so blue light reaches your eyes from every part of the sky.",
     },
     {
       type: "stat",
+      transition: "zoom",
       emoji: "🔬",
       value: "6x",
       label: "more scattering for blue light than for red",
       source: "Rayleigh scattering",
+      cue: "six times",
       narration:
         "In fact, blue light scatters about six times more than red light. Scientists call this Rayleigh scattering.",
     },
     {
       type: "comparison",
+      transition: "wipe",
       heading: "So why not purple?",
       left: {
         label: "Violet",
@@ -53,6 +58,7 @@ export const whyIsTheSkyBlue: VideoSpecInput = {
       right: {
         label: "Blue",
         points: ["Plenty in sunlight", "Our eyes love it"],
+        cue: "and our eyes",
       },
       narration:
         "Violet scatters even more, so why isn't the sky purple? Sunlight contains less violet, and our eyes are much more sensitive to blue.",

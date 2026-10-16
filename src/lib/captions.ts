@@ -1,4 +1,5 @@
-import type { WordTiming } from "../spec/schema";
+import type { Scene, WordTiming } from "../spec/schema";
+import { getSceneSeconds } from "./timing";
 
 export type CaptionPage = {
   words: WordTiming[];
@@ -32,6 +33,11 @@ export const estimateWordTimings = (
     return timing;
   });
 };
+
+/** The scene's word timings: from the voice-over, or estimated until it's recorded. */
+export const getSceneWords = (scene: Scene): WordTiming[] =>
+  scene.audio?.words ??
+  estimateWordTimings(scene.narration, getSceneSeconds(scene));
 
 const SENTENCE_END = /[.!?…:;]$/;
 

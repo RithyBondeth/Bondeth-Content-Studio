@@ -1,7 +1,9 @@
-import { useCurrentFrame } from "remotion";
+import { useCurrentFrame, useVideoConfig } from "remotion";
 import { Emoji } from "../components/Emoji";
 import { SceneFrame } from "../components/SceneFrame";
 import { progressBetween, riseIn } from "../lib/animation";
+import { getSceneWords } from "../lib/captions";
+import { getCueFrames } from "../lib/cues";
 import { useLayout } from "../lib/use-layout";
 import { theme } from "../theme/tokens";
 import type { SceneProps } from "./types";
@@ -71,9 +73,16 @@ export const ComparisonScene: React.FC<SceneProps<"comparison">> = ({
   reserveCaptions,
 }) => {
   const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
   const { unit, isVertical } = useLayout();
-  // The second side appears about a third of the way through.
-  const rightStart = Math.max(18, Math.round(durationInFrames * 0.33));
+  // Each side appears when the narration turns to it. Without a cue, the
+  // second side appears about a third of the way through.
+  const [leftStart, rightStart] = getCueFrames({
+    words: getSceneWords(scene),
+    cues: [scene.left.cue, scene.right.cue],
+    fallbacks: [6, Math.max(18, Math.round(durationInFrames * 0.33))],
+    fps,
+  });
 
   return (
     <SceneFrame
@@ -106,8 +115,8 @@ export const ComparisonScene: React.FC<SceneProps<"comparison">> = ({
           gap: 32 * unit,
         }}
       >
-        <SideCard side={scene.left} start={6} accent={false} />
-        <SideCard side={scene.right} start={rightStart} accent />
+        <SideCard side={scene.left} start={leftStart!} accent={false} />
+        <SideCard side={scene.right} start={rightStart!} accent />
       </div>
     </SceneFrame>
   );

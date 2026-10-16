@@ -155,12 +155,16 @@ export const sceneSummary = (scene: Scene): string => {
   }
 };
 
-/** Switches a scene to another template, keeping its narration, emoji, and main text. */
+/** Switches a scene to another template, keeping its narration, emoji, transition, and main text. */
 export const convertScene = (scene: Scene, type: SceneType): Scene => {
   if (scene.type === type) return scene;
   const next = SCENE_META[type].create();
   const text = sceneSummary(scene);
-  const base = { narration: scene.narration, emoji: scene.emoji };
+  const base = {
+    narration: scene.narration,
+    emoji: scene.emoji,
+    transition: scene.transition,
+  };
   switch (next.type) {
     case "title":
     case "list":

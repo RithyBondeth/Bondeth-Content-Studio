@@ -1,10 +1,11 @@
 "use client";
 
-import { Mic, Plus, Trash2 } from "lucide-react";
-import { useId } from "react";
+import { CircleAlert, Mic, Plus, Trash2 } from "lucide-react";
+import { useId, useMemo } from "react";
+import { findUnmatchedCues, moveCuesWithItems } from "../../../src/lib/cues";
 import { SUPPORTED_LANGUAGES } from "../../../src/lib/languages";
 import { countWords, estimateNarrationSeconds } from "../../../src/lib/timing";
-import type { Scene, SceneType } from "../../../src/spec/schema";
+import type { Scene, SceneType, Transition } from "../../../src/spec/schema";
 import { Badge, Button, Field, Input, Select, Textarea } from "../ui";
 import { SCENE_META, SCENE_TYPE_ORDER } from "./scene-meta";
 
@@ -102,8 +103,107 @@ const TextField = ({
   );
 };
 
+const TRANSITION_OPTIONS: { value: Transition; label: string }[] = [
+  { value: "fade", label: "Fade" },
+  { value: "slide", label: "Slide" },
+  { value: "wipe", label: "Wipe" },
+  { value: "zoom", label: "Zoom" },
+  { value: "cut", label: "Cut" },
+];
+
 /** Empty optional strings are stored as "not set". */
 const optional = (value: string) => (value.trim() ? value : undefined);
+
+const CUE_PLACEHOLDER = "Words from the narration";
+
+/** A cue input that warns when its words aren't in the narration. */
+const CueInput = ({
+  unmatched,
+  ...props
+}: React.ComponentProps<typeof Input> & { unmatched: boolean }) => {
+  const warningId = useId();
+  return (
+    <div className="flex flex-col gap-1">
+      <Input
+        {...props}
+        aria-invalid={unmatched || undefined}
+        aria-describedby={unmatched ? warningId : undefined}
+        className={unmatched ? "border-warning/50" : undefined}
+      />
+      {unmatched ? (
+        <p
+          id={warningId}
+          className="flex items-center gap-1.5 text-xs text-warning"
+        >
+          <CircleAlert className="size-3.5 shrink-0" aria-hidden />
+          Not found in narration, so it uses fixed timing.
+        </p>
+      ) : null}
+    </div>
+  );
+};
+
+/** One cue input per list item, kept in the same order as the items. */
+const ItemCuesField = ({
+  items,
+  cues,
+  unmatched,
+  onChange,
+}: {
+  items: string[];
+  cues: string[] | undefined;
+  unmatched: Set<string>;
+  onChange: (cues: string[] | undefined) => void;
+}) => (
+  <Field
+    label="Cues"
+    hint="Optional. Each item appears when the narrator says these words, in order."
+  >
+    <div className="flex flex-col gap-1.5">
+      {items.map((item, index) => (
+        <CueInput
+          key={index}
+          aria-label={`Cue for item ${index + 1}`}
+          placeholder={item.trim() || CUE_PLACEHOLDER}
+          value={cues?.[index] ?? ""}
+          unmatched={unmatched.has(`cues.${index}`)}
+          onChange={(event) => {
+            const next = items.map((_, i) =>
+              i === index ? event.target.value : (cues?.[i] ?? ""),
+            );
+            onChange(next.some((cue) => cue.trim()) ? next : undefined);
+          }}
+        />
+      ))}
+    </div>
+  </Field>
+);
+
+/** A labeled single cue, for stat and comparison scenes. */
+const CueField = ({
+  value,
+  hint,
+  unmatched,
+  onChange,
+}: {
+  value: string | undefined;
+  hint: string;
+  unmatched: boolean;
+  onChange: (value: string | undefined) => void;
+}) => {
+  const id = useId();
+  return (
+    <Field label="Cue" htmlFor={id} hint={hint}>
+      <CueInput
+        id={id}
+        value={value ?? ""}
+        placeholder={CUE_PLACEHOLDER}
+        unmatched={unmatched}
+        onChange={(event) => onChange(optional(event.target.value))}
+      />
+    </Field>
+  );
+};
 
 const TypeFields = ({
   scene,
@@ -112,6 +212,9 @@ const TypeFields = ({
   scene: Scene;
   onChange: (scene: Scene) => void;
 }) => {
+  // Paths like "cues.1" or "left.cue" for cues that aren't in the narration.
+  const unmatched = useMemo(() => new Set(findUnmatchedCues(scene)), [scene]);
+
   switch (scene.type) {
     case "title":
       return (
@@ -161,7 +264,19 @@ const TypeFields = ({
             label="Items"
             value={scene.items}
             hint="One per line, up to 6."
-            onChange={(items) => onChange({ ...scene, items })}
+            onChange={(items) =>
+              onChange({
+                ...scene,
+                items,
+                cues: moveCuesWithItems(scene.items, items, scene.cues),
+              })
+            }
+          />
+          <ItemCuesField
+            items={scene.items}
+            cues={scene.cues}
+            unmatched={unmatched}
+            onChange={(cues) => onChange({ ...scene, cues })}
           />
           <Field label="Style">
             <Select
@@ -203,6 +318,12 @@ const TypeFields = ({
             onChange={(value) =>
               onChange({ ...scene, source: optional(value) })
             }
+          />
+          <CueField
+            value={scene.cue}
+            hint="Optional. The number counts up when the narrator says these words."
+            unmatched={unmatched.has("cue")}
+            onChange={(cue) => onChange({ ...scene, cue })}
           />
         </>
       );
@@ -258,6 +379,14 @@ const TypeFields = ({
                   hint="One per line, up to 4."
                   onChange={(points) =>
                     onChange({ ...scene, [side]: { ...scene[side], points } })
+                  }
+                />
+                <CueField
+                  value={scene[side].cue}
+                  hint="Optional. This side appears when the narrator says these words."
+                  unmatched={unmatched.has(`${side}.cue`)}
+                  onChange={(cue) =>
+                    onChange({ ...scene, [side]: { ...scene[side], cue } })
                   }
                 />
               </div>
@@ -354,6 +483,24 @@ const TypeFields = ({
                     })
                   }
                 />
+                {stepIndex > 0 ? (
+                  <CueInput
+                    aria-label={`Step ${stepIndex + 1} cue`}
+                    placeholder="Cue: words from the narration where this step starts"
+                    value={step.cue ?? ""}
+                    unmatched={unmatched.has(`steps.${stepIndex}.cue`)}
+                    onChange={(event) =>
+                      onChange({
+                        ...scene,
+                        steps: scene.steps.map((s, i) =>
+                          i === stepIndex
+                            ? { ...s, cue: optional(event.target.value) }
+                            : s,
+                        ),
+                      })
+                    }
+                  />
+                ) : null}
               </div>
             ))}
             <Button
@@ -476,6 +623,7 @@ export const SceneForm = ({
 }: SceneFormProps) => {
   const narrationId = useId();
   const emojiId = useId();
+  const transitionId = useId();
   const words = countWords(scene.narration);
   const meta = SCENE_META[scene.type];
 
@@ -577,6 +725,32 @@ export const SceneForm = ({
             ))}
           </div>
         </Field>
+
+        {index > 0 ? (
+          <Field
+            label="Transition in"
+            htmlFor={transitionId}
+            hint="How this scene replaces the one before it."
+          >
+            <Select
+              id={transitionId}
+              className="w-40"
+              value={scene.transition ?? "fade"}
+              onChange={(event) =>
+                onChange({
+                  ...scene,
+                  transition: event.target.value as Transition,
+                })
+              }
+            >
+              {TRANSITION_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        ) : null}
 
         <Field
           label="Length"

@@ -21,6 +21,8 @@ export const sceneAudioSchema = z.object({
   words: z.array(wordTimingSchema),
 });
 
+export const TRANSITIONS = ["fade", "slide", "wipe", "zoom", "cut"] as const;
+
 const sceneBase = {
   /** What the voice-over says during this scene. Also used for captions. */
   narration: z.string(),
@@ -28,6 +30,8 @@ const sceneBase = {
   emoji: z.string().optional(),
   /** Overrides the length worked out from the audio or narration. */
   durationInSeconds: z.number().positive().optional(),
+  /** How this scene replaces the previous one. Defaults to "fade"; ignored on the first scene. */
+  transition: z.enum(TRANSITIONS).optional(),
   /** Filled in by the voice step. */
   audio: sceneAudioSchema.optional(),
 };
@@ -51,6 +55,12 @@ export const listSceneSchema = z.object({
   type: z.literal("list"),
   heading: z.string(),
   items: z.array(z.string()).min(1).max(6),
+  /**
+   * A short phrase from the narration for each item, in the same order. Each
+   * item appears as the narrator says its phrase; items without one, or whose
+   * phrase isn't in the narration, appear on a fixed schedule.
+   */
+  cues: z.array(z.string()).optional(),
   style: z.enum(["bullets", "numbered", "checks"]).optional(),
   ...sceneBase,
 });
@@ -61,6 +71,8 @@ export const statSceneSchema = z.object({
   value: z.string(),
   label: z.string(),
   source: z.string().optional(),
+  /** Phrase from the narration where the number is spoken; the count-up starts there. */
+  cue: z.string().optional(),
   ...sceneBase,
 });
 
@@ -74,6 +86,8 @@ export const quoteSceneSchema = z.object({
 export const comparisonSideSchema = z.object({
   label: z.string(),
   points: z.array(z.string()).min(1).max(4),
+  /** Phrase from the narration where this side comes up; it appears there. */
+  cue: z.string().optional(),
 });
 
 export const comparisonSceneSchema = z.object({
@@ -88,6 +102,8 @@ export const codeStepSchema = z.object({
   code: z.string(),
   /** Lines to focus, 1-based, e.g. "2,4-6". */
   highlight: z.string().optional(),
+  /** Phrase from the narration where this step starts. Ignored on the first step. */
+  cue: z.string().optional(),
 });
 
 export const codeSceneSchema = z.object({
@@ -140,6 +156,7 @@ export type SceneAudio = z.infer<typeof sceneAudioSchema>;
 export type Scene = z.infer<typeof sceneSchema>;
 export type SceneType = Scene["type"];
 export type SceneOf<T extends SceneType> = Extract<Scene, { type: T }>;
+export type Transition = (typeof TRANSITIONS)[number];
 export type CodeStep = z.infer<typeof codeStepSchema>;
 export type VideoSpec = z.infer<typeof videoSpecSchema>;
 /** A spec as written by hand, before defaults are applied. */
