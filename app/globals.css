@@ -1,0 +1,135 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #07090f;
+  --color-surface: #0e121b;
+  --color-raised: #151a26;
+  --color-hover: #1b2131;
+  --color-line: #222939;
+  --color-line-strong: #2f374a;
+  --color-text: #eef0f6;
+  --color-muted: #a3aabb;
+  --color-faint: #6b7386;
+  --color-accent: #7c5cff;
+  --color-accent-hover: #8d72ff;
+  --color-accent-bright: #b4a2ff;
+  --color-pink: #e879f9;
+  --color-cyan: #22d3ee;
+  --color-success: #34d399;
+  --color-warning: #fbbf24;
+  --color-danger: #f87171;
+
+  --font-sans: var(--font-ubuntu), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-ubuntu-mono), ui-monospace, monospace;
+
+  /* Ubuntu ships 300, 400, 500, and 700, so map the in-between weights. */
+  --font-weight-semibold: 500;
+  --font-weight-extrabold: 700;
+  --font-weight-black: 700;
+
+  --animate-fade-in: fade-in 0.2s ease-out;
+  --animate-rise-in: rise-in 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+  --animate-shimmer: shimmer 1.6s linear infinite;
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes rise-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px) scale(0.98);
+    }
+  }
+  @keyframes shimmer {
+    from {
+      background-position: -200% 0;
+    }
+    to {
+      background-position: 200% 0;
+    }
+  }
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-accent) 45%, transparent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent-bright);
+  outline-offset: 2px;
+}
+
+/* Thin, quiet scrollbars for the editor's panels. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-strong) transparent;
+}
+
+@utility text-gradient {
+  background: linear-gradient(
+    100deg,
+    #c4b5fd 0%,
+    #a78bfa 35%,
+    #e879f9 70%,
+    #f0abfc 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@utility bg-brand {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c5cff 45%, #c026d3 120%);
+}
+
+/* A soft spotlight and faint grid behind page headers. */
+@utility bg-stage {
+  background:
+    radial-gradient(60% 50% at 50% 0%, rgb(124 92 255 / 0.22), transparent 70%),
+    radial-gradient(
+      40% 35% at 85% 10%,
+      rgb(232 121 249 / 0.12),
+      transparent 70%
+    );
+}
+
+@utility bg-grid {
+  background-image:
+    linear-gradient(to right, rgb(255 255 255 / 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(255 255 255 / 0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(70% 60% at 50% 0%, black, transparent 75%);
+}
+
+@utility skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-raised) 25%,
+    var(--color-hover) 50%,
+    var(--color-raised) 75%
+  );
+  background-size: 200% 100%;
+  animation: var(--animate-shimmer);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
