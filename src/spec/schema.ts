@@ -141,6 +141,8 @@ export const videoSpecSchema = z.object({
   language: z.string().default("en"),
   /** Show word-by-word captions of the narration. */
   captions: z.boolean().default(true),
+  /** Play sound effects on transitions and as scene items appear. */
+  sfx: z.boolean().default(true),
   music: z
     .object({
       /** Path inside public/ or a full URL. */

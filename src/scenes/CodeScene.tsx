@@ -6,9 +6,8 @@ import {
 } from "../components/CodeBlock";
 import { CodeWindow } from "../components/CodeWindow";
 import { SceneFrame } from "../components/SceneFrame";
-import { getSceneWords } from "../lib/captions";
-import { getCueFrames } from "../lib/cues";
 import type { PreparedCodeStep } from "../lib/prepare-code";
+import { getCodeStepStarts } from "../lib/reveals";
 import { useLayout } from "../lib/use-layout";
 import type { SceneProps } from "./types";
 
@@ -53,25 +52,8 @@ const CodeSteps: React.FC<
   const { fps } = useVideoConfig();
   const fontSize = useCodeFontSize(codeSteps, reserveCaptions);
 
-  // Each step starts at its cue in the narration; without one, the scene is
-  // split evenly. The first step always starts with the scene, and every step
-  // gets at least one frame.
-  const stepFrames = Math.floor(durationInFrames / codeSteps.length);
-  const starts = getCueFrames({
-    words: getSceneWords(scene),
-    cues: codeSteps.map((_, index) =>
-      index === 0 ? undefined : scene.steps[index]?.cue,
-    ),
-    fallbacks: codeSteps.map((_, index) => index * stepFrames),
-    fps,
-  });
-  starts[0] = 0;
-  for (let index = 1; index < starts.length; index++) {
-    starts[index] = Math.min(
-      Math.max(starts[index]!, starts[index - 1]! + 1),
-      durationInFrames - (codeSteps.length - index),
-    );
-  }
+  // Each step starts at its cue in the narration.
+  const starts = getCodeStepStarts(scene, durationInFrames, fps);
 
   return (
     <SceneFrame
