@@ -42,6 +42,13 @@ Each scene also has a transition, which is how it replaces the previous scene:
 - cut: an instant switch. For a punchy, rapid-fire beat.
 Match the transition to what the narration is doing, and keep it calm: a video that changes style on every scene feels busy.
 
+Cues time the visuals to the voice-over. A cue is 1-4 words copied exactly from the scene's narration; the visual appears when the narrator says them:
+- list: one cue per item, in order, where the narration brings up that item.
+- stat: where the number is spoken; the number counts up from there.
+- comparison: a cue for each side, where the narration turns to it.
+- code: a cue for each step after the first, where the narration starts talking about it.
+Pick words that appear once in the narration, or that come after the previous cue. Use null when there is no clear moment.
+
 What makes a good video:
 - The first sentence of narration is the hook. Get to the point immediately.
 - Narration is written to be spoken: conversational, short sentences, no symbols or abbreviations a voice would stumble over.

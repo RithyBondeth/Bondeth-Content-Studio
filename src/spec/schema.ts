@@ -55,6 +55,12 @@ export const listSceneSchema = z.object({
   type: z.literal("list"),
   heading: z.string(),
   items: z.array(z.string()).min(1).max(6),
+  /**
+   * A short phrase from the narration for each item, in the same order. Each
+   * item appears as the narrator says its phrase; items without one, or whose
+   * phrase isn't in the narration, appear on a fixed schedule.
+   */
+  cues: z.array(z.string()).optional(),
   style: z.enum(["bullets", "numbered", "checks"]).optional(),
   ...sceneBase,
 });
@@ -65,6 +71,8 @@ export const statSceneSchema = z.object({
   value: z.string(),
   label: z.string(),
   source: z.string().optional(),
+  /** Phrase from the narration where the number is spoken; the count-up starts there. */
+  cue: z.string().optional(),
   ...sceneBase,
 });
 
@@ -78,6 +86,8 @@ export const quoteSceneSchema = z.object({
 export const comparisonSideSchema = z.object({
   label: z.string(),
   points: z.array(z.string()).min(1).max(4),
+  /** Phrase from the narration where this side comes up; it appears there. */
+  cue: z.string().optional(),
 });
 
 export const comparisonSceneSchema = z.object({
@@ -92,6 +102,8 @@ export const codeStepSchema = z.object({
   code: z.string(),
   /** Lines to focus, 1-based, e.g. "2,4-6". */
   highlight: z.string().optional(),
+  /** Phrase from the narration where this step starts. Ignored on the first step. */
+  cue: z.string().optional(),
 });
 
 export const codeSceneSchema = z.object({

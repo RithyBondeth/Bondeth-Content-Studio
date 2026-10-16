@@ -12,9 +12,9 @@ import {
 import { Background } from "../components/Background";
 import { Captions } from "../components/Captions";
 import { SceneFadeContext } from "../components/SceneFrame";
-import { estimateWordTimings } from "../lib/captions";
+import { getSceneWords } from "../lib/captions";
 import { prepareCodeSteps, type PreparedCodeStep } from "../lib/prepare-code";
-import { FPS, getSceneSeconds, getVideoTiming } from "../lib/timing";
+import { FPS, getVideoTiming } from "../lib/timing";
 import { renderTransition } from "../lib/transitions";
 import { CodeScene } from "../scenes/CodeScene";
 import { ComparisonScene } from "../scenes/ComparisonScene";
@@ -166,9 +166,6 @@ export const ExplainerVideo: React.FC<ExplainerVideoProps> = (props) => {
 
       {/* Voice-over and captions run on their own timeline, so they never overlap or move with a transition. */}
       {spec.scenes.map((scene, index) => {
-        const words =
-          scene.audio?.words ??
-          estimateWordTimings(scene.narration, getSceneSeconds(scene));
         return (
           <Sequence
             key={index}
@@ -179,7 +176,7 @@ export const ExplainerVideo: React.FC<ExplainerVideoProps> = (props) => {
             {scene.audio ? (
               <Html5Audio src={resolveMedia(scene.audio.src)} />
             ) : null}
-            {spec.captions ? <Captions words={words} /> : null}
+            {spec.captions ? <Captions words={getSceneWords(scene)} /> : null}
           </Sequence>
         );
       })}
