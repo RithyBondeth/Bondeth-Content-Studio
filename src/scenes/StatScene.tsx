@@ -2,8 +2,7 @@ import { Easing, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import { Emoji } from "../components/Emoji";
 import { SceneFrame } from "../components/SceneFrame";
 import { progressBetween, riseIn, useEnter } from "../lib/animation";
-import { getSceneWords } from "../lib/captions";
-import { getCueFrame } from "../lib/cues";
+import { getStatCountStart } from "../lib/reveals";
 import { useLayout } from "../lib/use-layout";
 import { theme } from "../theme/tokens";
 import type { SceneProps } from "./types";
@@ -51,7 +50,7 @@ export const StatScene: React.FC<SceneProps<"stat">> = ({
   const { fps } = useVideoConfig();
   const { unit, isVertical } = useLayout();
   // The count-up starts as the number is spoken.
-  const countStart = getCueFrame(getSceneWords(scene), scene.cue, 4, fps);
+  const countStart = getStatCountStart(scene, fps);
   const display = useCountUp(scene.value, countStart);
   const pop = useEnter(0, 14);
   const valueSize = (scene.value.length > 6 ? 190 : 260) * unit;

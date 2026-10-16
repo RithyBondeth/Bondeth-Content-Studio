@@ -2,8 +2,7 @@ import { useCurrentFrame, useVideoConfig } from "remotion";
 import { Emoji } from "../components/Emoji";
 import { SceneFrame } from "../components/SceneFrame";
 import { progressBetween, riseIn } from "../lib/animation";
-import { getSceneWords } from "../lib/captions";
-import { getCueFrames } from "../lib/cues";
+import { getComparisonStarts } from "../lib/reveals";
 import { useLayout } from "../lib/use-layout";
 import { theme } from "../theme/tokens";
 import type { SceneProps } from "./types";
@@ -75,14 +74,12 @@ export const ComparisonScene: React.FC<SceneProps<"comparison">> = ({
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const { unit, isVertical } = useLayout();
-  // Each side appears when the narration turns to it. Without a cue, the
-  // second side appears about a third of the way through.
-  const [leftStart, rightStart] = getCueFrames({
-    words: getSceneWords(scene),
-    cues: [scene.left.cue, scene.right.cue],
-    fallbacks: [6, Math.max(18, Math.round(durationInFrames * 0.33))],
+  // Each side appears when the narration turns to it.
+  const [leftStart, rightStart] = getComparisonStarts(
+    scene,
+    durationInFrames,
     fps,
-  });
+  );
 
   return (
     <SceneFrame

@@ -13,7 +13,9 @@ import { Background } from "../components/Background";
 import { Captions } from "../components/Captions";
 import { SceneFadeContext } from "../components/SceneFrame";
 import { getSceneWords } from "../lib/captions";
+import { getDuckFactor, getNarrationSpans, type Span } from "../lib/ducking";
 import { prepareCodeSteps, type PreparedCodeStep } from "../lib/prepare-code";
+import { getSoundSchedule, SOUNDS } from "../lib/sfx";
 import { FPS, getVideoTiming } from "../lib/timing";
 import { renderTransition } from "../lib/transitions";
 import { CodeScene } from "../scenes/CodeScene";
@@ -95,17 +97,20 @@ const SceneView: React.FC<SceneViewProps> = ({ scene, ...rest }) => {
   }
 };
 
-const Music: React.FC<{ music: NonNullable<VideoSpec["music"]> }> = ({
-  music,
-}) => {
+const Music: React.FC<{
+  music: NonNullable<VideoSpec["music"]>;
+  /** When the voice-over is playing; the music ducks under it. */
+  narration: Span[];
+}> = ({ music, narration }) => {
   const { durationInFrames, fps } = useVideoConfig();
   return (
     <Html5Audio
       src={resolveMedia(music.src)}
       loop
-      // Fade in over 1s and out over the last 2s.
+      // Fade in over 1s and out over the last 2s, and duck under the narration.
       volume={(frame) =>
         music.volume *
+        getDuckFactor(frame, narration) *
         interpolate(
           frame,
           [0, fps, durationInFrames - 2 * fps, durationInFrames],
@@ -121,12 +126,36 @@ const Music: React.FC<{ music: NonNullable<VideoSpec["music"]> }> = ({
 export const ExplainerVideo: React.FC<ExplainerVideoProps> = (props) => {
   const spec = useMemo(() => videoSpecSchema.parse(props.spec), [props.spec]);
   const timing = useMemo(() => getVideoTiming(spec), [spec]);
+  const narration = useMemo(
+    () => getNarrationSpans(spec.scenes, timing.starts, FPS),
+    [spec, timing],
+  );
+  const sounds = useMemo(
+    () => getSoundSchedule(spec, timing, FPS),
+    [spec, timing],
+  );
   const last = spec.scenes.length - 1;
 
   return (
     <AbsoluteFill>
       <Background />
-      {spec.music ? <Music music={spec.music} /> : null}
+      {spec.music ? <Music music={spec.music} narration={narration} /> : null}
+
+      {/* Sound effects, at most one per frame. */}
+      {sounds.map(({ sound, frame }) => (
+        <Sequence
+          key={`${sound}-${frame}`}
+          from={frame}
+          durationInFrames={SOUNDS[sound].durationInFrames}
+          layout="none"
+          name={`sfx: ${sound}`}
+        >
+          <Html5Audio
+            src={staticFile(SOUNDS[sound].src)}
+            volume={SOUNDS[sound].volume}
+          />
+        </Sequence>
+      ))}
 
       {/* Visuals. Each scene stays up while the next one transitions in over it. */}
       <TransitionSeries>

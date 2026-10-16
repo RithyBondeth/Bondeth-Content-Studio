@@ -2,8 +2,7 @@ import { useCurrentFrame, useVideoConfig } from "remotion";
 import { Emoji } from "../components/Emoji";
 import { SceneFrame } from "../components/SceneFrame";
 import { progressBetween, riseIn } from "../lib/animation";
-import { getSceneWords } from "../lib/captions";
-import { getCueFrames } from "../lib/cues";
+import { getListItemStarts } from "../lib/reveals";
 import { useLayout } from "../lib/use-layout";
 import { theme } from "../theme/tokens";
 import type { SceneProps } from "./types";
@@ -49,20 +48,8 @@ export const ListScene: React.FC<SceneProps<"list">> = ({
   const { unit, isVertical } = useLayout();
   const style = scene.style ?? "bullets";
 
-  // Each item appears as the narrator says its cue. Without one, items are
-  // revealed evenly across the first 70% of the scene.
-  const headingFrames = 12;
-  const revealWindow = Math.max(
-    scene.items.length * 8,
-    durationInFrames * 0.7 - headingFrames,
-  );
-  const gap = revealWindow / scene.items.length;
-  const starts = getCueFrames({
-    words: getSceneWords(scene),
-    cues: scene.items.map((_, index) => scene.cues?.[index]),
-    fallbacks: scene.items.map((_, index) => headingFrames + index * gap),
-    fps,
-  });
+  // Each item appears as the narrator says its cue.
+  const starts = getListItemStarts(scene, durationInFrames, fps);
   const itemSize = (isVertical ? 62 : 50) * unit;
 
   return (
