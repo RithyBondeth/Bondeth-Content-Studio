@@ -42,6 +42,12 @@ Each scene also has a transition, which is how it replaces the previous scene:
 - cut: an instant switch. For a punchy, rapid-fire beat.
 Match the transition to what the narration is doing, and keep it calm: a video that changes style on every scene feels busy.
 
+Pick a background music bed for the whole video. It plays quietly under the narration:
+- calm: slow, warm pads. For reflective, gentle or serious topics.
+- upbeat: bright and rhythmic. For tips, how-tos, and energetic or playful videos.
+- curious: mellow and a little mysterious. For questions, puzzles, science and "why does this happen" videos.
+- none: no music, when music would get in the way.
+
 Cues time the visuals to the voice-over. A cue is 1-4 words copied exactly from the scene's narration; the visual appears when the narrator says them:
 - list: one cue per item, in order, where the narration brings up that item.
 - stat: where the number is spoken; the number counts up from there.

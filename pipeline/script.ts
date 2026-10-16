@@ -4,6 +4,7 @@ import {
   type VideoSpecInput,
 } from "../src/spec/schema";
 import { findUnmatchedCues } from "../src/lib/cues";
+import { DEFAULT_MUSIC_VOLUME, MUSIC_TRACKS } from "../src/lib/music";
 import { countWords } from "../src/lib/timing";
 import { generateStructured } from "./claude";
 import { SCRIPT_SYSTEM, scriptPrompt } from "./prompts";
@@ -108,6 +109,10 @@ export const draftToSpec = (
     title: draft.title,
     language,
     captions: true,
+    music:
+      draft.music === "none"
+        ? undefined
+        : { src: MUSIC_TRACKS[draft.music].src, volume: DEFAULT_MUSIC_VOLUME },
     scenes: draft.scenes.map(toScene),
   };
 

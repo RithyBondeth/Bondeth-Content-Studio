@@ -19,7 +19,8 @@
     "pipeline": "tsx pipeline/cli.ts",
     "test": "node --import tsx --test \"pipeline/**/*.test.ts\" \"src/**/*.test.ts\"",
     "studio": "next dev --port 3100",
-    "sfx": "tsx pipeline/sfx.ts"
+    "sfx": "tsx pipeline/sfx.ts",
+    "music": "tsx pipeline/music.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.135.0",

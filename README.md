@@ -146,7 +146,7 @@ A whole video spec looks like this:
 }
 ```
 
-To add background music, put an audio file under `public/` and add `"music": { "src": "music/track.mp3", "volume": 0.15 }`.
+Background music is set in the editor's Music setting: pick one of the bundled beds (calm, upbeat, curious) or upload your own track, and set its volume. The script step also picks a bed to suit each video. In a spec it looks like `"music": { "src": "music/calm.wav", "volume": 0.15 }`; `src` is any path under `public/`. The beds in [`public/music/`](public/music/README.md) are CC0 and synthesized by `npm run music`. The music fades in and out and dips under the narration.
 
 ## Examples and templates
 

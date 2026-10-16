@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { SUPPORTED_LANGUAGES } from "../lib/languages";
+import { DEFAULT_MUSIC_VOLUME } from "../lib/music";
 
 /**
  * The video spec: everything needed to render one video. The AI pipeline
@@ -145,9 +146,9 @@ export const videoSpecSchema = z.object({
   sfx: z.boolean().default(true),
   music: z
     .object({
-      /** Path inside public/ or a full URL. */
-      src: z.string(),
-      volume: z.number().min(0).max(1).default(0.15),
+      /** Path inside public/ or a full URL: a bed in music/, or a track uploaded next to the voice-overs. */
+      src: z.string().min(1),
+      volume: z.number().min(0).max(1).default(DEFAULT_MUSIC_VOLUME),
     })
     .optional(),
   scenes: z.array(sceneSchema).min(1),

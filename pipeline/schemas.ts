@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { SUPPORTED_LANGUAGES } from "../src/lib/languages";
+import { MUSIC_MOODS } from "../src/lib/music";
 import { TRANSITIONS } from "../src/spec/schema";
 
 /**
@@ -167,6 +168,9 @@ export const sceneDraftSchema = z.discriminatedUnion("type", [
 
 export const videoDraftSchema = z.object({
   title: z.string(),
+  music: z
+    .enum([...MUSIC_MOODS, "none"])
+    .describe("Background music bed that fits the video's mood, or none"),
   scenes: z.array(sceneDraftSchema),
 });
 
