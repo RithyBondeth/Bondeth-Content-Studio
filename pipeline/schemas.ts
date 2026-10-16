@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { SUPPORTED_LANGUAGES } from "../src/lib/languages";
+import { TRANSITIONS } from "../src/spec/schema";
 
 /**
  * Shapes Claude must return. Structured outputs need every field to be
@@ -57,6 +58,11 @@ const sceneFields = {
     .string()
     .describe("Exactly what the voice-over says in this scene"),
   emoji: nullableString.describe("One emoji as the scene's visual, or null"),
+  transition: z
+    .enum(TRANSITIONS)
+    .describe(
+      "How this scene replaces the previous one; ignored on the first scene",
+    ),
 };
 
 const titleDraft = z.object({

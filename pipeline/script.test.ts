@@ -13,6 +13,7 @@ test("converts Claude's draft into a valid spec, dropping nulls", () => {
           subheading: null,
           narration: "Hello there.",
           emoji: null,
+          transition: "fade",
         },
         {
           type: "list",
@@ -21,6 +22,7 @@ test("converts Claude's draft into a valid spec, dropping nulls", () => {
           style: "checks",
           narration: "Some tips.",
           emoji: "✅",
+          transition: "slide",
         },
         {
           type: "code",
@@ -29,6 +31,7 @@ test("converts Claude's draft into a valid spec, dropping nulls", () => {
           steps: [{ code: "print(1)", highlight: null }],
           narration: "Print one.",
           emoji: null,
+          transition: "fade",
         },
         {
           type: "cta",
@@ -36,6 +39,7 @@ test("converts Claude's draft into a valid spec, dropping nulls", () => {
           action: "Follow",
           narration: "Follow me.",
           emoji: null,
+          transition: "fade",
         },
       ],
     },
@@ -50,6 +54,7 @@ test("converts Claude's draft into a valid spec, dropping nulls", () => {
   );
   assert.equal(list?.type === "list" && list.items.length, 6);
   assert.equal(list?.emoji, "✅");
+  assert.equal(list?.transition, "slide");
   assert.deepEqual(code?.type === "code" && code.steps, [
     { code: "print(1)", highlight: undefined },
   ]);
@@ -68,6 +73,7 @@ test("rejects drafts that can't become a valid spec", () => {
             style: "bullets",
             narration: "x",
             emoji: null,
+            transition: "fade",
           },
         ],
       },

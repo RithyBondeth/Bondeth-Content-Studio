@@ -16,6 +16,7 @@ const toScene = (draft: SceneDraft): Scene => {
   const base = {
     narration: draft.narration.trim(),
     emoji: orUndefined(draft.emoji),
+    transition: draft.transition,
   };
 
   switch (draft.type) {

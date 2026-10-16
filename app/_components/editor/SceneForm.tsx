@@ -4,7 +4,7 @@ import { Mic, Plus, Trash2 } from "lucide-react";
 import { useId } from "react";
 import { SUPPORTED_LANGUAGES } from "../../../src/lib/languages";
 import { countWords, estimateNarrationSeconds } from "../../../src/lib/timing";
-import type { Scene, SceneType } from "../../../src/spec/schema";
+import type { Scene, SceneType, Transition } from "../../../src/spec/schema";
 import { Badge, Button, Field, Input, Select, Textarea } from "../ui";
 import { SCENE_META, SCENE_TYPE_ORDER } from "./scene-meta";
 
@@ -101,6 +101,14 @@ const TextField = ({
     </Field>
   );
 };
+
+const TRANSITION_OPTIONS: { value: Transition; label: string }[] = [
+  { value: "fade", label: "Fade" },
+  { value: "slide", label: "Slide" },
+  { value: "wipe", label: "Wipe" },
+  { value: "zoom", label: "Zoom" },
+  { value: "cut", label: "Cut" },
+];
 
 /** Empty optional strings are stored as "not set". */
 const optional = (value: string) => (value.trim() ? value : undefined);
@@ -476,6 +484,7 @@ export const SceneForm = ({
 }: SceneFormProps) => {
   const narrationId = useId();
   const emojiId = useId();
+  const transitionId = useId();
   const words = countWords(scene.narration);
   const meta = SCENE_META[scene.type];
 
@@ -577,6 +586,32 @@ export const SceneForm = ({
             ))}
           </div>
         </Field>
+
+        {index > 0 ? (
+          <Field
+            label="Transition in"
+            htmlFor={transitionId}
+            hint="How this scene replaces the one before it."
+          >
+            <Select
+              id={transitionId}
+              className="w-40"
+              value={scene.transition ?? "fade"}
+              onChange={(event) =>
+                onChange({
+                  ...scene,
+                  transition: event.target.value as Transition,
+                })
+              }
+            >
+              {TRANSITION_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        ) : null}
 
         <Field
           label="Length"

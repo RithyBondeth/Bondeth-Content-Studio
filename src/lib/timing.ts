@@ -33,17 +33,50 @@ export const getSceneSeconds = (scene: Scene): number => {
   return Math.max(MIN_SCENE_SECONDS, fromNarration, fromContent);
 };
 
+/** Length of a transition between two scenes. */
+export const TRANSITION_FRAMES = 15;
+
+/** Frames of the transition into a scene, never more than half of either scene. */
+const getTransitionFrames = (
+  scene: Scene,
+  frames: number,
+  previousFrames: number,
+) =>
+  (scene.transition ?? "fade") === "cut"
+    ? 0
+    : Math.min(
+        TRANSITION_FRAMES,
+        Math.floor(frames / 2),
+        Math.floor(previousFrames / 2),
+      );
+
 export type VideoTiming = {
-  /** Length of each scene, in frames. */
+  /** Frames each scene is on screen, from its start to the next scene's start. */
   scenes: number[];
-  /** First frame of each scene. */
+  /** First frame of each scene, where its voice-over and transition begin. */
   starts: number[];
+  /** Frames of the transition into each scene; 0 for the first scene and cuts. */
+  transitions: number[];
+  /**
+   * Length of each scene's sequence. A scene stays mounted while the next one
+   * transitions in over it, so the next scene's voice-over starts only after
+   * this scene's has finished.
+   */
+  sequences: number[];
   total: number;
 };
 
 export const getVideoTiming = (spec: VideoSpec): VideoTiming => {
   const scenes = spec.scenes.map((scene) =>
-    Math.round(getSceneSeconds(scene) * FPS),
+    Math.max(1, Math.round(getSceneSeconds(scene) * FPS)),
+  );
+  const transitions = spec.scenes.map((scene, index) =>
+    index === 0
+      ? 0
+      : getTransitionFrames(scene, scenes[index]!, scenes[index - 1]!),
+  );
+  const sequences = scenes.map(
+    (frames, index) => frames + (transitions[index + 1] ?? 0),
   );
   const starts: number[] = [];
   let total = 0;
@@ -51,5 +84,5 @@ export const getVideoTiming = (spec: VideoSpec): VideoTiming => {
     starts.push(total);
     total += frames;
   }
-  return { scenes, starts, total };
+  return { scenes, starts, transitions, sequences, total };
 };

@@ -24,6 +24,7 @@ export const whyIsTheSkyBlue: VideoSpecInput = {
     },
     {
       type: "list",
+      transition: "slide",
       heading: "When sunlight hits the air",
       style: "numbered",
       items: [
@@ -36,6 +37,7 @@ export const whyIsTheSkyBlue: VideoSpecInput = {
     },
     {
       type: "stat",
+      transition: "zoom",
       emoji: "🔬",
       value: "6x",
       label: "more scattering for blue light than for red",
@@ -45,6 +47,7 @@ export const whyIsTheSkyBlue: VideoSpecInput = {
     },
     {
       type: "comparison",
+      transition: "wipe",
       heading: "So why not purple?",
       left: {
         label: "Violet",

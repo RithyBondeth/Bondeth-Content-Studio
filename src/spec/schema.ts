@@ -21,6 +21,8 @@ export const sceneAudioSchema = z.object({
   words: z.array(wordTimingSchema),
 });
 
+export const TRANSITIONS = ["fade", "slide", "wipe", "zoom", "cut"] as const;
+
 const sceneBase = {
   /** What the voice-over says during this scene. Also used for captions. */
   narration: z.string(),
@@ -28,6 +30,8 @@ const sceneBase = {
   emoji: z.string().optional(),
   /** Overrides the length worked out from the audio or narration. */
   durationInSeconds: z.number().positive().optional(),
+  /** How this scene replaces the previous one. Defaults to "fade"; ignored on the first scene. */
+  transition: z.enum(TRANSITIONS).optional(),
   /** Filled in by the voice step. */
   audio: sceneAudioSchema.optional(),
 };
@@ -140,6 +144,7 @@ export type SceneAudio = z.infer<typeof sceneAudioSchema>;
 export type Scene = z.infer<typeof sceneSchema>;
 export type SceneType = Scene["type"];
 export type SceneOf<T extends SceneType> = Extract<Scene, { type: T }>;
+export type Transition = (typeof TRANSITIONS)[number];
 export type CodeStep = z.infer<typeof codeStepSchema>;
 export type VideoSpec = z.infer<typeof videoSpecSchema>;
 /** A spec as written by hand, before defaults are applied. */
