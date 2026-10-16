@@ -1,9 +1,19 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Ubuntu, Ubuntu_Mono } from "next/font/google";
+import { ToastProvider } from "./_components/Toast";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
-const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });
+const ubuntu = Ubuntu({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "700"],
+  variable: "--font-ubuntu",
+});
+
+const ubuntuMono = Ubuntu_Mono({
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  variable: "--font-ubuntu-mono",
+});
 
 export const metadata: Metadata = {
   title: "Content Studio",
@@ -17,8 +27,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${inter.variable} ${mono.variable}`}>
-      <body className="min-h-screen font-sans">{children}</body>
+    <html lang="en" className={`${ubuntu.variable} ${ubuntuMono.variable}`}>
+      <body className="min-h-screen font-sans">
+        <ToastProvider>{children}</ToastProvider>
+      </body>
     </html>
   );
 }

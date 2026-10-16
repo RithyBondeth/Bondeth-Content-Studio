@@ -392,6 +392,82 @@ const TypeFields = ({
   }
 };
 
+const Section = ({
+  title,
+  description,
+  aside,
+  children,
+}: {
+  title: string;
+  description?: string;
+  aside?: React.ReactNode;
+  children: React.ReactNode;
+}) => (
+  <section className="flex flex-col gap-5 rounded-2xl border border-line bg-surface/60 p-5">
+    <div className="flex items-start justify-between gap-3">
+      <div>
+        <h3 className="text-sm font-medium">{title}</h3>
+        {description ? (
+          <p className="mt-0.5 text-xs text-faint">{description}</p>
+        ) : null}
+      </div>
+      {aside}
+    </div>
+    {children}
+  </section>
+);
+
+const TemplatePicker = ({
+  value,
+  onChange,
+}: {
+  value: SceneType;
+  onChange: (type: SceneType) => void;
+}) => (
+  <div
+    role="radiogroup"
+    aria-label="Scene template"
+    className="grid grid-cols-4 gap-1.5 @xl:grid-cols-8"
+  >
+    {SCENE_TYPE_ORDER.map((type) => {
+      const meta = SCENE_META[type];
+      const active = type === value;
+      return (
+        <button
+          key={type}
+          type="button"
+          role="radio"
+          aria-checked={active}
+          title={meta.description}
+          onClick={() => onChange(type)}
+          className={`flex flex-col items-center gap-1.5 rounded-xl border px-1 py-2.5 text-[11px] transition-all ${
+            active
+              ? "border-transparent text-text"
+              : "border-line text-faint hover:border-line-strong hover:text-muted"
+          }`}
+          style={
+            active
+              ? {
+                  background: `${meta.color}1a`,
+                  boxShadow: `inset 0 0 0 1px ${meta.color}80`,
+                }
+              : undefined
+          }
+        >
+          <meta.icon
+            className="size-4"
+            style={{ color: active ? meta.color : undefined }}
+            aria-hidden
+          />
+          <span className="truncate">
+            {meta.label === "Call to action" ? "CTA" : meta.label}
+          </span>
+        </button>
+      );
+    })}
+  </div>
+);
+
 export const SceneForm = ({
   scene,
   index,
@@ -401,114 +477,133 @@ export const SceneForm = ({
   const narrationId = useId();
   const emojiId = useId();
   const words = countWords(scene.narration);
+  const meta = SCENE_META[scene.type];
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="font-semibold">Scene {index + 1}</h2>
-        <Select
-          aria-label="Scene template"
-          className="w-auto"
-          value={scene.type}
-          onChange={(event) => onChangeType(event.target.value as SceneType)}
+    <div className="@container flex flex-col gap-4">
+      <div className="flex items-center gap-3">
+        <span
+          className="grid size-9 place-items-center rounded-xl"
+          style={{ background: `${meta.color}1f`, color: meta.color }}
         >
-          {SCENE_TYPE_ORDER.map((type) => (
-            <option key={type} value={type}>
-              {SCENE_META[type].label}
-            </option>
-          ))}
-        </Select>
+          <meta.icon className="size-4" aria-hidden />
+        </span>
+        <div>
+          <h2 className="font-medium">Scene {index + 1}</h2>
+          <p className="text-xs text-faint">{meta.description}</p>
+        </div>
       </div>
 
-      <Field
-        label="Narration"
-        htmlFor={narrationId}
-        hint={
-          <span className="flex items-center gap-2">
-            {words} words · about{" "}
-            {estimateNarrationSeconds(scene.narration).toFixed(1)}s spoken
-            {scene.audio ? (
-              <Badge tone="success">
-                <Mic className="size-3" aria-hidden />
-                Voice recorded
-              </Badge>
-            ) : null}
-          </span>
+      <TemplatePicker value={scene.type} onChange={onChangeType} />
+
+      <Section
+        title="Voice-over"
+        description="What the narrator says. Captions follow it word by word."
+        aside={
+          scene.audio ? (
+            <Badge tone="success">
+              <Mic className="size-3" aria-hidden />
+              Recorded
+            </Badge>
+          ) : (
+            <Badge>Not recorded</Badge>
+          )
         }
       >
-        <Textarea
-          id={narrationId}
-          rows={4}
-          value={scene.narration}
-          placeholder="What the voice-over says during this scene."
-          onChange={(event) =>
-            onChange({ ...scene, narration: event.target.value })
+        <Field
+          label="Narration"
+          htmlFor={narrationId}
+          aside={
+            <span className="font-mono text-[11px] text-faint">
+              {words} words · ~
+              {estimateNarrationSeconds(scene.narration).toFixed(1)}s
+            </span>
           }
-        />
-      </Field>
-
-      <TypeFields scene={scene} onChange={onChange} />
-
-      <Field
-        label="Emoji"
-        htmlFor={emojiId}
-        hint="Optional. Shown as the scene's visual."
-      >
-        <div className="flex flex-wrap items-center gap-1.5">
-          <Input
-            id={emojiId}
-            value={scene.emoji ?? ""}
+        >
+          <Textarea
+            id={narrationId}
+            rows={4}
+            value={scene.narration}
+            placeholder="What the voice-over says during this scene."
             onChange={(event) =>
-              onChange({ ...scene, emoji: optional(event.target.value) })
+              onChange({ ...scene, narration: event.target.value })
             }
-            className="w-16 text-center text-lg"
           />
-          {QUICK_EMOJI.map((emoji) => (
-            <button
-              key={emoji}
-              type="button"
-              aria-label={`Use ${emoji}`}
-              onClick={() =>
+        </Field>
+      </Section>
+
+      <Section
+        title="On screen"
+        description="The text and visuals viewers see."
+      >
+        <TypeFields scene={scene} onChange={onChange} />
+      </Section>
+
+      <Section title="Style & timing">
+        <Field
+          label="Emoji"
+          htmlFor={emojiId}
+          hint="Optional. Shown as the scene's visual."
+        >
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Input
+              id={emojiId}
+              value={scene.emoji ?? ""}
+              onChange={(event) =>
+                onChange({ ...scene, emoji: optional(event.target.value) })
+              }
+              className="w-14 text-center text-lg"
+            />
+            {QUICK_EMOJI.map((emoji) => (
+              <button
+                key={emoji}
+                type="button"
+                aria-label={`Use ${emoji}`}
+                aria-pressed={scene.emoji === emoji}
+                onClick={() =>
+                  onChange({
+                    ...scene,
+                    emoji: scene.emoji === emoji ? undefined : emoji,
+                  })
+                }
+                className={`grid size-9 place-items-center rounded-xl text-lg transition-all hover:scale-110 hover:bg-raised ${
+                  scene.emoji === emoji
+                    ? "bg-accent/20 ring-1 ring-accent/50"
+                    : ""
+                }`}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        </Field>
+
+        <Field
+          label="Length"
+          hint="Leave empty to fit the voice-over automatically."
+        >
+          <div className="flex items-center gap-2">
+            <Input
+              type="number"
+              min={1}
+              step={0.5}
+              aria-label="Scene length in seconds"
+              placeholder="Auto"
+              className="w-28"
+              value={scene.durationInSeconds ?? ""}
+              onChange={(event) => {
+                const value = Number(event.target.value);
                 onChange({
                   ...scene,
-                  emoji: scene.emoji === emoji ? undefined : emoji,
-                })
-              }
-              className={`grid size-9 place-items-center rounded-lg text-lg transition-colors hover:bg-raised ${
-                scene.emoji === emoji ? "bg-accent/20" : ""
-              }`}
-            >
-              {emoji}
-            </button>
-          ))}
-        </div>
-      </Field>
-
-      <Field
-        label="Length"
-        hint="Leave empty to fit the voice-over automatically."
-      >
-        <div className="flex items-center gap-2">
-          <Input
-            type="number"
-            min={1}
-            step={0.5}
-            aria-label="Scene length in seconds"
-            placeholder="Auto"
-            className="w-28"
-            value={scene.durationInSeconds ?? ""}
-            onChange={(event) => {
-              const value = Number(event.target.value);
-              onChange({
-                ...scene,
-                durationInSeconds:
-                  event.target.value && value > 0 ? value : undefined,
-              });
-            }}
-          />
-          <span className="text-sm text-muted">seconds</span>
-        </div>
-      </Field>
+                  durationInSeconds:
+                    event.target.value && value > 0 ? value : undefined,
+                });
+              }}
+            />
+            <span className="text-sm text-muted">seconds</span>
+          </div>
+        </Field>
+      </Section>
     </div>
   );
 };

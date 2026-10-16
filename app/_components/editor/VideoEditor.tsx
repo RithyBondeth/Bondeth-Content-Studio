@@ -26,7 +26,8 @@ import {
 import type { KeyStatus as Keys } from "../../../studio/server/env";
 import type { RenderFile } from "../../../studio/server/projects";
 import { recordVoiceAction, saveSpecAction } from "../../actions";
-import { Alert, Button, Input, cx } from "../ui";
+import { useToast } from "../Toast";
+import { Alert, Button, Skeleton, cx } from "../ui";
 import { RenderPanel } from "./RenderPanel";
 import { convertScene, SCENE_META, SCENE_SETTLE_FRAMES } from "./scene-meta";
 import { SceneForm } from "./SceneForm";
@@ -47,9 +48,7 @@ const Preview = dynamic(
   () => import("./Preview").then((module) => module.Preview),
   {
     ssr: false,
-    loading: () => (
-      <div className="aspect-[9/16] w-full animate-pulse rounded-2xl bg-surface" />
-    ),
+    loading: () => <Skeleton className="aspect-[9/16] w-full rounded-[28px]" />,
   },
 );
 
@@ -66,31 +65,87 @@ const describeIssue = (spec: VideoSpecInput) => {
   return `${where}${issue.message}`;
 };
 
+const formatTime = (seconds: number) =>
+  `${Math.floor(seconds / 60)}:${String(Math.round(seconds % 60)).padStart(2, "0")}`;
+
 const SaveIndicator = ({ state }: { state: SaveState }) => {
+  const base =
+    "flex h-8 items-center gap-1.5 rounded-full px-3 text-xs whitespace-nowrap";
   if (state.kind === "saved")
     return (
-      <span className="flex items-center gap-1.5 text-xs text-faint">
+      <span className={cx(base, "text-faint")}>
         <Check className="size-3.5" aria-hidden /> Saved
       </span>
     );
   if (state.kind === "saving" || state.kind === "pending")
     return (
-      <span className="flex items-center gap-1.5 text-xs text-faint">
+      <span className={cx(base, "text-faint")}>
         <Loader2 className="size-3.5 animate-spin" aria-hidden /> Saving…
       </span>
     );
   return (
     <span
-      className="flex max-w-xs items-center gap-1.5 truncate text-xs text-warning"
+      className={cx(base, "max-w-72 bg-warning/10 text-warning")}
       title={state.message}
     >
       <CircleAlert className="size-3.5 shrink-0" aria-hidden />
-      {state.kind === "invalid"
-        ? `Not saved. ${state.message}`
-        : `Couldn't save: ${state.message}`}
+      <span className="truncate">
+        {state.kind === "invalid"
+          ? `Not saved: ${state.message}`
+          : `Couldn't save: ${state.message}`}
+      </span>
     </span>
   );
 };
+
+const FormatToggle = ({
+  value,
+  onChange,
+}: {
+  value: VideoFormat;
+  onChange: (format: VideoFormat) => void;
+}) => (
+  <div
+    className="flex rounded-xl border border-line bg-surface p-0.5"
+    role="group"
+    aria-label="Preview format"
+  >
+    {(["vertical", "landscape"] as const).map((format) => (
+      <button
+        key={format}
+        type="button"
+        aria-pressed={value === format}
+        aria-label={
+          format === "vertical"
+            ? "Vertical preview (9:16)"
+            : "Landscape preview (16:9)"
+        }
+        title={format === "vertical" ? "Vertical 9:16" : "Landscape 16:9"}
+        onClick={() => onChange(format)}
+        className={cx(
+          "flex h-8 items-center gap-1.5 rounded-[10px] px-2.5 text-xs transition-all",
+          value === format
+            ? "bg-raised text-text shadow-sm ring-1 ring-line-strong"
+            : "text-faint hover:text-text",
+        )}
+      >
+        {format === "vertical" ? (
+          <Smartphone className="size-3.5" aria-hidden />
+        ) : (
+          <Monitor className="size-3.5" aria-hidden />
+        )}
+        <span className="hidden xl:inline">
+          {format === "vertical" ? "9:16" : "16:9"}
+        </span>
+      </button>
+    ))}
+  </div>
+);
+
+const isTyping = (target: EventTarget | null) =>
+  target instanceof HTMLElement &&
+  (target.isContentEditable ||
+    ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName));
 
 export const VideoEditor = ({
   slug,
@@ -109,15 +164,13 @@ export const VideoEditor = ({
   initialRenders: RenderFile[];
   keys: Keys;
 }) => {
+  const notify = useToast();
   const [spec, setSpec] = useState<VideoSpecInput>(initialSpec);
   const [selected, setSelected] = useState(0);
   const [format, setFormat] = useState<VideoFormat>("vertical");
   const [saveState, setSaveState] = useState<SaveState>({ kind: "saved" });
   const [voicing, setVoicing] = useState(false);
-  const [notice, setNotice] = useState<{
-    tone: "danger" | "info";
-    text: string;
-  } | null>(null);
+  const [playingFrame, setPlayingFrame] = useState<number | null>(null);
   const playerRef = useRef<PlayerRef>(null);
 
   // --- Saving: debounce edits, and let actions wait for pending saves. ---
@@ -170,11 +223,11 @@ export const VideoEditor = ({
     if (inFlight.current) await inFlight.current;
     const issue = describeIssue(latestSpec.current);
     if (issue) {
-      setNotice({ tone: "danger", text: `Fix this first. ${issue}` });
+      notify({ tone: "error", title: "Fix this first", description: issue });
       return false;
     }
     return true;
-  }, [saveNow]);
+  }, [saveNow, notify]);
 
   // Warn before leaving with unsaved edits.
   useEffect(() => {
@@ -190,15 +243,23 @@ export const VideoEditor = ({
   const lastValid = useRef<VideoSpec | null>(null);
   if (parsed.success) lastValid.current = parsed.data;
   const previewSpec = lastValid.current;
+  const timing = useMemo(
+    () => (previewSpec ? getVideoTiming(previewSpec) : null),
+    [previewSpec],
+  );
 
   const durations = spec.scenes.map((scene) => {
     const result = videoSpecSchema.shape.scenes.element.safeParse(scene);
     return result.success ? getSceneSeconds(result.data) : null;
   });
-  const totalSeconds = previewSpec
-    ? getVideoTiming(previewSpec).total / FPS
-    : 0;
+  const totalSeconds = timing ? timing.total / FPS : 0;
   const voicedCount = spec.scenes.filter((scene) => scene.audio).length;
+  const allVoiced = voicedCount === spec.scenes.length;
+
+  const playingScene =
+    playingFrame === null || !timing
+      ? null
+      : timing.starts.findLastIndex((start) => start <= playingFrame);
 
   // --- Editing ---
   const updateScenes = (update: (scenes: Scene[]) => Scene[]) =>
@@ -219,21 +280,46 @@ export const VideoEditor = ({
       }),
     );
 
-  const seekToScene = (sceneIndex: number) => {
-    if (!previewSpec || sceneIndex >= previewSpec.scenes.length) return;
-    const timing = getVideoTiming(previewSpec);
-    const start = timing.starts[sceneIndex] ?? 0;
-    const length = timing.scenes[sceneIndex] ?? 0;
-    // Land after the scene's fade-in so its content is visible.
-    playerRef.current?.seekTo(
-      start + Math.min(SCENE_SETTLE_FRAMES, Math.floor(length / 2)),
-    );
-  };
+  const seekToScene = useCallback(
+    (sceneIndex: number) => {
+      if (!timing || sceneIndex >= timing.starts.length) return;
+      const start = timing.starts[sceneIndex] ?? 0;
+      const length = timing.scenes[sceneIndex] ?? 0;
+      // Land after the scene's fade-in so its content is visible.
+      playerRef.current?.seekTo(
+        start + Math.min(SCENE_SETTLE_FRAMES, Math.floor(length / 2)),
+      );
+    },
+    [timing],
+  );
 
-  const select = (sceneIndex: number) => {
-    setSelected(sceneIndex);
-    seekToScene(sceneIndex);
-  };
+  const select = useCallback(
+    (sceneIndex: number) => {
+      setSelected(sceneIndex);
+      seekToScene(sceneIndex);
+    },
+    [seekToScene],
+  );
+
+  // Up and down arrows move between scenes when you're not typing.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (
+        isTyping(event.target) ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.altKey
+      )
+        return;
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        const next = selected + (event.key === "ArrowDown" ? 1 : -1);
+        if (next >= 0 && next < spec.scenes.length) select(next);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selected, spec.scenes.length, select]);
 
   const move = (sceneIndex: number, direction: -1 | 1) => {
     const target = sceneIndex + direction;
@@ -255,10 +341,26 @@ export const VideoEditor = ({
   };
 
   const remove = (sceneIndex: number) => {
+    const removed = spec.scenes[sceneIndex] as Scene;
     updateScenes((scenes) => scenes.filter((_, i) => i !== sceneIndex));
     setSelected((current) =>
       Math.max(0, Math.min(current, spec.scenes.length - 2)),
     );
+    notify({
+      tone: "info",
+      title: `Deleted ${SCENE_META[removed.type].label.toLowerCase()} scene`,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          updateScenes((scenes) => [
+            ...scenes.slice(0, sceneIndex),
+            removed,
+            ...scenes.slice(sceneIndex),
+          ]);
+          setSelected(sceneIndex);
+        },
+      },
+    });
   };
 
   const add = (type: SceneType) => {
@@ -272,23 +374,26 @@ export const VideoEditor = ({
   };
 
   const recordVoice = async () => {
-    setNotice(null);
     if (!(await flush())) return;
     setVoicing(true);
     const result = await recordVoiceAction(slug, index);
     setVoicing(false);
     if (!result.ok) {
-      setNotice({ tone: "danger", text: result.error });
+      notify({
+        tone: "error",
+        title: "Couldn't record the voice-over",
+        description: result.error,
+      });
       return;
     }
     skipNextSave.current = true; // The server already saved this version.
     setSpec(result.data.spec);
-    setNotice({
-      tone: "info",
-      text:
+    notify({
+      tone: "success",
+      title:
         result.data.generated === 0
-          ? "The voice-over is already up to date."
-          : `Recorded ${result.data.generated} scene${result.data.generated === 1 ? "" : "s"}.`,
+          ? "Voice-over is already up to date"
+          : `Recorded ${result.data.generated} scene${result.data.generated === 1 ? "" : "s"}`,
     });
   };
 
@@ -296,63 +401,33 @@ export const VideoEditor = ({
 
   return (
     <div className="flex min-h-screen flex-col lg:h-screen">
-      <header className="flex min-h-14 shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-line px-4 py-2">
+      <header className="z-20 flex min-h-16 shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-line bg-bg/80 px-3 py-2 backdrop-blur-xl sm:px-4">
         <Link
           href={`/projects/${slug}`}
-          className="flex min-w-0 items-center gap-1.5 text-sm text-muted hover:text-text"
-          title={projectTitle}
+          className="grid size-9 shrink-0 place-items-center rounded-xl border border-line text-muted transition-colors hover:border-line-strong hover:text-text"
+          aria-label={`Back to ${projectTitle}`}
+          title={`Back to ${projectTitle}`}
         >
-          <ArrowLeft className="size-4 shrink-0" aria-hidden />
-          <span className="hidden max-w-48 truncate md:inline">
-            {projectTitle}
-          </span>
+          <ArrowLeft className="size-4" aria-hidden />
         </Link>
-        <span className="text-faint">/</span>
-        <span className="text-xs text-faint">
-          Video {index + 1} of {videoCount}
-        </span>
-        <Input
-          aria-label="Video title"
-          value={spec.title}
-          onChange={(event) =>
-            setSpec((current) => ({ ...current, title: event.target.value }))
-          }
-          className="h-8 min-w-40 flex-1 border-transparent bg-transparent font-medium hover:border-line lg:max-w-sm"
-        />
-        <div className="ml-auto flex items-center gap-3">
+        <div className="flex min-w-48 flex-1 flex-col">
+          <span className="truncate text-[11px] text-faint">
+            {projectTitle} · Video {index + 1} of {videoCount}
+          </span>
+          <input
+            aria-label="Video title"
+            value={spec.title}
+            onChange={(event) =>
+              setSpec((current) => ({ ...current, title: event.target.value }))
+            }
+            className="-ml-1 w-full max-w-md truncate rounded-md bg-transparent px-1 text-[15px] font-medium transition-colors hover:bg-raised focus:bg-raised focus:outline-none"
+          />
+        </div>
+        <div className="flex items-center gap-2">
           <SaveIndicator state={saveState} />
-          <div
-            className="flex rounded-lg border border-line p-0.5"
-            role="group"
-            aria-label="Preview format"
-          >
-            {(["vertical", "landscape"] as const).map((value) => (
-              <button
-                key={value}
-                type="button"
-                aria-pressed={format === value}
-                title={
-                  value === "vertical" ? "Vertical 9:16" : "Landscape 16:9"
-                }
-                onClick={() => setFormat(value)}
-                className={cx(
-                  "rounded-md p-1.5 transition-colors",
-                  format === value
-                    ? "bg-raised text-text"
-                    : "text-faint hover:text-text",
-                )}
-              >
-                {value === "vertical" ? (
-                  <Smartphone className="size-4" aria-hidden />
-                ) : (
-                  <Monitor className="size-4" aria-hidden />
-                )}
-              </button>
-            ))}
-          </div>
+          <FormatToggle value={format} onChange={setFormat} />
           <Button
-            size="sm"
-            variant="primary"
+            variant={allVoiced ? "secondary" : "primary"}
             loading={voicing}
             disabled={!keys.elevenLabs}
             title={
@@ -361,48 +436,41 @@ export const VideoEditor = ({
                 : "Add ELEVENLABS_API_KEY to .env"
             }
             onClick={() => void recordVoice()}
-            icon={<Mic className="size-3.5" aria-hidden />}
+            icon={
+              allVoiced ? (
+                <Check className="size-4 text-success" aria-hidden />
+              ) : (
+                <Mic className="size-4" aria-hidden />
+              )
+            }
           >
             {voicing
               ? "Recording…"
-              : voicedCount === spec.scenes.length
-                ? "Voice recorded"
-                : "Record voice"}
+              : allVoiced
+                ? "Voice ready"
+                : voicedCount
+                  ? `Record voice (${spec.scenes.length - voicedCount} left)`
+                  : "Record voice"}
           </Button>
         </div>
       </header>
 
-      {notice ? (
-        <div className="px-4 pt-3">
-          <Alert tone={notice.tone}>
-            <span className="flex items-start justify-between gap-3">
-              {notice.text}
-              <button
-                type="button"
-                onClick={() => setNotice(null)}
-                className="text-xs underline"
-              >
-                Dismiss
-              </button>
-            </span>
-          </Alert>
-        </div>
-      ) : null}
-
-      <div className="grid flex-1 grid-cols-1 lg:min-h-0 lg:grid-cols-[280px_minmax(340px,1fr)_auto]">
-        <aside className="border-b border-line p-3 lg:min-h-0 lg:overflow-y-auto lg:border-r lg:border-b-0">
-          <div className="mb-2 flex items-center justify-between px-1 text-xs text-faint">
-            <span>
-              {spec.scenes.length} scenes · {Math.round(totalSeconds)}s
-            </span>
-            <span>
-              Voice {voicedCount}/{spec.scenes.length}
+      <div className="grid flex-1 grid-cols-1 lg:min-h-0 lg:grid-cols-[300px_minmax(380px,1fr)_auto]">
+        <aside
+          aria-label="Scenes"
+          className="border-b border-line bg-surface/30 p-3 lg:min-h-0 lg:overflow-y-auto lg:border-r lg:border-b-0"
+        >
+          <div className="mb-3 flex items-center justify-between px-1">
+            <h2 className="text-sm font-medium">Scenes</h2>
+            <span className="font-mono text-[11px] text-faint">
+              {spec.scenes.length} · {formatTime(totalSeconds)}
             </span>
           </div>
           <SceneList
             scenes={spec.scenes}
             durations={durations}
             selected={selected}
+            playing={playingScene}
             onSelect={select}
             onMove={move}
             onDuplicate={duplicate}
@@ -411,46 +479,74 @@ export const VideoEditor = ({
           />
         </aside>
 
-        <section className="border-b border-line p-5 lg:min-h-0 lg:overflow-y-auto lg:border-r lg:border-b-0">
-          {scene ? (
-            <SceneForm
-              key={selected}
-              scene={scene}
-              index={selected}
-              onChange={(next) => updateScene(selected, next)}
-              onChangeType={(type) =>
-                updateScene(selected, convertScene(scene, type))
-              }
-            />
-          ) : null}
-          <div className="mt-8 flex items-center justify-between rounded-xl border border-line p-3">
-            <span className="flex items-center gap-2 text-sm">
-              <Captions className="size-4 text-accent-bright" aria-hidden />
-              Show captions
-            </span>
-            <input
-              type="checkbox"
-              aria-label="Show captions"
-              checked={spec.captions ?? true}
-              onChange={(event) =>
-                setSpec((current) => ({
-                  ...current,
-                  captions: event.target.checked,
-                }))
-              }
-              className="size-4 accent-accent"
-            />
+        <section
+          aria-label="Scene details"
+          className="border-b border-line lg:min-h-0 lg:overflow-y-auto lg:border-r lg:border-b-0"
+        >
+          <div className="mx-auto flex max-w-2xl flex-col gap-4 p-4 sm:p-6">
+            {scene ? (
+              <SceneForm
+                key={selected}
+                scene={scene}
+                index={selected}
+                onChange={(next) => updateScene(selected, next)}
+                onChangeType={(type) =>
+                  updateScene(selected, convertScene(scene, type))
+                }
+              />
+            ) : null}
+            <label className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl border border-line bg-surface/60 p-4">
+              <span className="flex items-center gap-3">
+                <span className="grid size-9 place-items-center rounded-xl bg-raised text-accent-bright">
+                  <Captions className="size-4" aria-hidden />
+                </span>
+                <span>
+                  <span className="block text-sm font-medium">Captions</span>
+                  <span className="block text-xs text-faint">
+                    Word-by-word captions for the whole video
+                  </span>
+                </span>
+              </span>
+              <input
+                type="checkbox"
+                role="switch"
+                checked={spec.captions ?? true}
+                onChange={(event) =>
+                  setSpec((current) => ({
+                    ...current,
+                    captions: event.target.checked,
+                  }))
+                }
+                className="peer sr-only"
+              />
+              <span
+                aria-hidden
+                className="relative h-6 w-11 shrink-0 rounded-full bg-line-strong transition-colors peer-checked:bg-accent peer-focus-visible:ring-2 peer-focus-visible:ring-accent-bright after:absolute after:top-0.5 after:left-0.5 after:size-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:after:translate-x-5"
+              />
+            </label>
           </div>
         </section>
 
-        <aside className="order-first flex flex-col gap-5 border-b border-line p-5 lg:order-none lg:min-h-0 lg:overflow-y-auto lg:border-b-0">
+        <aside
+          aria-label="Preview and export"
+          className={cx(
+            "relative order-first flex flex-col gap-5 overflow-hidden border-b border-line p-5 lg:order-none lg:min-h-0 lg:overflow-y-auto lg:border-b-0",
+            format === "vertical"
+              ? "lg:w-[min(460px,34vw)]"
+              : "lg:w-[min(640px,44vw)]",
+          )}
+        >
           <div
-            className="mx-auto w-full"
+            className="bg-stage pointer-events-none absolute inset-0 opacity-60"
+            aria-hidden
+          />
+          <div
+            className="relative mx-auto w-full"
             style={{
               width:
                 format === "vertical"
-                  ? "min(380px, calc((100vh - 250px) * 9 / 16))"
-                  : "min(600px, calc((100vh - 250px) * 16 / 9))",
+                  ? "min(340px, calc((100vh - 320px) * 9 / 16))"
+                  : "100%",
             }}
           >
             {previewSpec ? (
@@ -458,6 +554,7 @@ export const VideoEditor = ({
                 spec={previewSpec}
                 format={format}
                 playerRef={playerRef}
+                onPlaybackChange={setPlayingFrame}
               />
             ) : (
               <Alert tone="warning">
@@ -465,12 +562,20 @@ export const VideoEditor = ({
               </Alert>
             )}
           </div>
-          {!parsed.success && previewSpec ? (
-            <p className="text-center text-xs text-warning">
-              Showing the last valid version.
-            </p>
-          ) : null}
-          <div className="mx-auto w-full max-w-sm">
+          <p className="relative text-center text-xs text-faint">
+            {!parsed.success && previewSpec ? (
+              <span className="text-warning">
+                Showing the last valid version
+              </span>
+            ) : (
+              <>
+                Scene {selected + 1} ·{" "}
+                {scene ? SCENE_META[scene.type].label : ""} ·{" "}
+                {formatTime(totalSeconds)} total
+              </>
+            )}
+          </p>
+          <div className="relative">
             <RenderPanel
               slug={slug}
               index={index}

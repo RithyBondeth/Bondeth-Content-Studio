@@ -16,6 +16,8 @@ export const SCENE_SETTLE_FRAMES = 20;
 
 type SceneMeta = {
   label: string;
+  /** Identifies the template in the scene list. */
+  color: string;
   description: string;
   icon: LucideIcon;
   create: () => Scene;
@@ -23,6 +25,7 @@ type SceneMeta = {
 
 export const SCENE_META: Record<SceneType, SceneMeta> = {
   title: {
+    color: "#a78bfa",
     label: "Title",
     description: "The opening hook",
     icon: Heading1,
@@ -33,6 +36,7 @@ export const SCENE_META: Record<SceneType, SceneMeta> = {
     }),
   },
   statement: {
+    color: "#60a5fa",
     label: "Statement",
     description: "One big idea, word by word",
     icon: Type,
@@ -44,6 +48,7 @@ export const SCENE_META: Record<SceneType, SceneMeta> = {
     }),
   },
   list: {
+    color: "#34d399",
     label: "List",
     description: "Points that appear one by one",
     icon: List,
@@ -56,6 +61,7 @@ export const SCENE_META: Record<SceneType, SceneMeta> = {
     }),
   },
   stat: {
+    color: "#fbbf24",
     label: "Stat",
     description: "A number that counts up",
     icon: Hash,
@@ -67,6 +73,7 @@ export const SCENE_META: Record<SceneType, SceneMeta> = {
     }),
   },
   quote: {
+    color: "#e879f9",
     label: "Quote",
     description: "A quote and its author",
     icon: Quote,
@@ -78,6 +85,7 @@ export const SCENE_META: Record<SceneType, SceneMeta> = {
     }),
   },
   comparison: {
+    color: "#fb7185",
     label: "Comparison",
     description: "Two sides, like myth vs. fact",
     icon: Columns2,
@@ -90,6 +98,7 @@ export const SCENE_META: Record<SceneType, SceneMeta> = {
     }),
   },
   code: {
+    color: "#22d3ee",
     label: "Code",
     description: "Code that builds up step by step",
     icon: Code2,
@@ -102,6 +111,7 @@ export const SCENE_META: Record<SceneType, SceneMeta> = {
     }),
   },
   cta: {
+    color: "#fb923c",
     label: "Call to action",
     description: "The closing ask",
     icon: Megaphone,
