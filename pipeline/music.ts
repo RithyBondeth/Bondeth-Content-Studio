@@ -9,16 +9,21 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { MusicMood } from "../src/lib/music";
-import { makeBandPass, makeNoise, toWav } from "./synth";
+import { makeBandPass, makeHighPass, makeNoise, toWav } from "./synth";
 
-/** Beds are soft and low, so a lower rate keeps the files small without losing anything audible. */
+/** Beds are soft background, so a lower rate keeps the files small without losing anything audible. */
 const SAMPLE_RATE = 22050;
 /**
- * Every bed is scaled to the same RMS level, so a given volume in the spec
- * sounds about as loud whichever bed is picked. Peaks stay below MAX_PEAK.
- * Playback volume comes from the spec, not the files.
+ * Most viewers hear these on a phone speaker, which plays little below
+ * about 300 Hz. So the beds keep their energy in the mids, everything below
+ * BASS_CUT is filtered out, and loudness is matched on what a small speaker
+ * plays: every bed has the same RMS above SPEAKER_CUT, so a given volume in
+ * the spec sounds about as loud on a phone whichever bed is picked.
+ * Peaks stay below MAX_PEAK. Playback volume comes from the spec, not the files.
  */
-const TARGET_RMS = 0.16;
+const BASS_CUT = 100;
+const SPEAKER_CUT = 300;
+const TARGET_SPEAKER_RMS = 0.1;
 const MAX_PEAK = 0.9;
 
 type Voice = (t: number) => number;
@@ -40,17 +45,32 @@ const makeLoop = (seconds: number) => {
     if (samples.some((value) => !Number.isFinite(value))) {
       throw new Error("A voice produced a non-finite sample.");
     }
-    const peak = samples.reduce(
+    const output = highPass(samples, BASS_CUT);
+    const peak = output.reduce(
       (max, value) => Math.max(max, Math.abs(value)),
       0,
     );
-    const rms = Math.sqrt(
-      samples.reduce((sum, value) => sum + value * value, 0) / length,
+    const speaker = highPass(output, SPEAKER_CUT);
+    const speakerRms = Math.sqrt(
+      speaker.reduce((sum, value) => sum + value * value, 0) / length,
     );
-    const scale = Math.min(TARGET_RMS / (rms || 1), MAX_PEAK / (peak || 1));
-    return samples.map((value) => value * scale);
+    const scale = Math.min(
+      TARGET_SPEAKER_RMS / (speakerRms || 1),
+      MAX_PEAK / (peak || 1),
+    );
+    return output.map((value) => value * scale);
   };
   return { add, finish };
+};
+
+/**
+ * High-passes a loop. The filter runs over it twice and keeps the second
+ * pass, so its state has settled and the loop point stays seamless.
+ */
+const highPass = (loop: Float32Array, cutoff: number) => {
+  const filter = makeHighPass(cutoff, SAMPLE_RATE);
+  loop.forEach((value) => filter(value));
+  return loop.map((value) => filter(value));
 };
 
 /** Linear attack and release around a note that lasts `duration` seconds. */
@@ -63,14 +83,14 @@ const envelope = (
 
 // --- Voices ---
 
-/** A warm, slowly swelling pad: a soft saw-like stack, doubled and detuned. */
+/** A warm, slowly swelling pad: a saw-like stack, doubled and detuned. */
 const pad =
   (note: number, duration: number): Voice =>
   (t) => {
     const frequency = midi(note);
     let sum = 0;
-    for (let n = 1; n <= 6; n++) {
-      const amplitude = 1 / n ** 1.6;
+    for (let n = 1; n <= 8; n++) {
+      const amplitude = 1 / n ** 1.25;
       sum +=
         amplitude *
         (Math.sin(2 * Math.PI * frequency * 0.997 * n * t) +
@@ -79,14 +99,19 @@ const pad =
     return sum * envelope(t, duration, 1.5, 1.4);
   };
 
-/** A round sine bass with a little second harmonic. */
+/**
+ * A round bass. Its upper harmonics let a phone speaker, which can't play
+ * the fundamental, still carry the bass line.
+ */
 const bass =
   (note: number, duration: number): Voice =>
   (t) => {
     const frequency = midi(note);
     const tone =
       Math.sin(2 * Math.PI * frequency * t) +
-      0.2 * Math.sin(4 * Math.PI * frequency * t);
+      0.5 * Math.sin(2 * Math.PI * 2 * frequency * t) +
+      0.25 * Math.sin(2 * Math.PI * 3 * frequency * t) +
+      0.1 * Math.sin(2 * Math.PI * 4 * frequency * t);
     return tone * envelope(t, duration, 0.01, 0.15) * Math.exp(-t / 1.2);
   };
 
@@ -127,10 +152,20 @@ const bell =
     return tone * Math.min(1, t / 0.01) * Math.exp(-t / 1.4);
   };
 
-/** A gentle kick: a sine that drops from 120 Hz to 50 Hz. */
-const kick = (): Voice => (t) => {
-  const phase = 2 * Math.PI * (50 * t + 70 * 0.03 * (1 - Math.exp(-t / 0.03)));
-  return Math.sin(phase) * Math.exp(-t / 0.16);
+/**
+ * A gentle kick: a sine that drops from 180 Hz to 60 Hz, with a short knock
+ * of filtered noise a phone can play. The knock is unpitched so it never
+ * clashes with the chords.
+ */
+const kick = (seed: number): Voice => {
+  const noise = makeNoise(seed);
+  const filter = makeBandPass(0.8, SAMPLE_RATE);
+  return (t) => {
+    const phase =
+      2 * Math.PI * (60 * t + 120 * 0.025 * (1 - Math.exp(-t / 0.025)));
+    const knock = filter(noise(), 1500) * Math.exp(-t / 0.008);
+    return Math.sin(phase) * Math.exp(-t / 0.14) + 0.6 * knock;
+  };
 };
 
 /** A shaker: a short burst of high band-passed noise. */
@@ -168,10 +203,10 @@ const beds: Record<MusicMood, () => Float32Array> = {
   // 64 BPM, 8 bars in C major: Cmaj7, Am7, Fmaj7, G6, two bars each.
   calm: () => {
     const chords: Chord[] = [
-      { root: 36, tones: [48, 52, 55, 59] },
-      { root: 33, tones: [45, 48, 52, 55] },
-      { root: 29, tones: [41, 45, 48, 52] },
-      { root: 31, tones: [43, 47, 50, 52] },
+      { root: 48, tones: [60, 64, 67, 71] },
+      { root: 45, tones: [57, 60, 64, 67] },
+      { root: 41, tones: [53, 57, 60, 64] },
+      { root: 43, tones: [55, 59, 62, 64] },
     ];
     // Sparse bell notes, as [beat within the two bars, note].
     const melody: [number, number][][] = [
@@ -201,11 +236,11 @@ const beds: Record<MusicMood, () => Float32Array> = {
       const chord = chords[bar / 2]!;
       const length = 8 * beat;
       for (const tone of chord.tones) {
-        add(start, length + 1.4, pad(tone, length + 1.4), 0.22);
+        add(start, length + 1.4, pad(tone, length + 1.4), 0.16);
       }
-      add(start, length + 0.15, bass(chord.root, length + 0.15), 0.5);
+      add(start, length + 0.15, bass(chord.root, length + 0.15), 0.3);
       for (const [at, note] of melody[bar / 2]!) {
-        add(start + at * beat, 3, bell(note), 0.18);
+        add(start + at * beat, 3, bell(note), 0.32);
       }
     });
   },
@@ -213,10 +248,10 @@ const beds: Record<MusicMood, () => Float32Array> = {
   // 120 BPM, 16 bars in D major: D, A, Bm, G, two bars each, played twice.
   upbeat: () => {
     const chords: Chord[] = [
-      { root: 38, tones: [62, 66, 69, 74] },
-      { root: 33, tones: [61, 64, 69, 73] },
-      { root: 35, tones: [62, 66, 71, 74] },
-      { root: 31, tones: [62, 67, 71, 74] },
+      { root: 50, tones: [62, 66, 69, 74] },
+      { root: 45, tones: [61, 64, 69, 73] },
+      { root: 47, tones: [62, 66, 71, 74] },
+      { root: 43, tones: [62, 67, 71, 74] },
     ];
     const arpeggio = [0, 1, 2, 1, 3, 2, 1, 2];
     return bed(120, 16, (add, bar, beat, start) => {
@@ -224,15 +259,17 @@ const beds: Record<MusicMood, () => Float32Array> = {
       if (bar % 2 === 0) {
         const length = 8 * beat;
         for (const tone of chord.tones.slice(0, 3)) {
-          add(start, length + 1.4, pad(tone - 12, length + 1.4), 0.06);
+          add(start, length + 1.4, pad(tone, length + 1.4), 0.05);
         }
       }
       arpeggio.forEach((index, step) => {
         add(start + step * (beat / 2), 1, pluck(chord.tones[index]!), 0.3);
       });
       for (let b = 0; b < 4; b++) {
-        add(start + b * beat, beat, bass(chord.root, beat * 0.9), 0.45);
-        if (b % 2 === 0) add(start + b * beat, 0.6, kick(), 0.5);
+        add(start + b * beat, beat, bass(chord.root, beat * 0.9), 0.2);
+        if (b % 2 === 0) {
+          add(start + b * beat, 0.6, kick(1000 + bar * 4 + b), 0.35);
+        }
         add(
           start + (b + 0.5) * beat,
           0.15,
@@ -246,10 +283,10 @@ const beds: Record<MusicMood, () => Float32Array> = {
   // 90 BPM, 12 bars in A minor: Am, F, Dm, E, one bar each, played three times.
   curious: () => {
     const chords: Chord[] = [
-      { root: 33, tones: [57, 60, 64] },
-      { root: 29, tones: [57, 60, 65] },
-      { root: 26, tones: [57, 62, 65] },
-      { root: 28, tones: [56, 59, 64] },
+      { root: 45, tones: [57, 60, 64] },
+      { root: 41, tones: [57, 60, 65] },
+      { root: 38, tones: [57, 62, 65] },
+      { root: 40, tones: [56, 59, 64] },
     ];
     // A syncopated mallet figure, as [eighth note in the bar, chord tone, octave up].
     const figure: [number, number, number][] = [
@@ -263,18 +300,18 @@ const beds: Record<MusicMood, () => Float32Array> = {
       const chord = chords[bar % chords.length]!;
       const length = 4 * beat;
       for (const tone of chord.tones) {
-        add(start, length + 1, pad(tone - 12, length + 1), 0.07);
+        add(start, length + 1, pad(tone, length + 1), 0.05);
       }
       for (const [eighth, index, octave] of figure) {
         add(
           start + eighth * (beat / 2),
           1.5,
-          mallet(chord.tones[index]! + octave - 12),
+          mallet(chord.tones[index]! + octave),
           0.32,
         );
       }
-      add(start, 2 * beat, bass(chord.root, 1.6 * beat), 0.5);
-      add(start + 2.5 * beat, 1.5 * beat, bass(chord.root, 1.2 * beat), 0.4);
+      add(start, 2 * beat, bass(chord.root, 1.6 * beat), 0.3);
+      add(start + 2.5 * beat, 1.5 * beat, bass(chord.root, 1.2 * beat), 0.25);
     });
   },
 };

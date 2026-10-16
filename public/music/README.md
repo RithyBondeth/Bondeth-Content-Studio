@@ -25,10 +25,17 @@ All three files are dedicated to the public domain under
 can copy, modify and use them, including commercially, without asking or
 crediting anyone.
 
-Format: mono, 16-bit PCM WAV at 22.05 kHz, all scaled to the same RMS level
-(about -18 LUFS) so they sound equally loud at the same volume. Playback
-volume is set per video in the spec (`music.volume`, 0.15 by default), not in
-the files.
+Format: mono, 16-bit PCM WAV at 22.05 kHz. Playback volume is set per video
+in the spec (`music.volume`, 0.15 by default), not in the files.
+
+Mixed for phone speakers: most viewers watch on a phone, which plays almost
+nothing below about 300 Hz. So the bass lines and pads sit an octave higher
+than a full-range mix would put them, the bass has upper harmonics that
+carry its line on a small speaker, and everything below 100 Hz is filtered
+out. Loudness is matched on what a phone plays: every bed has the same level
+above 300 Hz (about -21 LUFS there, -18 to -19 LUFS full range), so a given
+volume sounds equally loud whichever bed is picked.
+`pipeline/music-beds.test.ts` checks both.
 
 Tracks you upload in the editor are not stored here: they go in the video's
 media folder under `public/content/`, next to its voice-overs.
