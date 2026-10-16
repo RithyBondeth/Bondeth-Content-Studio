@@ -228,8 +228,18 @@ const render = async (planSlug: string) => {
     }
     for (const format of formats) {
       const output = outputPath(file, index, format);
-      log(`  ${index + 1}. ${title} (${format})`);
-      await renderVideo(spec, format, output);
+      let lastLogged = "";
+      await renderVideo(spec, format, output, ({ stage, progress }) => {
+        // "preparing", then every 10%, so the log stays short.
+        const label =
+          stage === "bundling"
+            ? "preparing"
+            : `${Math.floor(progress * 10) * 10}%`;
+        if (label !== lastLogged) {
+          lastLogged = label;
+          log(`  ${index + 1}. ${title} (${format}): ${label}`);
+        }
+      });
       rendered.push(output);
     }
   }

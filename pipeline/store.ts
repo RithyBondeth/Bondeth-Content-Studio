@@ -12,6 +12,11 @@ export type PlanFile = {
   createdAt: string;
   options: PlanOptions;
   plan: ContentPlan;
+  /**
+   * Folder name for each video, parallel to plan.videos. Stored so renaming
+   * or reordering videos doesn't lose their scripts.
+   */
+  videoKeys?: string[];
 };
 
 export type PlanOptions = {
@@ -35,15 +40,40 @@ export const planDir = (planSlug: string) => path.join(CONTENT_DIR, planSlug);
 const planFile = (planSlug: string) =>
   path.join(planDir(planSlug), "plan.json");
 
-/** "03-why-is-the-sky-blue": the folder name for one video in a plan. */
+/** Picks a folder name for a new video that no other video in the plan uses. */
+export const newVideoKey = (title: string, taken: string[]) => {
+  const base = slugify(title, 40);
+  let key = base;
+  for (let n = 2; taken.includes(key); n++) {
+    key = `${base}-${n}`;
+  }
+  return key;
+};
+
+/** Gives every video a folder name, keeping the ones it already has. */
+export const withVideoKeys = (plan: PlanFile): PlanFile => {
+  const keys: string[] = [];
+  plan.plan.videos.forEach((video, index) => {
+    keys.push(
+      plan.videoKeys?.[index] ??
+        newVideoKey(
+          `${String(index + 1).padStart(2, "0")}-${video.title}`,
+          keys,
+        ),
+    );
+  });
+  return { ...plan, videoKeys: keys };
+};
+
+/** The folder name for one video in a plan, e.g. "03-why-is-the-sky-blue". */
 export const videoKey = (plan: PlanFile, index: number) => {
-  const video = plan.plan.videos[index];
-  if (!video) {
+  if (!plan.plan.videos[index]) {
     throw new Error(
       `Plan "${plan.slug}" has ${plan.plan.videos.length} videos; there is no video ${index + 1}.`,
     );
   }
-  return `${String(index + 1).padStart(2, "0")}-${slugify(video.title, 40)}`;
+  const key = withVideoKeys(plan).videoKeys![index]!;
+  return key;
 };
 
 export const specPath = (plan: PlanFile, index: number) =>
@@ -83,7 +113,7 @@ export const loadPlan = async (planSlug: string): Promise<PlanFile> => {
       `No plan named "${planSlug}". ${plans.length ? `Plans: ${plans.join(", ")}` : 'Create one with: npm run pipeline -- plan "your idea"'}`,
     );
   }
-  return readJson<PlanFile>(file);
+  return withVideoKeys(await readJson<PlanFile>(file));
 };
 
 export const listPlans = async (): Promise<string[]> => {

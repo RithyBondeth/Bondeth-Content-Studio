@@ -41,17 +41,35 @@ npm install
 cp .env.example .env
 ```
 
-Add your keys to `.env`, then make your first videos:
+Add your keys to `.env`, then open the studio:
+
+```bash
+npm run studio
+```
+
+Go to [http://localhost:3100](http://localhost:3100). No keys yet? Click **Try the example project** to explore the editor, preview, and export without them.
+
+## The web studio
+
+The studio walks you through the whole process in your browser:
+
+1. **New project:** describe what you want to teach, choose how many videos and the language, and Claude writes a content plan.
+2. **Project:** review the plan, edit titles and hooks, then write scripts for one video or all of them. You can also add a video and write it yourself.
+3. **Editor:** a list of scenes, a form for the selected scene, and a live preview that updates as you type. Add, reorder, duplicate, and delete scenes, switch a scene's template, and edit narration, on-screen text, emoji, and timing. Changes save automatically.
+4. **Voice:** record the narration with ElevenLabs. Only scenes whose narration changed are re-recorded.
+5. **Export:** render vertical or landscape MP4s on your computer, with progress, then play or download them.
+
+The studio runs locally and stores everything in this folder, the same files the command line uses.
+
+## Command line
+
+Everything the studio does is also available from the terminal. To go from an idea to finished videos in one command:
 
 ```bash
 npm run pipeline -- make "Everyday science for curious teenagers" --videos 3
 ```
 
-The finished videos are written to `out/<plan>/`.
-
-## Step by step
-
-Running each step on its own lets you review and edit between steps.
+The finished videos are written to `out/<plan>/`. Running each step on its own lets you review and edit between steps.
 
 ```bash
 # 1. Plan a series. Prints the plan and saves content/<plan>/plan.json.
@@ -146,13 +164,20 @@ To add background music, put an audio file under `public/` and add `"music": { "
 ## Project structure
 
 ```
-pipeline/                 # The idea → video CLI (runs in Node)
+app/                      # The web studio (Next.js)
+├── page.tsx              # Home: new project and project list
+├── projects/             # Project overview and video editor pages
+├── actions.ts            # Server actions the UI calls
+└── _components/          # UI components, including the editor
+studio/server/            # Studio server code: projects, render jobs, key status
+pipeline/                 # The idea → video pipeline (runs in Node)
 ├── cli.ts                # Commands: plan, script, preview, voice, render, make, list
 ├── prompts.ts            # Instructions given to Claude
 ├── schemas.ts            # The plan and script formats Claude must return
 ├── plan.ts / script.ts   # Claude steps
 ├── voice.ts              # ElevenLabs voice-over and word timings
-├── render.ts             # Calls the Remotion CLI
+├── render.ts             # Renders with Remotion, reporting progress
+├── render-worker.ts      # Runs one render in its own process, for the studio
 └── store.ts              # Where plans, specs, and media are saved
 src/                      # The Remotion video app
 ├── spec/schema.ts        # The video spec format (zod)
@@ -171,6 +196,7 @@ out/                      # Rendered videos (git-ignored)
 
 | Command                         | Description                            |
 | ------------------------------- | -------------------------------------- |
+| `npm run studio`                | Open the web studio on port 3100       |
 | `npm run pipeline -- <command>` | Run the idea → video pipeline          |
 | `npm run dev`                   | Open Remotion Studio with the examples |
 | `npm run render -- <id>`        | Render a composition directly          |
@@ -180,12 +206,12 @@ out/                      # Rendered videos (git-ignored)
 
 ## Roadmap
 
-| Stage                     | Goal                                         | Highlights                                                                     |
-| ------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------ |
-| **1. Pipeline** (current) | Idea to finished video from the command line | Content plans, scripts, 8 scene types, voice-over, captions, both formats      |
-| **2. Richer visuals**     | Videos that look less templated              | Stock and AI images, icons, charts, more transitions, background music library |
-| **3. Web studio**         | Anyone can use it, no terminal needed        | Browser editor with live preview, brand kits, cloud rendering, accounts        |
-| **4. Publishing**         | From plan to posted                          | Captions and hashtags per platform, scheduling, performance tracking           |
+| Stage                                      | Goal                                               | Highlights                                                                             |
+| ------------------------------------------ | -------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| **1. Pipeline and local studio** (current) | Idea to finished video, in the browser or terminal | Content plans, scripts, 8 scene types, voice-over, captions, live editor, local export |
+| **2. Richer visuals**                      | Videos that look less templated                    | Stock and AI images, icons, charts, more transitions, background music library         |
+| **3. Hosted studio**                       | Anyone can use it without installing anything      | Accounts, brand kits, cloud rendering, sharing                                         |
+| **4. Publishing**                          | From plan to posted                                | Captions and hashtags per platform, scheduling, performance tracking                   |
 
 ## Costs
 

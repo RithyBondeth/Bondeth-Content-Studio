@@ -8,3 +8,8 @@ out
 content
 public/content
 !.env.example
+
+# Next.js
+.next
+next-env.d.ts
+*.tsbuildinfo

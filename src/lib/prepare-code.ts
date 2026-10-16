@@ -34,3 +34,27 @@ export const prepareCodeSteps = async (
     })),
   );
 };
+
+/**
+ * Same shape as prepareCodeSteps, without syntax colors. Synchronous, so a
+ * live preview can show code immediately while highlighting loads.
+ */
+export const plainCodeSteps = (steps: CodeStep[]): PreparedCodeStep[] => {
+  const plainLines = steps.map((step) =>
+    normalizeCode(step.code).split(/\r?\n/),
+  );
+  return steps.map((step, index) => ({
+    lines: plainLines[index]!.map((line) => [{ content: line }]),
+    addedLines: findAddedLines(plainLines[index - 1] ?? [], plainLines[index]!),
+    highlightedLines: safeLineRanges(step.highlight),
+  }));
+};
+
+/** Like parseLineRanges, but ignores a half-typed range instead of throwing. */
+const safeLineRanges = (ranges: string | undefined) => {
+  try {
+    return parseLineRanges(ranges);
+  } catch {
+    return [];
+  }
+};
