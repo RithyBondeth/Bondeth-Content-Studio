@@ -52,3 +52,27 @@ export const toWav = (samples: Float32Array, sampleRate: number) => {
   header.writeUInt32LE(data.length, 40);
   return Buffer.concat([header, data]);
 };
+
+/** Second-order Butterworth high-pass (RBJ biquad) at a fixed cutoff. */
+export const makeHighPass = (cutoff: number, sampleRate: number) => {
+  const w = (2 * Math.PI * cutoff) / sampleRate;
+  const alpha = Math.sin(w) / Math.SQRT2;
+  const cos = Math.cos(w);
+  const a0 = 1 + alpha;
+  const b0 = (1 + cos) / 2 / a0;
+  const b1 = -(1 + cos) / a0;
+  const a1 = (-2 * cos) / a0;
+  const a2 = (1 - alpha) / a0;
+  let x1 = 0;
+  let x2 = 0;
+  let y1 = 0;
+  let y2 = 0;
+  return (input: number) => {
+    const output = b0 * input + b1 * x1 + b0 * x2 - a1 * y1 - a2 * y2;
+    x2 = x1;
+    x1 = input;
+    y2 = y1;
+    y1 = output;
+    return output;
+  };
+};
