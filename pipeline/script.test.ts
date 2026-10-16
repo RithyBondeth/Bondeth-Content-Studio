@@ -6,6 +6,7 @@ test("converts Claude's draft into a valid spec, dropping nulls", () => {
   const spec = draftToSpec(
     {
       title: "Test",
+      music: "curious",
       scenes: [
         {
           type: "title",
@@ -67,6 +68,7 @@ test("converts Claude's draft into a valid spec, dropping nulls", () => {
     "five",
     "six",
   ]);
+  assert.deepEqual(spec.music, { src: "music/curious.wav", volume: 0.15 });
   assert.deepEqual(code?.type === "code" && code.steps, [
     { code: "print(1)", highlight: undefined, cue: undefined },
     { code: "print(2)", highlight: "1", cue: "then two" },
@@ -78,6 +80,7 @@ test("rejects drafts that can't become a valid spec", () => {
     draftToSpec(
       {
         title: "Broken",
+        music: "none",
         scenes: [
           {
             type: "list",
@@ -94,4 +97,25 @@ test("rejects drafts that can't become a valid spec", () => {
       "en",
     ),
   );
+});
+
+test("leaves music off when the draft picks none", () => {
+  const spec = draftToSpec(
+    {
+      title: "Quiet",
+      music: "none",
+      scenes: [
+        {
+          type: "title",
+          heading: "Hi",
+          subheading: null,
+          narration: "Hi.",
+          emoji: null,
+          transition: "fade",
+        },
+      ],
+    },
+    "en",
+  );
+  assert.equal(spec.music, undefined);
 });

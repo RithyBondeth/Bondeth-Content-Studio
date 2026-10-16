@@ -1,9 +1,15 @@
 import "server-only";
+import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { examples } from "../../src/examples";
 import type { VideoSpecInput } from "../../src/spec/schema";
 import { FORMAT_NAMES, type VideoFormat } from "../../src/lib/formats";
+import {
+  MAX_MUSIC_UPLOAD_BYTES,
+  MUSIC_UPLOAD_TYPES,
+  musicUploadFileName,
+} from "../../src/lib/music";
 import { OUT_DIR, PUBLIC_DIR, MEDIA_SUBDIR } from "../../pipeline/config";
 import type { ContentPlan } from "../../pipeline/schemas";
 import {
@@ -11,9 +17,11 @@ import {
   listPlans,
   loadPlan,
   loadSpec,
+  mediaDir,
   newVideoKey,
   outputPath,
   planDir,
+  publicPath,
   savePlan,
   saveSpec,
   uniquePlanSlug,
@@ -220,6 +228,48 @@ export const updatePlanContent = async (slug: string, content: ContentPlan) => {
     throw new Error("Adding or removing videos isn't supported here.");
   }
   await savePlan({ ...plan, plan: content });
+};
+
+/**
+ * Stores an uploaded music track in the video's media folder, next to its
+ * voice-overs, and returns its src for the spec. The same file uploaded twice
+ * is stored once.
+ */
+export const saveMusicUpload = async (
+  slug: string,
+  index: number,
+  fileName: string,
+  bytes: Buffer,
+): Promise<string> => {
+  // Only known plans, so the slug can't point outside content/.
+  if (!(await listPlans()).includes(slug)) {
+    throw new Error("That project doesn't exist.");
+  }
+  const plan = await loadPlan(slug);
+  if (!Number.isInteger(index) || !plan.plan.videos[index]) {
+    throw new Error("That video doesn't exist.");
+  }
+  if (bytes.length === 0) throw new Error("That file is empty.");
+  if (bytes.length > MAX_MUSIC_UPLOAD_BYTES) {
+    throw new Error(
+      `Music files can be up to ${MAX_MUSIC_UPLOAD_BYTES / 1024 / 1024} MB.`,
+    );
+  }
+  const hash = createHash("sha256").update(bytes).digest("hex");
+  const name = musicUploadFileName(fileName, hash);
+  if (!name) {
+    const formats = Object.keys(MUSIC_UPLOAD_TYPES)
+      .map((extension) => extension.toUpperCase())
+      .join(", ");
+    throw new Error(`Upload an audio file: ${formats}.`);
+  }
+  const src = path.posix.join(mediaDir(plan, index), name);
+  const file = publicPath(src);
+  if (!(await exists(file))) {
+    await fs.mkdir(path.dirname(file), { recursive: true });
+    await fs.writeFile(file, bytes);
+  }
+  return src;
 };
 
 /** Deletes a project's plan, scripts, voice-overs, and renders. */
