@@ -1,34 +1,55 @@
-import type { Lesson } from "../lessons/types";
+import type { Scene, VideoSpec } from "../spec/schema";
 
 export const FPS = 30;
 
-const INTRO_SECONDS = 3.5;
-const OUTRO_SECONDS = 4;
-const DEFAULT_STEP_SECONDS = 5;
+/** Pause after each scene's voice-over before the next scene starts. */
+const AUDIO_TAIL_SECONDS = 0.35;
+/** Reading speed used to size scenes that have no audio yet. */
+const WORDS_PER_SECOND = 2.6;
+const MIN_SCENE_SECONDS = 2.5;
+const MIN_CODE_STEP_SECONDS = 2.5;
 
-/** Length of the fade between intro, walkthrough, and outro. */
-export const TRANSITION_FRAMES = 15;
+export const countWords = (text: string) =>
+  text.split(/\s+/).filter(Boolean).length;
 
-export type LessonTiming = {
-  intro: number;
-  steps: number[];
-  walkthrough: number;
-  outro: number;
+/** Estimated narration length when there is no audio yet. */
+export const estimateNarrationSeconds = (narration: string) =>
+  countWords(narration) / WORDS_PER_SECOND;
+
+export const getSceneSeconds = (scene: Scene): number => {
+  const fromContent =
+    scene.type === "code" ? scene.steps.length * MIN_CODE_STEP_SECONDS : 0;
+  const fromNarration = scene.audio
+    ? scene.audio.durationInSeconds + AUDIO_TAIL_SECONDS
+    : estimateNarrationSeconds(scene.narration) + 0.5;
+
+  // An explicit duration wins, but never cuts off the voice-over.
+  if (scene.durationInSeconds !== undefined) {
+    return scene.audio
+      ? Math.max(scene.durationInSeconds, fromNarration)
+      : scene.durationInSeconds;
+  }
+
+  return Math.max(MIN_SCENE_SECONDS, fromNarration, fromContent);
+};
+
+export type VideoTiming = {
+  /** Length of each scene, in frames. */
+  scenes: number[];
+  /** First frame of each scene. */
+  starts: number[];
   total: number;
 };
 
-export const getLessonTiming = (lesson: Lesson): LessonTiming => {
-  const toFrames = (seconds: number) => Math.round(seconds * FPS);
-
-  const intro = toFrames(INTRO_SECONDS);
-  const outro = toFrames(OUTRO_SECONDS);
-  const steps = lesson.steps.map((step) =>
-    toFrames(step.durationInSeconds ?? DEFAULT_STEP_SECONDS),
+export const getVideoTiming = (spec: VideoSpec): VideoTiming => {
+  const scenes = spec.scenes.map((scene) =>
+    Math.round(getSceneSeconds(scene) * FPS),
   );
-  const walkthrough = steps.reduce((sum, frames) => sum + frames, 0);
-
-  // Each of the two transitions overlaps the scenes on either side of it.
-  const total = intro + walkthrough + outro - 2 * TRANSITION_FRAMES;
-
-  return { intro, steps, walkthrough, outro, total };
+  const starts: number[] = [];
+  let total = 0;
+  for (const frames of scenes) {
+    starts.push(total);
+    total += frames;
+  }
+  return { scenes, starts, total };
 };

@@ -1,37 +1,54 @@
 import { Composition, Folder } from "remotion";
 import {
-  calculateLessonMetadata,
-  LessonVideo,
-} from "./compositions/LessonVideo";
-import { lessons } from "./lessons";
+  calculateExplainerMetadata,
+  ExplainerVideo,
+} from "./compositions/ExplainerVideo";
+import { examples } from "./examples";
+import { FORMAT_NAMES, FORMATS, type VideoFormat } from "./lib/formats";
 import { FPS } from "./lib/timing";
 
-const formats = [
-  { name: "landscape", width: 1920, height: 1080 },
-  { name: "vertical", width: 1080, height: 1920 },
-] as const;
+const ExplainerComposition: React.FC<{
+  id: string;
+  format: VideoFormat;
+  spec: (typeof examples)[number]["spec"];
+}> = ({ id, format, spec }) => (
+  <Composition
+    id={id}
+    component={ExplainerVideo}
+    width={FORMATS[format].width}
+    height={FORMATS[format].height}
+    fps={FPS}
+    // Replaced by calculateExplainerMetadata.
+    durationInFrames={1}
+    defaultProps={{ spec }}
+    calculateMetadata={calculateExplainerMetadata}
+  />
+);
 
 export const RemotionRoot: React.FC = () => {
   return (
     <>
-      {lessons.map((lesson) => (
-        <Folder key={lesson.slug} name={lesson.slug}>
-          {formats.map((format) => (
-            <Composition
-              key={format.name}
-              id={`${lesson.slug}-${format.name}`}
-              component={LessonVideo}
-              width={format.width}
-              height={format.height}
-              fps={FPS}
-              // Replaced by calculateLessonMetadata.
-              durationInFrames={1}
-              defaultProps={{ lesson }}
-              calculateMetadata={calculateLessonMetadata}
-            />
-          ))}
-        </Folder>
+      {/* The pipeline renders these, passing a spec with --props. */}
+      {FORMAT_NAMES.map((format) => (
+        <ExplainerComposition
+          key={format}
+          id={`explainer-${format}`}
+          format={format}
+          spec={examples[0]!.spec}
+        />
       ))}
+      <Folder name="examples">
+        {examples.map((example) =>
+          FORMAT_NAMES.map((format) => (
+            <ExplainerComposition
+              key={`${example.id}-${format}`}
+              id={`${example.id}-${format}`}
+              format={format}
+              spec={example.spec}
+            />
+          )),
+        )}
+      </Folder>
     </>
   );
 };

@@ -12,7 +12,9 @@ export const useLayout = () => {
     height,
     isVertical,
     unit,
-    paddingX: (isVertical ? 64 : 120) * unit,
-    paddingY: (isVertical ? 140 : 72) * unit,
+    paddingX: (isVertical ? 72 : 140) * unit,
+    paddingTop: (isVertical ? 220 : 90) * unit,
+    /** Space kept free at the bottom for captions. */
+    captionZone: (isVertical ? 560 : 230) * unit,
   };
 };

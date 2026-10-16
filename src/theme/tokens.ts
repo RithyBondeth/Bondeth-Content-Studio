@@ -9,6 +9,8 @@ export const theme = {
     text: "#E5E7EB",
     textMuted: "#9CA3AF",
     accent: "#7C5CFF",
+    // Lighter accent for text on the dark background.
+    accentBright: "#A78BFA",
     accentText: "#FFFFFF",
     lineHighlight: "rgba(124, 92, 255, 0.16)",
     lineHighlightBorder: "#7C5CFF",

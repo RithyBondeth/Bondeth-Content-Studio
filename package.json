@@ -2,7 +2,7 @@
   "name": "bondeth-content-studio",
   "version": "0.1.0",
   "private": true,
-  "description": "A code-first video studio for developer and tech creators, built on Remotion.",
+  "description": "Turn an idea into a content plan, scripts, voice-over, and animated explainer videos. Built on Claude, ElevenLabs, and Remotion.",
   "license": "MIT",
   "author": "Rithy Bondeth",
   "engines": {
@@ -13,25 +13,31 @@
     "render": "remotion render",
     "still": "remotion still",
     "typecheck": "tsc",
-    "lint": "eslint src",
+    "lint": "eslint src pipeline",
     "format": "prettier --write .",
-    "check": "npm run typecheck && npm run lint"
+    "check": "npm run typecheck && npm run lint",
+    "pipeline": "tsx pipeline/cli.ts",
+    "test": "node --import tsx --test \"pipeline/**/*.test.ts\" \"src/**/*.test.ts\""
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.135.0",
     "@remotion/cli": "4.0.536",
     "@remotion/google-fonts": "4.0.536",
     "@remotion/transitions": "4.0.536",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "remotion": "4.0.536",
-    "shiki": "^4.5.0"
+    "shiki": "^4.5.0",
+    "zod": "4.5.4"
   },
   "devDependencies": {
     "@remotion/eslint-config-flat": "4.0.536",
+    "@types/node": "^22.20.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "eslint": "^10.13.0",
     "prettier": "^3.9.10",
+    "tsx": "^4.23.15",
     "typescript": "^6.0.3"
   }
 }

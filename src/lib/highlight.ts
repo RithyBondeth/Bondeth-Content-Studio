@@ -1,4 +1,8 @@
-import { createHighlighterCore, type HighlighterCore } from "shiki/core";
+import {
+  createHighlighterCore,
+  type HighlighterCore,
+  type LanguageRegistration,
+} from "shiki/core";
 import { createJavaScriptRegexEngine } from "shiki/engine/javascript";
 import bash from "shiki/langs/bash.mjs";
 import css from "shiki/langs/css.mjs";
@@ -15,9 +19,11 @@ import typescript from "shiki/langs/typescript.mjs";
 import yaml from "shiki/langs/yaml.mjs";
 import githubDarkDefault from "shiki/themes/github-dark-default.mjs";
 import { theme } from "../theme/tokens";
+import type { SupportedLanguage } from "./languages";
 
-// Only these languages are bundled. To support another one, import it above and add it here.
-const languages = {
+// Only these languages are bundled. To support another one, import it above,
+// add it here, and add its name to lib/languages.ts.
+const languages: Record<SupportedLanguage, LanguageRegistration[]> = {
   bash,
   css,
   go,
@@ -32,8 +38,6 @@ const languages = {
   typescript,
   yaml,
 };
-
-export type SupportedLanguage = keyof typeof languages;
 
 /** A highlighted piece of a line. Plain JSON so it can travel through composition props. */
 export type CodeToken = {

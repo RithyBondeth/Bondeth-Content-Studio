@@ -2,13 +2,14 @@
 
 # Bondeth Content Studio
 
-**A code-first video studio for developer and tech creators.**
+**Turn one idea into a content plan, then into finished explainer videos.**
 
-Turn code snippets into polished, on-brand coding videos for YouTube, Shorts, TikTok, Reels, and LinkedIn.
+An AI content studio for educators and explainers: Claude plans the series and writes the scripts, ElevenLabs records the voice-over, and Remotion renders animated, captioned videos for TikTok, YouTube Shorts, Reels, and YouTube.
 
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
 ![React](https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=white)
 ![Remotion](https://img.shields.io/badge/Remotion-0B84F3?style=for-the-badge&logo=remotion&logoColor=white)
+![Claude](https://img.shields.io/badge/Claude-D97757?style=for-the-badge&logo=claude&logoColor=white)
 
 </div>
 
@@ -16,160 +17,179 @@ Turn code snippets into polished, on-brand coding videos for YouTube, Shorts, Ti
 
 ## Why
 
-Developers who want to teach online hit the same wall: general video editors are bad at code. Animating a code walkthrough by hand in a timeline editor takes hours, and redoing it when the code changes takes hours again.
+Most people who want to teach online get stuck in the same places: deciding what to post, writing the script, and editing the video. Bondeth Content Studio handles all three, while leaving you in control of every step.
 
-Bondeth Content Studio treats a video like source code. You describe a lesson as a list of code steps with captions, and the studio renders a branded video with syntax highlighting, animated line reveals, and focus highlights, in both landscape and vertical formats. Because lessons are code, they live in git, are easy to review, and can be updated in minutes.
+1. **Plan:** describe your idea, and Claude turns it into a content series with an audience, themes, a posting schedule, and a list of videos with hooks.
+2. **Script:** Claude writes each video as a sequence of scenes (title, list, statistic, comparison, code, and more), with narration and on-screen text.
+3. **Voice:** ElevenLabs records the narration and returns word timings for the captions.
+4. **Render:** Remotion turns everything into an animated MP4 with word-by-word captions, in vertical (9:16) and landscape (16:9).
+
+Every step writes plain JSON files you can review and edit before moving on.
 
 ## Who it's for
 
-- Developers starting a YouTube, TikTok, or LinkedIn channel
-- DevRel teams producing tutorials and product walkthroughs
-- Course creators and instructors who teach programming
-
-## Features
-
-**Available now (Stage 1)**
-
-- **Lessons as data.** Write a lesson as a list of steps, each with code, a caption, and optional highlighted lines.
-- **Animated code walkthroughs.** Lines that are new in a step animate in; highlighted lines come into focus while the rest dim.
-- **Syntax highlighting** with [Shiki](https://shiki.style/) for TypeScript, TSX, JavaScript, Python, Go, Rust, Bash, SQL, and more.
-- **Landscape and vertical** (16:9 and 9:16) from the same lesson, with code automatically sized to fit.
-- **Branded intro, lower third, and outro** driven by one brand file.
-- **Design tokens** for colors, fonts, and radii, so every video stays consistent.
-- **MP4 rendering** with Remotion.
-
-## Roadmap
-
-| Stage                          | Goal                                 | Highlights                                                                                                      |
-| ------------------------------ | ------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
-| **1. Code toolkit** (current)  | Make great coding videos from code   | Templates, code walkthroughs, both formats, CLI rendering                                                       |
-| **2. Content-first authoring** | Write lessons without touching React | Lessons in Markdown/MDX, captions/subtitles, thumbnails, more scene types (terminal, diagrams, browser preview) |
-| **3. Web studio**              | Creators who don't code can use it   | Browser editor with live preview, brand kits, cloud rendering, accounts                                         |
-| **4. AI assist**               | Go from idea to video faster         | Script and step generation from a topic, voice-over, auto-cutting long videos into Shorts                       |
+Educators, teachers, coaches, and anyone who explains things: science, history, finance, languages, programming, and how-tos. The videos are animated explainers with no presenter on camera, so you never need to film yourself.
 
 ## Getting started
 
-**Requirements:** Node.js 20 or newer.
+**Requirements:** Node.js 20 or newer, an [Anthropic API key](https://platform.claude.com/settings/keys), and an [ElevenLabs API key](https://elevenlabs.io/app/settings/api-keys) for voice-over.
 
 ```bash
 git clone https://github.com/RithyBondeth/Bondeth-Content-Studio.git
 cd Bondeth-Content-Studio
 npm install
-npm run dev
+cp .env.example .env
 ```
 
-`npm run dev` opens Remotion Studio, where you can preview every lesson in both formats.
-
-## Rendering a video
-
-Each lesson gets two compositions: `<slug>-landscape` (1920×1080) and `<slug>-vertical` (1080×1920).
+Add your keys to `.env`, then make your first videos:
 
 ```bash
-npm run render -- react-use-state-landscape
-npm run render -- react-use-state-vertical
+npm run pipeline -- make "Everyday science for curious teenagers" --videos 3
 ```
 
-Videos are written to `out/<composition-id>.mp4`. To export a single frame, for example as a thumbnail:
+The finished videos are written to `out/<plan>/`.
+
+## Step by step
+
+Running each step on its own lets you review and edit between steps.
 
 ```bash
-npm run still -- react-use-state-landscape out/thumbnail.png --frame=60
+# 1. Plan a series. Prints the plan and saves content/<plan>/plan.json.
+npm run pipeline -- plan "Personal finance basics for university students" --videos 7
+
+# 2. Write scripts. Saves content/<plan>/videos/<nn>-<title>/spec.json for each video.
+npm run pipeline -- script personal-finance-basics
+
+# 3. Preview a video in Remotion Studio, with captions timed from the text.
+npm run pipeline -- preview personal-finance-basics --video 1
+
+# 4. Record the voice-over. Unchanged scenes are skipped on re-runs.
+npm run pipeline -- voice personal-finance-basics
+
+# 5. Render to MP4.
+npm run pipeline -- render personal-finance-basics --format both
+
+# See plans, and the status of each video in a plan.
+npm run pipeline -- list
+npm run pipeline -- list personal-finance-basics
 ```
 
-## Creating a lesson
+| Option              | Used by                                | Description                                                 |
+| ------------------- | -------------------------------------- | ----------------------------------------------------------- |
+| `--videos <n>`      | `plan`, `make`                         | Number of videos to plan (default 5)                        |
+| `--audience <text>` | `plan`, `make`                         | Who the videos are for                                      |
+| `--tone <text>`     | `plan`, `make`                         | Voice and style, e.g. "warm and playful"                    |
+| `--language <code>` | `plan`, `make`                         | Narration language, e.g. `en`, `es`, `km` (default `en`)    |
+| `--seconds <n>`     | `script`, `make`                       | Target length of each video (default 45)                    |
+| `--video <n\|all>`  | `script`, `voice`, `render`, `preview` | Which video to work on (default all; preview defaults to 1) |
+| `--format <name>`   | `render`, `make`                       | `vertical`, `landscape`, or `both` (default `vertical`)     |
+| `--no-voice`        | `make`                                 | Skip the voice-over; captions are timed from the text       |
+| `--force`           | `script`                               | Rewrite scripts that already exist                          |
 
-1. Add a file in `src/lessons/`, for example `src/lessons/python-list-comprehensions.ts`:
+## Scene types
 
-   ```ts
-   import type { Lesson } from "./types";
+A video is a list of scenes. Each scene has `narration` (what the voice says), an optional `emoji`, and fields for its template.
 
-   export const pythonListComprehensions: Lesson = {
-     slug: "python-list-comprehensions",
-     title: "List Comprehensions",
-     subtitle: "Write loops in one line.",
-     language: "python",
-     fileName: "squares.py",
-     steps: [
-       {
-         caption: "A classic loop that builds a list.",
-         code: `
-   squares = []
-   for n in range(10):
-       squares.append(n * n)
-   `,
-       },
-       {
-         caption: "The same thing as a list comprehension.",
-         highlight: "1",
-         code: `
-   squares = [n * n for n in range(10)]
-   `,
-       },
-     ],
-     outro: { nextUp: "Dictionary comprehensions" },
-   };
-   ```
+| Type         | Shows                                               | Fields                                                         |
+| ------------ | --------------------------------------------------- | -------------------------------------------------------------- |
+| `title`      | The opening hook                                    | `heading`, `subheading?`                                       |
+| `statement`  | One big idea, revealed word by word                 | `text`, `highlight?` (words to color)                          |
+| `list`       | A heading and items that appear one by one          | `heading`, `items`, `style?` (`bullets`, `numbered`, `checks`) |
+| `stat`       | A number that counts up                             | `value` (e.g. `"73%"`), `label`, `source?`                     |
+| `quote`      | A quote with its author                             | `quote`, `author?`                                             |
+| `comparison` | Two sides, such as myth vs. fact                    | `heading?`, `left`, `right` (each `label` + `points`)          |
+| `code`       | Syntax-highlighted code that builds up step by step | `language`, `fileName?`, `steps` (`code`, `highlight?`)        |
+| `cta`        | The closing call to action                          | `heading`, `action`                                            |
 
-2. Register it in `src/lessons/index.ts`:
+Every scene also accepts `durationInSeconds` to override its length. Otherwise the length comes from the voice-over, or from the narration's word count before there is one.
 
-   ```ts
-   export const lessons: Lesson[] = [reactUseState, pythonListComprehensions];
-   ```
+A whole video spec looks like this:
 
-3. Run `npm run dev` to preview it, then render it.
+```json
+{
+  "version": 1,
+  "title": "Why Is the Sky Blue?",
+  "language": "en",
+  "captions": true,
+  "scenes": [
+    {
+      "type": "title",
+      "emoji": "🌤️",
+      "heading": "Why is the sky blue?",
+      "narration": "Why is the sky blue, and not purple or white?"
+    },
+    {
+      "type": "stat",
+      "value": "6x",
+      "label": "more scattering for blue light than for red",
+      "narration": "Blue light scatters about six times more than red light."
+    }
+  ]
+}
+```
 
-### Step options
+To add background music, put an audio file under `public/` and add `"music": { "src": "music/track.mp3", "volume": 0.15 }`.
 
-| Field               | Required | Description                                                                         |
-| ------------------- | -------- | ----------------------------------------------------------------------------------- |
-| `code`              | Yes      | The full code for this step. Lines that are new since the previous step animate in. |
-| `caption`           | Yes      | On-screen text explaining the step.                                                 |
-| `highlight`         | No       | Lines to focus, 1-based, e.g. `"3"` or `"2,4-6"`. Other lines dim.                  |
-| `fileName`          | No       | File name in the editor title bar. Defaults to the lesson's `fileName`.             |
-| `durationInSeconds` | No       | How long the step stays on screen. Defaults to 5.                                   |
+## Examples and templates
+
+`npm run dev` opens Remotion Studio with two hand-written examples in `src/examples/`: a science explainer that uses most scene types, and a coding explainer. Use them to preview template changes.
 
 ## Customizing your brand
 
-| File                  | What it controls                                                                   |
-| --------------------- | ---------------------------------------------------------------------------------- |
-| `src/brand.ts`        | Channel name, role, handle, and website shown in the intro, lower third, and outro |
-| `src/theme/tokens.ts` | Colors, radii, and the syntax-highlighting theme                                   |
-| `src/theme/fonts.ts`  | Fonts (loaded from Google Fonts)                                                   |
-| `src/lib/timing.ts`   | Intro, outro, step, and transition lengths                                         |
+| File                  | What it controls                                                            |
+| --------------------- | --------------------------------------------------------------------------- |
+| `src/brand.ts`        | Your name, handle, and website, used in calls to action and given to Claude |
+| `src/theme/tokens.ts` | Colors, radii, and the code highlighting theme                              |
+| `src/theme/fonts.ts`  | Fonts (loaded from Google Fonts)                                            |
+| `.env`                | Claude model, ElevenLabs voice, and ElevenLabs model                        |
 
 ## Project structure
 
 ```
-src/
-├── index.ts                  # Remotion entry point
-├── Root.tsx                  # Registers a landscape + vertical composition per lesson
-├── brand.ts                  # Your channel identity
-├── lessons/                  # Lesson content (one file per lesson)
-├── compositions/
-│   └── LessonVideo.tsx       # Intro → walkthrough → outro, plus metadata calculation
-├── scenes/                   # IntroScene, CodeWalkthroughScene, OutroScene
-├── components/               # CodeBlock, CodeWindow, LowerThird, Pill, StepProgress, Background
-├── lib/                      # Highlighting, line diffing, timing, layout helpers
-└── theme/                    # Design tokens and fonts
+pipeline/                 # The idea → video CLI (runs in Node)
+├── cli.ts                # Commands: plan, script, preview, voice, render, make, list
+├── prompts.ts            # Instructions given to Claude
+├── schemas.ts            # The plan and script formats Claude must return
+├── plan.ts / script.ts   # Claude steps
+├── voice.ts              # ElevenLabs voice-over and word timings
+├── render.ts             # Calls the Remotion CLI
+└── store.ts              # Where plans, specs, and media are saved
+src/                      # The Remotion video app
+├── spec/schema.ts        # The video spec format (zod)
+├── compositions/         # ExplainerVideo: scenes, audio, captions, timing
+├── scenes/               # One component per scene type
+├── components/           # Captions, code blocks, kinetic text, backgrounds
+├── examples/             # Hand-written example videos
+├── lib/                  # Timing, captions, highlighting, layout helpers
+└── theme/                # Design tokens and fonts
+content/                  # Generated plans and specs (git-ignored)
+public/content/           # Generated voice-overs (git-ignored)
+out/                      # Rendered videos (git-ignored)
 ```
 
 ## Scripts
 
-| Command                        | Description                           |
-| ------------------------------ | ------------------------------------- |
-| `npm run dev`                  | Open Remotion Studio for live preview |
-| `npm run render -- <id>`       | Render a composition to MP4           |
-| `npm run still -- <id> <file>` | Render a single frame to an image     |
-| `npm run check`                | Type-check and lint                   |
-| `npm run format`               | Format the code with Prettier         |
+| Command                         | Description                            |
+| ------------------------------- | -------------------------------------- |
+| `npm run pipeline -- <command>` | Run the idea → video pipeline          |
+| `npm run dev`                   | Open Remotion Studio with the examples |
+| `npm run render -- <id>`        | Render a composition directly          |
+| `npm test`                      | Run the unit tests                     |
+| `npm run check`                 | Type-check and lint                    |
+| `npm run format`                | Format the code with Prettier          |
 
-## Tech stack
+## Roadmap
 
-| Area                | Technology                            |
-| ------------------- | ------------------------------------- |
-| Video framework     | [Remotion](https://www.remotion.dev/) |
-| UI                  | React                                 |
-| Language            | TypeScript                            |
-| Syntax highlighting | [Shiki](https://shiki.style/)         |
+| Stage                     | Goal                                         | Highlights                                                                     |
+| ------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------ |
+| **1. Pipeline** (current) | Idea to finished video from the command line | Content plans, scripts, 8 scene types, voice-over, captions, both formats      |
+| **2. Richer visuals**     | Videos that look less templated              | Stock and AI images, icons, charts, more transitions, background music library |
+| **3. Web studio**         | Anyone can use it, no terminal needed        | Browser editor with live preview, brand kits, cloud rendering, accounts        |
+| **4. Publishing**         | From plan to posted                          | Captions and hashtags per platform, scheduling, performance tracking           |
+
+## Costs
+
+Each video calls the Claude API once to write the script, plus once per plan, and ElevenLabs once per scene. Check current [Claude](https://platform.claude.com/docs/en/about-claude/pricing) and [ElevenLabs](https://elevenlabs.io/pricing) pricing. Rendering runs on your machine and is free.
 
 ## Author
 
@@ -183,4 +203,4 @@ src/
 
 The code in this repository is distributed under the MIT License. See [`LICENSE`](LICENSE) for details.
 
-This project depends on [Remotion](https://www.remotion.dev/), which has its own license: it is free for individuals and small companies, while larger companies need a company license. Check [Remotion's license terms](https://www.remotion.dev/license) before using this project commercially.
+This project depends on [Remotion](https://www.remotion.dev/), which has its own license: it is free for individuals and small companies, while larger companies need a company license, and offering video rendering to others as a service also requires one. Check [Remotion's license terms](https://www.remotion.dev/license) before using this project commercially.

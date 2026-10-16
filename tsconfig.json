@@ -11,7 +11,8 @@
     "noUnusedParameters": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-    "noEmit": true
+    "noEmit": true,
+    "types": ["node"]
   },
-  "include": ["src", "remotion.config.ts"]
+  "include": ["src", "pipeline", "remotion.config.ts"]
 }
