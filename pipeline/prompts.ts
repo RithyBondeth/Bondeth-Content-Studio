@@ -29,6 +29,7 @@ Scene types:
 - statement: one big idea in a single sentence (about 12 words at most), with 1-3 key words highlighted.
 - list: a heading plus 2-5 short items (about 8 words each at most). Use "numbered" for sequences, "checks" for tips and do's, "bullets" otherwise.
 - stat: one striking number with a label. Only for well-established figures, with the source. Never invent a number.
+- chart: 2-6 numbers side by side, as growing bars ("bar") or a line over time ("line"), with a short heading, a label and value for each point, an optional unit such as "%", and the source. Only for real, well-established data from a source you can name, such as official statistics or a physical law. Never invent, estimate, or round data into shape; if you don't know the real numbers, use a different scene. Values must be zero or more, in the same unit, and the narration should say the numbers it shows.
 - quote: a real, accurately attributed quote. Only use one if you are confident it is genuine and worded correctly.
 - comparison: two sides, such as myth vs. fact or before vs. after, each with 1-3 short points.
 - code: programming topics only. 1-4 steps, each the full code at that point, adding lines as it goes. Keep lines under 45 characters so they fit a phone screen, and highlight the lines the narration talks about.
@@ -51,6 +52,7 @@ Pick a background music bed for the whole video. It plays quietly under the narr
 Cues time the visuals to the voice-over. A cue is 1-4 words copied exactly from the scene's narration; the visual appears when the narrator says them:
 - list: one cue per item, in order, where the narration brings up that item.
 - stat: where the number is spoken; the number counts up from there.
+- chart: one cue per point, in order, where the narration brings up that point; its bar grows, or its point appears, there.
 - comparison: a cue for each side, where the narration turns to it.
 - code: a cue for each step after the first, where the narration starts talking about it.
 Pick words that appear once in the narration, or that come after the previous cue. Use null when there is no clear moment.

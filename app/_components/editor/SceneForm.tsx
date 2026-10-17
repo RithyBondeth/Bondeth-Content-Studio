@@ -1,11 +1,16 @@
 "use client";
 
 import { CircleAlert, Mic, Plus, Trash2 } from "lucide-react";
-import { useId, useMemo } from "react";
+import { useId, useMemo, useState } from "react";
 import { findUnmatchedCues, moveCuesWithItems } from "../../../src/lib/cues";
 import { SUPPORTED_LANGUAGES } from "../../../src/lib/languages";
 import { countWords, estimateNarrationSeconds } from "../../../src/lib/timing";
-import type { Scene, SceneType, Transition } from "../../../src/spec/schema";
+import type {
+  ChartPoint,
+  Scene,
+  SceneType,
+  Transition,
+} from "../../../src/spec/schema";
 import { Badge, Button, Field, Input, Select, Textarea } from "../ui";
 import { SCENE_META, SCENE_TYPE_ORDER } from "./scene-meta";
 
@@ -205,6 +210,127 @@ const CueField = ({
   );
 };
 
+/**
+ * A number input that lets people type freely ("", "-", "5.") and only
+ * reports finished numbers. It follows outside changes, such as undo.
+ */
+const NumberInput = ({
+  value,
+  onChange,
+  ...props
+}: Omit<React.ComponentProps<typeof Input>, "value" | "onChange"> & {
+  value: number;
+  onChange: (value: number) => void;
+}) => {
+  const [text, setText] = useState(String(value));
+  const [shown, setShown] = useState(value);
+  if (value !== shown) {
+    setShown(value);
+    setText(String(value));
+  }
+  return (
+    <Input
+      {...props}
+      type="number"
+      value={text}
+      onChange={(event) => {
+        setText(event.target.value);
+        const next = event.target.valueAsNumber;
+        if (Number.isFinite(next)) {
+          setShown(next);
+          onChange(next);
+        }
+      }}
+      onBlur={() => setText(String(value))}
+    />
+  );
+};
+
+const MIN_CHART_POINTS = 2;
+const MAX_CHART_POINTS = 6;
+
+/** One row per chart point: its label, value, and cue. */
+const ChartPointsField = ({
+  points,
+  unmatched,
+  onChange,
+}: {
+  points: ChartPoint[];
+  unmatched: Set<string>;
+  onChange: (points: ChartPoint[]) => void;
+}) => {
+  const update = (index: number, change: Partial<ChartPoint>) =>
+    onChange(
+      points.map((point, i) => (i === index ? { ...point, ...change } : point)),
+    );
+  return (
+    <Field
+      label="Data"
+      hint={`${MIN_CHART_POINTS} to ${MAX_CHART_POINTS} points, with values of 0 or more. Each point appears when the narrator says its cue, if it has one.`}
+    >
+      <div className="flex flex-col gap-2">
+        {points.map((point, index) => (
+          <div
+            key={index}
+            className="flex flex-col gap-1.5 rounded-xl border border-line p-2"
+          >
+            <div className="flex items-center gap-1.5">
+              <Input
+                aria-label={`Point ${index + 1} label`}
+                placeholder="Label"
+                value={point.label}
+                onChange={(event) =>
+                  update(index, { label: event.target.value })
+                }
+              />
+              <NumberInput
+                aria-label={`Point ${index + 1} value`}
+                className="w-28 shrink-0"
+                min={0}
+                step="any"
+                value={point.value}
+                onChange={(value) =>
+                  update(index, { value: Math.max(0, value) })
+                }
+              />
+              <Button
+                size="sm"
+                variant="danger"
+                disabled={points.length <= MIN_CHART_POINTS}
+                aria-label={`Remove point ${index + 1}`}
+                onClick={() => onChange(points.filter((_, i) => i !== index))}
+                icon={<Trash2 className="size-3.5" aria-hidden />}
+              />
+            </div>
+            <CueInput
+              aria-label={`Cue for point ${index + 1}`}
+              placeholder={`Cue: ${CUE_PLACEHOLDER.toLowerCase()}`}
+              value={point.cue ?? ""}
+              unmatched={unmatched.has(`points.${index}.cue`)}
+              onChange={(event) =>
+                update(index, { cue: optional(event.target.value) })
+              }
+            />
+          </div>
+        ))}
+        <Button
+          size="sm"
+          disabled={points.length >= MAX_CHART_POINTS}
+          onClick={() =>
+            onChange([
+              ...points,
+              { label: "", value: points.at(-1)?.value ?? 0 },
+            ])
+          }
+          icon={<Plus className="size-3.5" aria-hidden />}
+        >
+          Add point
+        </Button>
+      </div>
+    </Field>
+  );
+};
+
 const TypeFields = ({
   scene,
   onChange,
@@ -324,6 +450,53 @@ const TypeFields = ({
             hint="Optional. The number counts up when the narrator says these words."
             unmatched={unmatched.has("cue")}
             onChange={(cue) => onChange({ ...scene, cue })}
+          />
+        </>
+      );
+    case "chart":
+      return (
+        <>
+          <TextField
+            label="Heading"
+            value={scene.heading}
+            onChange={(heading) => onChange({ ...scene, heading })}
+          />
+          <ChartPointsField
+            points={scene.points}
+            unmatched={unmatched}
+            onChange={(points) => onChange({ ...scene, points })}
+          />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Style">
+              <Select
+                value={scene.style ?? "bar"}
+                onChange={(event) =>
+                  onChange({
+                    ...scene,
+                    style: event.target.value as typeof scene.style,
+                  })
+                }
+              >
+                <option value="bar">Bars</option>
+                <option value="line">Line</option>
+              </Select>
+            </Field>
+            <TextField
+              label="Unit"
+              value={scene.unit}
+              placeholder='Optional, e.g. "%", "x", "km", "$"'
+              onChange={(value) =>
+                onChange({ ...scene, unit: optional(value) })
+              }
+            />
+          </div>
+          <TextField
+            label="Source"
+            value={scene.source}
+            placeholder="Optional, but recommended"
+            onChange={(value) =>
+              onChange({ ...scene, source: optional(value) })
+            }
           />
         </>
       );
@@ -574,7 +747,7 @@ const TemplatePicker = ({
   <div
     role="radiogroup"
     aria-label="Scene template"
-    className="grid grid-cols-4 gap-1.5 @xl:grid-cols-8"
+    className="grid grid-cols-5 gap-1.5 @xl:grid-cols-9"
   >
     {SCENE_TYPE_ORDER.map((type) => {
       const meta = SCENE_META[type];
