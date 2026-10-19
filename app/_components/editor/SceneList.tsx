@@ -1,11 +1,12 @@
 "use client";
 
 import { ArrowDown, ArrowUp, Copy, Mic, Plus, Trash2 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { needsReRecord } from "../../../src/lib/recording";
 import type { SceneType, VideoSpecInput } from "../../../src/spec/schema";
 import { Kbd, cx } from "../ui";
-import { SCENE_META, SCENE_TYPE_ORDER, sceneSummary } from "./scene-meta";
+import { SCENE_META, sceneSummary } from "./scene-meta";
+import { TemplateMenu } from "./TemplateMenu";
 
 type SceneListProps = {
   scenes: VideoSpecInput["scenes"];
@@ -51,31 +52,13 @@ const IconButton = ({
   </button>
 );
 
-const AddSceneMenu = ({ onAdd }: { onAdd: (type: SceneType) => void }) => {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const close = (event: MouseEvent) =>
-      !ref.current?.contains(event.target as Node) && setOpen(false);
-    const escape = (event: KeyboardEvent) =>
-      event.key === "Escape" && setOpen(false);
-    document.addEventListener("mousedown", close);
-    document.addEventListener("keydown", escape);
-    return () => {
-      document.removeEventListener("mousedown", close);
-      document.removeEventListener("keydown", escape);
-    };
-  }, [open]);
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-        aria-expanded={open}
-        aria-haspopup="menu"
+const AddSceneMenu = ({ onAdd }: { onAdd: (type: SceneType) => void }) => (
+  <TemplateMenu
+    label="Add scene"
+    placement="above"
+    onPick={onAdd}
+    trigger={(open) => (
+      <span
         className={cx(
           "flex w-full items-center justify-center gap-2 rounded-xl border border-dashed py-3 text-sm transition-colors",
           open
@@ -85,43 +68,10 @@ const AddSceneMenu = ({ onAdd }: { onAdd: (type: SceneType) => void }) => {
       >
         <Plus className="size-4" aria-hidden />
         Add scene
-      </button>
-      {open ? (
-        <div
-          role="menu"
-          className="animate-rise-in absolute inset-x-0 bottom-full z-30 mb-2 grid grid-cols-2 gap-1 rounded-2xl border border-line-strong bg-raised p-1.5 shadow-2xl shadow-black/60"
-        >
-          {SCENE_TYPE_ORDER.map((type) => {
-            const meta = SCENE_META[type];
-            return (
-              <button
-                key={type}
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  onAdd(type);
-                  setOpen(false);
-                }}
-                className="flex flex-col items-start gap-1.5 rounded-xl p-2.5 text-left transition-colors hover:bg-hover"
-              >
-                <span
-                  className="grid size-7 place-items-center rounded-lg"
-                  style={{ background: `${meta.color}1f`, color: meta.color }}
-                >
-                  <meta.icon className="size-3.5" aria-hidden />
-                </span>
-                <span className="text-[13px] font-medium">{meta.label}</span>
-                <span className="text-[11px] leading-snug text-faint">
-                  {meta.description}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      ) : null}
-    </div>
-  );
-};
+      </span>
+    )}
+  />
+);
 
 export const SceneList = ({
   scenes,

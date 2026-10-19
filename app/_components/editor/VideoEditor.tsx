@@ -9,9 +9,14 @@ import {
   Check,
   CircleAlert,
   Loader2,
+  Clapperboard,
   Mic,
   Monitor,
+  Redo2,
+  Send,
+  Settings2,
   Smartphone,
+  Undo2,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -37,6 +42,13 @@ import {
 } from "../../actions";
 import { useToast } from "../Toast";
 import { Alert, Button, Skeleton, cx } from "../ui";
+import {
+  commit,
+  createHistory,
+  firstChangedScene,
+  redo,
+  undo,
+} from "./history";
 import { MusicSetting } from "./MusicSetting";
 import { PublishPanel } from "./PublishPanel";
 import { RenderPanel } from "./RenderPanel";
@@ -194,6 +206,61 @@ const SettingSwitch = ({
   </label>
 );
 
+type Tab = "scene" | "video" | "publish";
+
+const TABS: { value: Tab; label: string; icon: LucideIcon }[] = [
+  { value: "scene", label: "Scene", icon: Clapperboard },
+  { value: "video", label: "Video", icon: Settings2 },
+  { value: "publish", label: "Publish", icon: Send },
+];
+
+/** Switches the middle column between the selected scene, video-wide settings, and publishing. */
+const TabBar = ({
+  value,
+  sceneNumber,
+  onChange,
+}: {
+  value: Tab;
+  sceneNumber: number;
+  onChange: (tab: Tab) => void;
+}) => (
+  <div
+    role="tablist"
+    aria-label="Editor sections"
+    className="sticky top-0 z-10 flex gap-1 border-b border-line bg-bg/85 px-4 py-2 backdrop-blur-xl sm:px-6"
+  >
+    {TABS.map((tab) => (
+      <button
+        key={tab.value}
+        type="button"
+        role="tab"
+        id={`tab-${tab.value}`}
+        aria-selected={value === tab.value}
+        aria-controls={`panel-${tab.value}`}
+        onClick={() => onChange(tab.value)}
+        className={cx(
+          "flex h-9 items-center gap-2 rounded-xl px-3 text-sm transition-colors",
+          value === tab.value
+            ? "bg-raised text-text ring-1 ring-line-strong"
+            : "text-faint hover:bg-surface hover:text-muted",
+        )}
+      >
+        <tab.icon className="size-4" aria-hidden />
+        {tab.value === "scene" ? `Scene ${sceneNumber}` : tab.label}
+      </button>
+    ))}
+  </div>
+);
+
+/** ⌘ on Macs, Ctrl elsewhere, for shortcut hints. */
+const useModifierLabel = () => {
+  const [label, setLabel] = useState("Ctrl");
+  useEffect(() => {
+    if (/Mac|iPhone|iPad/.test(navigator.platform)) setLabel("⌘");
+  }, []);
+  return label;
+};
+
 const isTyping = (target: EventTarget | null) =>
   target instanceof HTMLElement &&
   (target.isContentEditable ||
@@ -228,8 +295,31 @@ export const VideoEditor = ({
   projectVoice?: VoiceValue;
 }) => {
   const notify = useToast();
-  const [spec, setSpec] = useState<VideoSpecInput>(initialSpec);
+  const modifier = useModifierLabel();
+  const [history, setHistory] = useState(() => createHistory(initialSpec));
+  const spec = history.present;
+  const latestHistory = useRef(history);
+  latestHistory.current = history;
+  /**
+   * Changes the video, as one undo step. Changes with the same `group` made
+   * in quick succession, like typing, share a step.
+   */
+  const setSpec = useCallback(
+    (
+      update: VideoSpecInput | ((current: VideoSpecInput) => VideoSpecInput),
+      group?: string,
+    ) =>
+      setHistory((current) =>
+        commit(
+          current,
+          typeof update === "function" ? update(current.present) : update,
+          { group, at: Date.now() },
+        ),
+      ),
+    [],
+  );
   const [selected, setSelected] = useState(0);
+  const [tab, setTab] = useState<Tab>("scene");
   const [format, setFormat] = useState<VideoFormat>("vertical");
   const [saveState, setSaveState] = useState<SaveState>({ kind: "saved" });
   const [voicing, setVoicing] = useState(false);
@@ -350,28 +440,70 @@ export const VideoEditor = ({
       : timing.starts.findLastIndex((start) => start <= playingFrame);
 
   // --- Editing ---
-  const updateScenes = (update: (scenes: Scene[]) => Scene[]) =>
-    setSpec((current) => ({
-      ...current,
-      scenes: update(current.scenes as Scene[]),
-    }));
-
-  const updateScene = (sceneIndex: number, next: Scene) =>
-    updateScenes((scenes) =>
-      scenes.map((scene, i) => {
-        if (i !== sceneIndex) return scene;
-        // New narration makes an ElevenLabs voice-over out of date, so it's
-        // dropped. Your own recording is kept and flagged for a re-record.
-        if (
-          scene.audio &&
-          !isSelfRecorded(scene.audio) &&
-          next.narration !== scene.narration
-        ) {
-          return { ...next, audio: undefined };
-        }
-        return next;
+  const updateScenes = (update: (scenes: Scene[]) => Scene[], group?: string) =>
+    setSpec(
+      (current) => ({
+        ...current,
+        scenes: update(current.scenes as Scene[]),
       }),
+      group,
     );
+
+  /** Edits one scene. Quick edits to the same scene are undone together. */
+  const updateScene = (
+    sceneIndex: number,
+    next: Scene,
+    { ownStep = false }: { ownStep?: boolean } = {},
+  ) =>
+    updateScenes(
+      (scenes) =>
+        scenes.map((scene, i) => {
+          if (i !== sceneIndex) return scene;
+          // New narration makes an ElevenLabs voice-over out of date, so it's
+          // dropped. Your own recording is kept and flagged for a re-record.
+          if (
+            scene.audio &&
+            !isSelfRecorded(scene.audio) &&
+            next.narration !== scene.narration
+          ) {
+            return { ...next, audio: undefined };
+          }
+          return next;
+        }),
+      ownStep ? undefined : `scene-${sceneIndex}`,
+    );
+
+  const changeTemplate = (sceneIndex: number, type: SceneType) => {
+    const previous = spec.scenes[sceneIndex] as Scene;
+    if (previous.type === type) return;
+    updateScene(sceneIndex, convertScene(previous, type), { ownStep: true });
+    notify({
+      tone: "info",
+      title: `Switched to ${SCENE_META[type].label.toLowerCase()}`,
+      description: `Fields that don't fit the new template are dropped. ${modifier}+Z undoes it.`,
+      action: {
+        label: "Undo",
+        onClick: () => updateScene(sceneIndex, previous, { ownStep: true }),
+      },
+    });
+  };
+
+  /** Steps back or forward through edits, and shows the scene that changed. */
+  const travel = useCallback((direction: "undo" | "redo") => {
+    const current = latestHistory.current;
+    const next = direction === "undo" ? undo(current) : redo(current);
+    if (next === current) return;
+    setHistory(next);
+    const changed = firstChangedScene(current.present, next.present);
+    if (changed !== null) {
+      setSelected(changed);
+      setTab("scene");
+    } else {
+      setSelected((value) =>
+        Math.max(0, Math.min(value, next.present.scenes.length - 1)),
+      );
+    }
+  }, []);
 
   const seekToScene = useCallback(
     (sceneIndex: number) => {
@@ -389,14 +521,32 @@ export const VideoEditor = ({
   const select = useCallback(
     (sceneIndex: number) => {
       setSelected(sceneIndex);
+      setTab("scene");
       seekToScene(sceneIndex);
     },
     [seekToScene],
   );
 
-  // Up and down arrows move between scenes when you're not typing.
+  // Undo and redo anywhere in the editor, except fields that aren't part of
+  // the video (they keep the browser's own undo). Up and down arrows move
+  // between scenes when you're not typing.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
+      const key = event.key.toLowerCase();
+      if (
+        (event.metaKey || event.ctrlKey) &&
+        !event.altKey &&
+        (key === "z" || key === "y")
+      ) {
+        if (
+          event.target instanceof Element &&
+          event.target.closest("[data-native-undo]")
+        )
+          return;
+        event.preventDefault();
+        travel(key === "y" || event.shiftKey ? "redo" : "undo");
+        return;
+      }
       if (
         isTyping(event.target) ||
         event.metaKey ||
@@ -412,7 +562,7 @@ export const VideoEditor = ({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [selected, spec.scenes.length, select]);
+  }, [selected, spec.scenes.length, select, travel]);
 
   const move = (sceneIndex: number, direction: -1 | 1) => {
     const target = sceneIndex + direction;
@@ -511,12 +661,35 @@ export const VideoEditor = ({
             aria-label="Video title"
             value={spec.title}
             onChange={(event) =>
-              setSpec((current) => ({ ...current, title: event.target.value }))
+              setSpec(
+                (current) => ({ ...current, title: event.target.value }),
+                "title",
+              )
             }
             className="-ml-1 w-full max-w-md truncate rounded-md bg-transparent px-1 text-[15px] font-medium transition-colors hover:bg-raised focus:bg-raised focus:outline-none"
           />
         </div>
         <div className="flex items-center gap-2">
+          <div className="flex items-center">
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label="Undo"
+              title={`Undo (${modifier}+Z)`}
+              disabled={history.past.length === 0}
+              onClick={() => travel("undo")}
+              icon={<Undo2 className="size-4" aria-hidden />}
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label="Redo"
+              title={`Redo (${modifier}+Shift+Z)`}
+              disabled={history.future.length === 0}
+              onClick={() => travel("redo")}
+              icon={<Redo2 className="size-4" aria-hidden />}
+            />
+          </div>
           <SaveIndicator state={saveState} />
           <FormatToggle value={format} onChange={setFormat} />
           <Button
@@ -573,10 +746,18 @@ export const VideoEditor = ({
         </aside>
 
         <section
-          aria-label="Scene details"
+          aria-label="Editor"
           className="border-b border-line lg:min-h-0 lg:overflow-y-auto lg:border-r lg:border-b-0"
         >
-          <div className="mx-auto flex max-w-2xl flex-col gap-4 p-4 sm:p-6">
+          <TabBar value={tab} sceneNumber={selected + 1} onChange={setTab} />
+          {/* Every panel stays mounted, so switching tabs keeps its state, like a half-written post. */}
+          <div
+            role="tabpanel"
+            id="panel-scene"
+            aria-labelledby="tab-scene"
+            hidden={tab !== "scene"}
+            className="mx-auto max-w-2xl p-4 sm:p-6"
+          >
             {scene ? (
               <SceneForm
                 key={selected}
@@ -589,54 +770,83 @@ export const VideoEditor = ({
                   hasPexels: keys.pexels,
                 }}
                 onChange={(next) => updateScene(selected, next)}
-                onChangeType={(type) =>
-                  updateScene(selected, convertScene(scene, type))
+                onChangeType={(type) => changeTemplate(selected, type)}
+              />
+            ) : (
+              <Alert tone="info">Add a scene to start editing.</Alert>
+            )}
+          </div>
+          <div
+            role="tabpanel"
+            id="panel-video"
+            aria-labelledby="tab-video"
+            hidden={tab !== "video"}
+            className="mx-auto max-w-2xl p-4 sm:p-6"
+          >
+            <div className="flex flex-col gap-4">
+              <SettingSwitch
+                icon={Captions}
+                label="Captions"
+                description="Word-by-word captions for the whole video"
+                checked={spec.captions ?? true}
+                onChange={(captions) =>
+                  setSpec((current) => ({ ...current, captions }))
                 }
               />
-            ) : null}
-            <SettingSwitch
-              icon={Captions}
-              label="Captions"
-              description="Word-by-word captions for the whole video"
-              checked={spec.captions ?? true}
-              onChange={(captions) =>
-                setSpec((current) => ({ ...current, captions }))
-              }
-            />
-            <SettingSwitch
-              icon={AudioLines}
-              label="Sound effects"
-              description="Whooshes on transitions and pops as items appear"
-              checked={spec.sfx ?? true}
-              onChange={(sfx) => setSpec((current) => ({ ...current, sfx }))}
-            />
-            <ThemeSetting
-              theme={spec.theme}
-              brandTheme={brandTheme}
-              onChange={(theme) =>
-                setSpec((current) => ({ ...current, theme }))
-              }
-            />
-            <MusicSetting
+              <SettingSwitch
+                icon={AudioLines}
+                label="Sound effects"
+                description="Whooshes on transitions and pops as items appear"
+                checked={spec.sfx ?? true}
+                onChange={(sfx) => setSpec((current) => ({ ...current, sfx }))}
+              />
+              <ThemeSetting
+                theme={spec.theme}
+                brandTheme={brandTheme}
+                onChange={(theme) =>
+                  setSpec((current) => ({ ...current, theme }), "theme")
+                }
+              />
+              <MusicSetting
+                slug={slug}
+                index={index}
+                music={spec.music}
+                onChange={(music) =>
+                  setSpec((current) => ({ ...current, music }), "music")
+                }
+              />
+              <VoiceSetting
+                voice={spec.voice}
+                projectVoice={projectVoice}
+                canList={keys.elevenLabs}
+                pending={voicedCount ? pending : null}
+                onChange={(voice) =>
+                  setSpec((current) => {
+                    const next = { ...current, voice };
+                    if (!voice) delete next.voice;
+                    return next;
+                  }, "voice")
+                }
+              />
+            </div>
+          </div>
+          {/* Post text isn't part of the video, so it keeps the browser's own undo. */}
+          <div
+            role="tabpanel"
+            id="panel-publish"
+            aria-labelledby="tab-publish"
+            hidden={tab !== "publish"}
+            data-native-undo
+            className="mx-auto max-w-2xl p-4 sm:p-6"
+          >
+            <PublishPanel
               slug={slug}
               index={index}
-              music={spec.music}
-              onChange={(music) =>
-                setSpec((current) => ({ ...current, music }))
-              }
-            />
-            <VoiceSetting
-              voice={spec.voice}
-              projectVoice={projectVoice}
-              canList={keys.elevenLabs}
-              pending={voicedCount ? pending : null}
-              onChange={(voice) =>
-                setSpec((current) => {
-                  const next = { ...current, voice };
-                  if (!voice) delete next.voice;
-                  return next;
-                })
-              }
+              scenes={spec.scenes}
+              initialKit={initialPublishKit}
+              initialCovers={initialCovers}
+              canGenerate={keys.claude}
+              beforeGenerate={flush}
             />
           </div>
         </section>
@@ -672,7 +882,7 @@ export const VideoEditor = ({
               />
             ) : (
               <Alert tone="warning">
-                Fix the issue above to see the preview.
+                Fix the issue in the editor to see the preview.
               </Alert>
             )}
           </div>
@@ -695,17 +905,6 @@ export const VideoEditor = ({
               index={index}
               initialRenders={initialRenders}
               beforeRender={flush}
-            />
-          </div>
-          <div className="relative">
-            <PublishPanel
-              slug={slug}
-              index={index}
-              scenes={spec.scenes}
-              initialKit={initialPublishKit}
-              initialCovers={initialCovers}
-              canGenerate={keys.claude}
-              beforeGenerate={flush}
             />
           </div>
         </aside>
