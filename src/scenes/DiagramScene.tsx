@@ -14,7 +14,7 @@ import { ICONS } from "../lib/icons";
 import { getDiagramNodeStarts } from "../lib/reveals";
 import { useLayout } from "../lib/use-layout";
 import type { DiagramNode } from "../spec/schema";
-import { theme } from "../theme/tokens";
+import { useTheme } from "../theme/context";
 import type { SceneProps } from "./types";
 
 /** How long a connector takes to draw from one node to the next. */
@@ -25,6 +25,7 @@ const Arrow: React.FC<{ connector: Connector; start: number }> = ({
   connector,
   start,
 }) => {
+  const theme = useTheme();
   const frame = useCurrentFrame();
   const { unit } = useLayout();
   const drawn = progressBetween(frame, start, start + DRAW_FRAMES);
@@ -67,6 +68,7 @@ const Badge: React.FC<{
   size: number;
   start: number;
 }> = ({ node, number, size, start }) => {
+  const theme = useTheme();
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const { unit } = useLayout();
@@ -154,6 +156,7 @@ export const DiagramScene: React.FC<SceneProps<"diagram">> = ({
   durationInFrames,
   reserveCaptions,
 }) => {
+  const theme = useTheme();
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const { unit, isVertical, width, height, paddingX, paddingTop, captionZone } =

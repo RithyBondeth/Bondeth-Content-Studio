@@ -5,6 +5,7 @@ import type { VideoFormat } from "../src/lib/formats";
 import { FORMAT_NAMES } from "../src/lib/formats";
 import {
   videoSpecSchema,
+  type BrandKit,
   type ImageLayout,
   type VideoSpecInput,
 } from "../src/spec/schema";
@@ -25,6 +26,7 @@ import {
   createExampleProject,
   deleteProject,
   listRenders,
+  updateBrandKit,
   updatePlanContent,
   videoMediaDir,
   type RenderFile,
@@ -89,6 +91,13 @@ export const updatePlanAction = async (slug: string, content: ContentPlan) =>
   run(async () => {
     await updatePlanContent(slug, content);
     revalidatePath(`/projects/${slug}`);
+  });
+
+export const updateBrandKitAction = async (slug: string, kit: BrandKit) =>
+  run(async () => {
+    const saved = await updateBrandKit(slug, kit);
+    revalidatePath(`/projects/${slug}`, "layout");
+    return saved ?? null;
   });
 
 export const addVideoAction = async (slug: string, title: string) =>

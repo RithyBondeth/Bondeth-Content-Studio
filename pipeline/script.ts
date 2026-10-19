@@ -1,5 +1,7 @@
 import {
   videoSpecSchema,
+  type Brand,
+  type BrandKit,
   type Scene,
   type VideoSpecInput,
 } from "../src/spec/schema";
@@ -166,6 +168,32 @@ export const draftToSpec = (
   return spec;
 };
 
+/** The creator part of a brand kit, without empty fields; undefined if there's nothing. */
+export const kitCreator = (kit: BrandKit | undefined): Brand | undefined => {
+  const creator: Brand = {};
+  for (const key of ["name", "handle", "website"] as const) {
+    const value = kit?.[key]?.trim();
+    if (value) creator[key] = value;
+  }
+  return Object.keys(creator).length ? creator : undefined;
+};
+
+/**
+ * Gives a new video the project's brand kit: its theme, and the creator's
+ * handle and website for the closing call to action.
+ */
+export const applyBrandKit = (
+  spec: VideoSpecInput,
+  kit: BrandKit | undefined,
+): VideoSpecInput => {
+  const brand = kitCreator(kit);
+  return {
+    ...spec,
+    ...(kit?.theme ? { theme: kit.theme } : {}),
+    ...(brand ? { brand } : {}),
+  };
+};
+
 /** Reads a value at a dotted path such as "steps.1.cue". */
 const valueAt = (value: unknown, path: string): unknown =>
   path
@@ -209,11 +237,15 @@ export const createVideoSpec = async (
     prompt: scriptPrompt(plan.plan, index, {
       seconds: options.seconds,
       language: plan.options.language,
+      creator: kitCreator(plan.brand),
     }),
     label: `script for "${video.title}"`,
   });
 
-  const spec = draftToSpec(draft, plan.options.language);
+  const spec = applyBrandKit(
+    draftToSpec(draft, plan.options.language),
+    plan.brand,
+  );
   for (const warning of describeUnmatchedCues(spec)) {
     console.warn(`  ⚠ ${video.title}: ${warning}`);
   }

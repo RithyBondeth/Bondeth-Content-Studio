@@ -1,7 +1,9 @@
 import { z } from "zod";
 import { ICON_NAMES } from "../lib/icon-names";
 import { SUPPORTED_LANGUAGES } from "../lib/languages";
+import { HEX_COLOR } from "../lib/color";
 import { DEFAULT_MUSIC_VOLUME } from "../lib/music";
+import { THEME_FONT_NAMES, THEME_PRESET_NAMES } from "../theme/presets";
 
 /**
  * The video spec: everything needed to render one video. The AI pipeline
@@ -219,6 +221,39 @@ export const sceneSchema = z.discriminatedUnion("type", [
   ctaSceneSchema,
 ]);
 
+const hexColor = z
+  .string()
+  .regex(HEX_COLOR, "Use a 6-digit hex color, like #7C5CFF.");
+
+/** The video's look: a preset, plus any colors or font changed from it. */
+export const themeSettingSchema = z.object({
+  /** "midnight", "paper", "ember", "chalkboard", or "contrast". */
+  preset: z.enum(THEME_PRESET_NAMES),
+  /** Bars, buttons, and highlights. */
+  accent: hexColor.optional(),
+  background: hexColor.optional(),
+  text: hexColor.optional(),
+  /** Heading and body font. Defaults to the preset's. */
+  font: z.enum(THEME_FONT_NAMES).optional(),
+});
+
+/** Who made the video. Shown on the closing call to action. */
+export const brandSchema = z.object({
+  name: z.string().optional(),
+  /** e.g. "@bondeth" */
+  handle: z.string().optional(),
+  /** e.g. "bondeth.dev" */
+  website: z.string().optional(),
+});
+
+/**
+ * A project's identity: who the creator is and how their videos look. New
+ * videos in the project start with it.
+ */
+export const brandKitSchema = brandSchema.extend({
+  theme: themeSettingSchema.optional(),
+});
+
 export const videoSpecSchema = z.object({
   version: z.literal(1),
   title: z.string(),
@@ -235,6 +270,10 @@ export const videoSpecSchema = z.object({
       volume: z.number().min(0).max(1).default(DEFAULT_MUSIC_VOLUME),
     })
     .optional(),
+  /** Defaults to the "midnight" preset. */
+  theme: themeSettingSchema.optional(),
+  /** Defaults to the creator in src/brand.ts. */
+  brand: brandSchema.optional(),
   scenes: z.array(sceneSchema).min(1),
 });
 
@@ -251,6 +290,8 @@ export type ImageLayout = (typeof IMAGE_LAYOUTS)[number];
 export type ImageMotion = (typeof IMAGE_MOTIONS)[number];
 export type DiagramLayout = (typeof DIAGRAM_LAYOUTS)[number];
 export type DiagramNode = z.infer<typeof diagramNodeSchema>;
+export type Brand = z.infer<typeof brandSchema>;
+export type BrandKit = z.infer<typeof brandKitSchema>;
 export type VideoSpec = z.infer<typeof videoSpecSchema>;
 /** A spec as written by hand, before defaults are applied. */
 export type VideoSpecInput = z.input<typeof videoSpecSchema>;

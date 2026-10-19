@@ -1,6 +1,6 @@
 import { interpolate } from "remotion";
 import { useEnter } from "../lib/animation";
-import { theme } from "../theme/tokens";
+import { useTheme } from "../theme/context";
 
 type KineticTextProps = {
   text: string;
@@ -49,6 +49,7 @@ const AnimatedWord: React.FC<{
   delay: number;
   color: string;
 }> = ({ word, delay, color }) => {
+  const theme = useTheme();
   const enter = useEnter(delay);
   return (
     <span
@@ -71,11 +72,12 @@ export const KineticText: React.FC<KineticTextProps> = ({
   highlight = [],
   fontSize,
   fontWeight = 800,
-  color = theme.colors.text,
+  color,
   align = "left",
   delay = 0,
   stagger = 3,
 }) => {
+  const theme = useTheme();
   const words = splitWords(text, highlight);
 
   return (
@@ -95,7 +97,7 @@ export const KineticText: React.FC<KineticTextProps> = ({
           key={index}
           word={word}
           delay={delay + index * stagger}
-          color={color}
+          color={color ?? theme.colors.text}
         />
       ))}
     </div>

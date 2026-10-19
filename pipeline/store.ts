@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { VideoSpecInput } from "../src/spec/schema";
+import type { BrandKit, VideoSpecInput } from "../src/spec/schema";
 import { CONTENT_DIR, MEDIA_SUBDIR, OUT_DIR, PUBLIC_DIR } from "./config";
 import type { ContentPlan } from "./schemas";
 
@@ -17,6 +17,8 @@ export type PlanFile = {
    * or reordering videos doesn't lose their scripts.
    */
   videoKeys?: string[];
+  /** The creator's name, handle, website, and default theme for this project. */
+  brand?: BrandKit;
 };
 
 export type PlanOptions = {

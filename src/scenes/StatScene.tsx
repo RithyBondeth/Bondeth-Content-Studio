@@ -4,7 +4,7 @@ import { SceneFrame } from "../components/SceneFrame";
 import { progressBetween, riseIn, useEnter } from "../lib/animation";
 import { getStatCountStart } from "../lib/reveals";
 import { useLayout } from "../lib/use-layout";
-import { theme } from "../theme/tokens";
+import { useTheme } from "../theme/context";
 import type { SceneProps } from "./types";
 
 const COUNT_FRAMES = 36;
@@ -46,6 +46,7 @@ export const StatScene: React.FC<SceneProps<"stat">> = ({
   durationInFrames,
   reserveCaptions,
 }) => {
+  const theme = useTheme();
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const { unit, isVertical } = useLayout();

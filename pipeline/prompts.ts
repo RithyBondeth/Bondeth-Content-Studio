@@ -1,4 +1,5 @@
 import { brand } from "../src/brand";
+import type { Brand } from "../src/spec/schema";
 import type { ContentPlan } from "./schemas";
 import type { PlanOptions } from "./store";
 
@@ -74,9 +75,11 @@ Write the narration and on-screen text in the requested language.`;
 export const scriptPrompt = (
   plan: ContentPlan,
   videoIndex: number,
-  options: { seconds: number; language: string },
+  options: { seconds: number; language: string; creator?: Brand },
 ) => {
   const video = plan.videos[videoIndex]!;
+  // The project's brand kit when it has one, otherwise the default handle.
+  const creator = options.creator ?? { handle: brand.handle };
   const targetWords = Math.round(options.seconds * 2.6);
   return [
     "## Series",
@@ -84,7 +87,9 @@ export const scriptPrompt = (
     `Audience: ${plan.audience}`,
     `Goal: ${plan.goal}`,
     `Tone: ${plan.tone}`,
-    `Creator handle: ${brand.handle}`,
+    ...(creator.name ? [`Creator: ${creator.name}`] : []),
+    ...(creator.handle ? [`Creator handle: ${creator.handle}`] : []),
+    ...(creator.website ? [`Creator website: ${creator.website}`] : []),
     "",
     `## This video (${videoIndex + 1} of ${plan.videos.length})`,
     `Title: ${video.title}`,
