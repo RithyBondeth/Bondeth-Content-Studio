@@ -57,7 +57,7 @@ export const NextStepCard = ({
 }: {
   slug: string;
   videos: VideoSummary[];
-  /** Whether Claude can write scripts (ANTHROPIC_API_KEY is set). */
+  /** Whether an AI provider is set up to write scripts. */
   canWrite: boolean;
   /** Videos whose scripts are being written right now. */
   writing: Set<number>;
@@ -140,7 +140,7 @@ export const NextStepCard = ({
           </Button>
         ) : (
           <p className="max-w-60 text-xs text-faint">
-            Add ANTHROPIC_API_KEY to .env to write it with Claude.
+            Set up an AI provider in .env to write it.
           </p>
         )
       ) : (

@@ -235,7 +235,7 @@ export const PublishPanel = ({
   /** A kit with no posts when publish.json doesn't exist yet. */
   initialKit: PublishKit;
   initialCovers: RenderFile[];
-  /** Whether a Claude API key is set. */
+  /** Whether an AI provider is set up. */
   canGenerate: boolean;
   /** Called before generating or exporting, e.g. to save pending edits. */
   beforeGenerate: () => Promise<boolean>;
@@ -290,7 +290,7 @@ export const PublishPanel = ({
       !(await confirm({
         title: "Write new posts?",
         description:
-          "Claude rewrites the titles, text and hashtags for every platform. Your edits here will be replaced.",
+          "AI rewrites the titles, text and hashtags for every platform. Your edits here will be replaced.",
         confirmLabel: "Regenerate",
       }))
     )
@@ -412,7 +412,7 @@ export const PublishPanel = ({
             variant="ghost"
             loading={generating}
             disabled={!canGenerate}
-            title={canGenerate ? undefined : "Add ANTHROPIC_API_KEY to .env"}
+            title={canGenerate ? undefined : "Set up an AI provider in .env"}
             icon={<RefreshCw className="size-3.5" aria-hidden />}
             onClick={() => void generate()}
           >
@@ -489,7 +489,7 @@ export const PublishPanel = ({
             </Button>
             {canGenerate ? null : (
               <p className="text-[11px] text-faint">
-                Add ANTHROPIC_API_KEY to .env to write posts with Claude.
+                Set up an AI provider in .env to write posts.
               </p>
             )}
           </div>

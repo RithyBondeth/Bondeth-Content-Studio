@@ -250,7 +250,7 @@ export const generateImageAction = async (
     generateImage(prompt, await videoMediaDir(slug, index), layout),
   );
 
-/** Writes (or rewrites) the video's posts for every platform with Claude. */
+/** Writes (or rewrites) the video's posts for every platform with the AI provider. */
 export const generatePublishKitAction = async (
   slug: string,
   index: number,

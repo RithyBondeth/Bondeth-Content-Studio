@@ -890,7 +890,7 @@ export const VideoEditor = ({
               scenes={spec.scenes}
               initialKit={initialPublishKit}
               initialCovers={initialCovers}
-              canGenerate={keys.claude}
+              canGenerate={keys.ai}
               beforeGenerate={flush}
             />
           </div>

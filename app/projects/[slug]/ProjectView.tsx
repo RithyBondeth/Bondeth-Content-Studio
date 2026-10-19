@@ -335,7 +335,7 @@ export const ProjectView = ({
     const ok = await confirm({
       title: "Rewrite this script?",
       description:
-        "Claude writes a fresh script for this video. Any edits you made to it will be replaced.",
+        "AI writes a fresh script for this video. Any edits you made to it will be replaced.",
       confirmLabel: "Rewrite script",
     });
     if (ok) void writeScript(index);
@@ -425,7 +425,7 @@ export const ProjectView = ({
         <NextStepCard
           slug={plan.slug}
           videos={videos}
-          canWrite={keys.claude}
+          canWrite={keys.ai}
           writing={writing}
           onWrite={(index) => void writeScript(index)}
         />
@@ -509,7 +509,7 @@ export const ProjectView = ({
               Videos
             </h2>
             <div className="flex flex-wrap items-center gap-2">
-              {keys.claude ? (
+              {keys.ai ? (
                 <label className="flex items-center gap-2 text-sm text-muted">
                   Length
                   <Select
@@ -529,10 +529,8 @@ export const ProjectView = ({
                 <Button
                   variant="primary"
                   onClick={() => void writeAll()}
-                  disabled={!keys.claude || writing.size > 0}
-                  title={
-                    keys.claude ? undefined : "Add ANTHROPIC_API_KEY to .env"
-                  }
+                  disabled={!keys.ai || writing.size > 0}
+                  title={keys.ai ? undefined : "Set up an AI provider in .env"}
                   icon={<Wand2 className="size-4" aria-hidden />}
                 >
                   Write{" "}
@@ -602,7 +600,7 @@ export const ProjectView = ({
                             className="size-4 animate-spin"
                             aria-hidden
                           />
-                          Claude is writing…
+                          Writing…
                         </span>
                       ) : scripted ? (
                         <>
@@ -613,7 +611,7 @@ export const ProjectView = ({
                             Open editor
                             <ArrowRight className="size-4" aria-hidden />
                           </Link>
-                          {keys.claude ? (
+                          {keys.ai ? (
                             <Menu
                               label={`Actions for ${video.title}`}
                               items={[
@@ -631,11 +629,11 @@ export const ProjectView = ({
                       ) : (
                         <Button
                           variant="primary"
-                          disabled={!keys.claude}
+                          disabled={!keys.ai}
                           title={
-                            keys.claude
+                            keys.ai
                               ? undefined
-                              : "Add ANTHROPIC_API_KEY to .env"
+                              : "Set up an AI provider in .env"
                           }
                           onClick={() => void writeScript(video.index)}
                           icon={<Wand2 className="size-4" aria-hidden />}

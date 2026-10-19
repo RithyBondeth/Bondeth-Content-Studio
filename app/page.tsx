@@ -12,7 +12,7 @@ const STEPS = [
   {
     icon: Lightbulb,
     title: "Plan",
-    text: "Claude turns your idea into a series with an audience, themes, and hooks.",
+    text: "AI turns your idea into a series with an audience, themes, and hooks.",
   },
   {
     icon: FileText,
@@ -64,7 +64,7 @@ export default async function HomePage() {
               animated videos, and stay in control of every scene.
             </p>
           </div>
-          <NewProjectForm hasClaude={keys.claude} />
+          <NewProjectForm hasAi={keys.ai} />
         </section>
 
         <section aria-labelledby="how-it-works" className="flex flex-col gap-6">

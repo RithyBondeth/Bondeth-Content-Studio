@@ -32,7 +32,7 @@ Educators, teachers, coaches, and anyone who explains things: science, history, 
 
 ## Getting started
 
-**Requirements:** Node.js 20 or newer, an [Anthropic API key](https://platform.claude.com/settings/keys), and an [ElevenLabs API key](https://elevenlabs.io/app/settings/api-keys) for voice-over (or [record your own voice](#recording-your-own-voice) for free). Optional: an [OpenAI API key](https://platform.openai.com/api-keys) for AI illustrations.
+**Requirements:** Node.js 20 or newer, an [Anthropic API key](https://platform.claude.com/settings/keys) (or a key for [another AI provider](#ai-providers)), and an [ElevenLabs API key](https://elevenlabs.io/app/settings/api-keys) for voice-over (or [record your own voice](#recording-your-own-voice) for free). Optional: an [OpenAI API key](https://platform.openai.com/api-keys) for AI illustrations.
 
 ```bash
 git clone https://github.com/RithyBondeth/Bondeth-Content-Studio.git
@@ -61,6 +61,27 @@ The studio walks you through the whole process in your browser:
 6. **Publish:** Claude writes a title, post text, call to action, and hashtags for TikTok, YouTube Shorts, Instagram Reels, and YouTube in one go. Edit them with live character counters, copy them, and export a cover image from any scene, then download one zip per platform with the video, cover, post text, and caption files. See [Publishing](#publishing).
 
 The studio runs locally and stores everything in this folder, the same files the command line uses.
+
+## AI providers
+
+Claude writes plans, scripts, and posts by default: set `ANTHROPIC_API_KEY` and you're done. To use another model, set `LLM_PROVIDER` and `LLM_MODEL` in `.env`, plus the provider's key:
+
+| `LLM_PROVIDER` | Key                      | Notes                                       |
+| -------------- | ------------------------ | ------------------------------------------- |
+| `anthropic`    | `ANTHROPIC_API_KEY`      | Default. `LLM_MODEL` is optional            |
+| `openai`       | `OPENAI_API_KEY`         |                                             |
+| `gemini`       | `GEMINI_API_KEY`         | Through Google's OpenAI-compatible endpoint |
+| `openrouter`   | `OPENROUTER_API_KEY`     | Hundreds of models behind one key           |
+| `groq`         | `GROQ_API_KEY`           |                                             |
+| `deepseek`     | `DEEPSEEK_API_KEY`       |                                             |
+| `mistral`      | `MISTRAL_API_KEY`        |                                             |
+| `xai`          | `XAI_API_KEY`            |                                             |
+| `together`     | `TOGETHER_API_KEY`       |                                             |
+| `ollama`       | none                     | Local models at `localhost:11434`           |
+| `lmstudio`     | none                     | Local models at `localhost:1234`            |
+| `custom`       | `LLM_API_KEY` (optional) | Any OpenAI-compatible API at `LLM_BASE_URL` |
+
+`LLM_API_KEY` works for every provider, and `LLM_BASE_URL` overrides a preset's endpoint (for a proxy or a self-hosted gateway). Every reply is checked against the expected format, so a model that can't follow it fails with a clear error instead of producing a broken video. Videos are planned with long, structured JSON, so larger models give much better results. If a provider rejects JSON Schema output, set `LLM_JSON_MODE=object`.
 
 ## Command line
 
@@ -209,7 +230,7 @@ Fonts are `inter`, `poppins`, `nunito`, `montserrat`, `playfair-display`, and `a
 | `src/theme/presets.ts` | The theme presets, their colors and fonts, and the font choices |
 | `src/theme/resolve.ts` | How a theme's overrides are applied, and the contrast checks    |
 | `src/theme/fonts.ts`   | Loading fonts from Google Fonts                                 |
-| `.env`                 | Claude model, ElevenLabs voice, and ElevenLabs model            |
+| `.env`                 | AI provider and model, ElevenLabs voice, and ElevenLabs model   |
 
 ## Voices
 

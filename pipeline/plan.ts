@@ -1,4 +1,4 @@
-import { generateStructured } from "./claude";
+import { generateStructured } from "./llm";
 import { PLAN_SYSTEM, planPrompt } from "./prompts";
 import { contentPlanSchema } from "./schemas";
 import {

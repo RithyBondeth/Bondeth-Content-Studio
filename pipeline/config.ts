@@ -15,7 +15,6 @@ export const MEDIA_SUBDIR = "content";
 export const OUT_DIR = path.join(ROOT, "out");
 
 export const config = {
-  claudeModel: process.env.CLAUDE_MODEL ?? "claude-opus-5-5",
   elevenLabs: {
     // George, one of ElevenLabs' default voices. Browse others at elevenlabs.io/app/voice-library.
     voiceId: process.env.ELEVENLABS_VOICE_ID ?? "JBFqnCBsd6RMkjVDRZzb",

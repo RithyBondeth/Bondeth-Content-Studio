@@ -8,7 +8,7 @@ import {
 import { findUnmatchedCues } from "../src/lib/cues";
 import { DEFAULT_MUSIC_VOLUME, MUSIC_TRACKS } from "../src/lib/music";
 import { countWords } from "../src/lib/timing";
-import { generateStructured } from "./claude";
+import { generateStructured } from "./llm";
 import { SCRIPT_SYSTEM, scriptPrompt } from "./prompts";
 import { videoDraftSchema, type SceneDraft, type VideoDraft } from "./schemas";
 import type { PlanFile } from "./store";

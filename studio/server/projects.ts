@@ -52,7 +52,7 @@ export type VideoSummary = {
   status: VideoStatus;
   scenes: number;
   renders: RenderFile[];
-  /** Whether Claude has written its posts in the publish kit. */
+  /** Whether AI has written its posts in the publish kit. */
   hasPosts: boolean;
 };
 

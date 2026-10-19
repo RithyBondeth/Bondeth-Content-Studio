@@ -37,7 +37,7 @@ const EXAMPLE_IDEAS = [
   "Fascinating moments from world history",
 ];
 
-// Shown one after another while Claude works, so the wait feels alive.
+// Shown one after another while the AI works, so the wait feels alive.
 const PLANNING_STEPS = [
   "Understanding your idea",
   "Choosing the right audience",
@@ -140,7 +140,7 @@ const PlanningOverlay = ({ idea }: { idea: string }) => {
   );
 };
 
-export const NewProjectForm = ({ hasClaude }: { hasClaude: boolean }) => {
+export const NewProjectForm = ({ hasAi }: { hasAi: boolean }) => {
   const router = useRouter();
   const notify = useToast();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -152,7 +152,7 @@ export const NewProjectForm = ({ hasClaude }: { hasClaude: boolean }) => {
   const [showMore, setShowMore] = useState(false);
   const [pending, setPending] = useState<"plan" | "example" | null>(null);
 
-  const canPlan = hasClaude && idea.trim().length > 0 && pending === null;
+  const canPlan = hasAi && idea.trim().length > 0 && pending === null;
 
   const createPlan = async () => {
     if (!canPlan) return;
@@ -282,7 +282,7 @@ export const NewProjectForm = ({ hasClaude }: { hasClaude: boolean }) => {
                 disabled={!canPlan}
                 loading={pending === "plan"}
                 icon={<ArrowUp className="size-4" aria-hidden />}
-                title={hasClaude ? undefined : "Add ANTHROPIC_API_KEY to .env"}
+                title={hasAi ? undefined : "Set up an AI provider in .env"}
               >
                 Create plan
               </Button>
@@ -309,19 +309,23 @@ export const NewProjectForm = ({ hasClaude }: { hasClaude: boolean }) => {
         ))}
       </div>
 
-      {!hasClaude ? (
+      {!hasAi ? (
         <div className="mx-auto mt-2 flex w-full max-w-2xl flex-col items-center gap-3 rounded-2xl border border-dashed border-line-strong bg-surface/40 p-4 text-center sm:flex-row sm:text-left">
           <p className="flex-1 text-sm text-muted">
-            Add{" "}
-            <code className="rounded bg-raised px-1.5 py-0.5 font-mono text-[13px] text-text">
-              ANTHROPIC_API_KEY
-            </code>{" "}
-            to{" "}
+            Set up an AI provider in{" "}
             <code className="rounded bg-raised px-1.5 py-0.5 font-mono text-[13px] text-text">
               .env
             </code>{" "}
-            and restart to plan with Claude. Until then, explore with a
-            ready-made project.
+            (an{" "}
+            <code className="rounded bg-raised px-1.5 py-0.5 font-mono text-[13px] text-text">
+              ANTHROPIC_API_KEY
+            </code>
+            , or{" "}
+            <code className="rounded bg-raised px-1.5 py-0.5 font-mono text-[13px] text-text">
+              LLM_PROVIDER
+            </code>{" "}
+            with its key) and restart to plan with AI. Until then, explore with
+            a ready-made project.
           </p>
           <Button
             variant="secondary"
