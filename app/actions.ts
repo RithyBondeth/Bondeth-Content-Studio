@@ -3,18 +3,32 @@
 import { revalidatePath } from "next/cache";
 import type { VideoFormat } from "../src/lib/formats";
 import { FORMAT_NAMES } from "../src/lib/formats";
-import { videoSpecSchema, type VideoSpecInput } from "../src/spec/schema";
+import {
+  videoSpecSchema,
+  type BrandKit,
+  type ImageLayout,
+  type VideoSpecInput,
+} from "../src/spec/schema";
 import { createPlan } from "../pipeline/plan";
 import type { ContentPlan } from "../pipeline/schemas";
 import { createVideoSpec } from "../pipeline/script";
 import { loadPlan, loadSpec, mediaDir, saveSpec } from "../pipeline/store";
+import {
+  addImages,
+  downloadImage,
+  generateImage,
+  searchStockImages,
+  type StockImage,
+} from "../pipeline/images";
 import { addVoiceOver } from "../pipeline/voice";
 import {
   addBlankVideo,
   createExampleProject,
   deleteProject,
   listRenders,
+  updateBrandKit,
   updatePlanContent,
+  videoMediaDir,
   type RenderFile,
 } from "../studio/server/projects";
 import {
@@ -79,6 +93,13 @@ export const updatePlanAction = async (slug: string, content: ContentPlan) =>
     revalidatePath(`/projects/${slug}`);
   });
 
+export const updateBrandKitAction = async (slug: string, kit: BrandKit) =>
+  run(async () => {
+    const saved = await updateBrandKit(slug, kit);
+    revalidatePath(`/projects/${slug}`, "layout");
+    return saved ?? null;
+  });
+
 export const addVideoAction = async (slug: string, title: string) =>
   run(async () => {
     const index = await addBlankVideo(slug, title);
@@ -93,7 +114,10 @@ export const writeScriptAction = async (
 ) =>
   run(async () => {
     const plan = await loadPlan(slug);
-    const { spec } = await createVideoSpec(plan, index, { seconds });
+    const { spec: written } = await createVideoSpec(plan, index, { seconds });
+    // Images are best-effort: scenes without one keep a placeholder to fill in the editor.
+    const { spec, failures } = await addImages(written, mediaDir(plan, index));
+    for (const failure of failures) console.warn(failure);
     await saveSpec(plan, index, spec);
     revalidatePath(`/projects/${slug}`);
     return spec;
@@ -144,3 +168,27 @@ export const listRendersAction = async (
   index: number,
 ): Promise<Result<RenderFile[]>> =>
   run(async () => listRenders(await loadPlan(slug), index));
+
+export const searchImagesAction = async (query: string, layout?: ImageLayout) =>
+  run(() => searchStockImages(query, layout));
+
+/** Downloads a stock photo into the video's media folder. */
+export const pickStockImageAction = async (
+  slug: string,
+  index: number,
+  image: Pick<StockImage, "url" | "credit">,
+) =>
+  run(async () => ({
+    src: await downloadImage(image.url, await videoMediaDir(slug, index)),
+    credit: image.credit,
+  }));
+
+export const generateImageAction = async (
+  slug: string,
+  index: number,
+  prompt: string,
+  layout?: ImageLayout,
+) =>
+  run(async () =>
+    generateImage(prompt, await videoMediaDir(slug, index), layout),
+  );

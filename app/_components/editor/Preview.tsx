@@ -11,12 +11,14 @@ import {
 } from "../../../src/lib/prepare-code";
 import { FPS, getVideoTiming } from "../../../src/lib/timing";
 import type { Scene, VideoSpec } from "../../../src/spec/schema";
+import type { CodeTheme } from "../../../src/theme/presets";
+import { resolveTheme } from "../../../src/theme/resolve";
 import { SCENE_SETTLE_FRAMES } from "./scene-meta";
 
 type CodeScene = Extract<Scene, { type: "code" }>;
 
-const codeKey = (scene: CodeScene) =>
-  JSON.stringify([scene.language, scene.steps]);
+const codeKey = (scene: CodeScene, codeTheme: CodeTheme) =>
+  JSON.stringify([scene.language, codeTheme, scene.steps]);
 
 /**
  * Highlights code scenes in the background. Until a scene is highlighted,
@@ -26,11 +28,16 @@ const useCodeSteps = (spec: VideoSpec) => {
   const [cache, setCache] = useState<Map<string, PreparedCodeStep[]>>(
     () => new Map(),
   );
+  const { codeTheme } = resolveTheme(spec.theme);
   const codeScenes = spec.scenes.filter(
     (scene): scene is CodeScene => scene.type === "code",
   );
-  const missing = codeScenes.filter((scene) => !cache.has(codeKey(scene)));
-  const missingKey = missing.map(codeKey).join("|");
+  const missing = codeScenes.filter(
+    (scene) => !cache.has(codeKey(scene, codeTheme)),
+  );
+  const missingKey = missing
+    .map((scene) => codeKey(scene, codeTheme))
+    .join("|");
 
   useEffect(() => {
     if (!missing.length) return;
@@ -39,8 +46,8 @@ const useCodeSteps = (spec: VideoSpec) => {
       missing.map(
         async (scene) =>
           [
-            codeKey(scene),
-            await prepareCodeSteps(scene.steps, scene.language),
+            codeKey(scene, codeTheme),
+            await prepareCodeSteps(scene.steps, scene.language, codeTheme),
           ] as const,
       ),
     ).then((entries) => {
@@ -63,11 +70,11 @@ const useCodeSteps = (spec: VideoSpec) => {
     spec.scenes.forEach((scene, index) => {
       if (scene.type === "code") {
         result[index] =
-          cache.get(codeKey(scene)) ?? plainCodeSteps(scene.steps);
+          cache.get(codeKey(scene, codeTheme)) ?? plainCodeSteps(scene.steps);
       }
     });
     return result;
-  }, [spec, cache]);
+  }, [spec, cache, codeTheme]);
 };
 
 export const Preview = ({

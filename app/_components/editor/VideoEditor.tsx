@@ -35,6 +35,8 @@ import { RenderPanel } from "./RenderPanel";
 import { convertScene, SCENE_META, SCENE_SETTLE_FRAMES } from "./scene-meta";
 import { SceneForm } from "./SceneForm";
 import { SceneList } from "./SceneList";
+import type { ThemeSetting as ThemeValue } from "../../../src/theme/resolve";
+import { ThemeSetting } from "./ThemeSetting";
 
 type SaveState =
   | { kind: "saved" }
@@ -196,6 +198,7 @@ export const VideoEditor = ({
   initialSpec,
   initialRenders,
   keys,
+  brandTheme,
 }: {
   slug: string;
   projectTitle: string;
@@ -204,6 +207,8 @@ export const VideoEditor = ({
   initialSpec: VideoSpecInput;
   initialRenders: RenderFile[];
   keys: Keys;
+  /** The project's brand kit theme, offered in the theme picker. */
+  brandTheme?: ThemeValue;
 }) => {
   const notify = useToast();
   const [spec, setSpec] = useState<VideoSpecInput>(initialSpec);
@@ -530,6 +535,12 @@ export const VideoEditor = ({
                 key={selected}
                 scene={scene}
                 index={selected}
+                imageContext={{
+                  slug,
+                  videoIndex: index,
+                  canGenerate: keys.openai,
+                  hasPexels: keys.pexels,
+                }}
                 onChange={(next) => updateScene(selected, next)}
                 onChangeType={(type) =>
                   updateScene(selected, convertScene(scene, type))
@@ -551,6 +562,13 @@ export const VideoEditor = ({
               description="Whooshes on transitions and pops as items appear"
               checked={spec.sfx ?? true}
               onChange={(sfx) => setSpec((current) => ({ ...current, sfx }))}
+            />
+            <ThemeSetting
+              theme={spec.theme}
+              brandTheme={brandTheme}
+              onChange={(theme) =>
+                setSpec((current) => ({ ...current, theme }))
+              }
             />
             <MusicSetting
               slug={slug}

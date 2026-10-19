@@ -18,7 +18,7 @@ import {
 import { getChartPointStarts } from "../lib/reveals";
 import { useLayout } from "../lib/use-layout";
 import type { ChartPoint } from "../spec/schema";
-import { theme } from "../theme/tokens";
+import { useTheme, type Theme } from "../theme/context";
 import type { SceneProps } from "./types";
 
 /** How long a bar takes to grow, and its value to count up. */
@@ -32,7 +32,7 @@ const easeOut = {
   easing: Easing.out(Easing.cubic),
 } as const;
 
-const barFill = (direction: "top" | "right") =>
+const barFill = (theme: Theme, direction: "top" | "right") =>
   `linear-gradient(to ${direction}, ${theme.colors.accent}, ${theme.colors.accentBright})`;
 
 type ChartBodyProps = {
@@ -43,7 +43,7 @@ type ChartBodyProps = {
   contentWidth: number;
 };
 
-const valueStyle = (size: number): React.CSSProperties => ({
+const valueStyle = (theme: Theme, size: number): React.CSSProperties => ({
   fontFamily: theme.fonts.sans,
   fontWeight: 800,
   fontSize: size,
@@ -54,7 +54,7 @@ const valueStyle = (size: number): React.CSSProperties => ({
   whiteSpace: "nowrap",
 });
 
-const labelStyle = (size: number): React.CSSProperties => ({
+const labelStyle = (theme: Theme, size: number): React.CSSProperties => ({
   fontFamily: theme.fonts.sans,
   fontWeight: 600,
   fontSize: size,
@@ -69,6 +69,7 @@ const Columns: React.FC<ChartBodyProps> = ({
   format,
   contentWidth,
 }) => {
+  const theme = useTheme();
   const frame = useCurrentFrame();
   const { unit } = useLayout();
   const fractions = getChartFractions(points.map((point) => point.value));
@@ -130,7 +131,7 @@ const Columns: React.FC<ChartBodyProps> = ({
             >
               <div
                 style={{
-                  ...valueStyle(valueSize),
+                  ...valueStyle(theme, valueSize),
                   opacity: progressBetween(frame, start, start + 6),
                 }}
               >
@@ -141,7 +142,7 @@ const Columns: React.FC<ChartBodyProps> = ({
                   width: barWidth,
                   height: barHeight,
                   borderRadius: `${theme.radius.md * unit}px ${theme.radius.md * unit}px 0 0`,
-                  background: barFill("top"),
+                  background: barFill(theme, "top"),
                 }}
               />
             </div>
@@ -156,7 +157,7 @@ const Columns: React.FC<ChartBodyProps> = ({
             style={{
               width: columnWidth,
               textAlign: "center",
-              ...labelStyle(labelSize),
+              ...labelStyle(theme, labelSize),
               ...riseIn(
                 progressBetween(frame, starts[index]!, starts[index]! + 10),
                 16 * unit,
@@ -178,6 +179,7 @@ const Rows: React.FC<ChartBodyProps> = ({
   format,
   contentWidth,
 }) => {
+  const theme = useTheme();
   const frame = useCurrentFrame();
   const { unit } = useLayout();
   const fractions = getChartFractions(points.map((point) => point.value));
@@ -213,19 +215,19 @@ const Rows: React.FC<ChartBodyProps> = ({
               ...riseIn(progressBetween(frame, start, start + 10), 20 * unit),
             }}
           >
-            <div style={labelStyle(44 * unit)}>{point.label}</div>
+            <div style={labelStyle(theme, 44 * unit)}>{point.label}</div>
             <div style={{ display: "flex", alignItems: "center" }}>
               <div
                 style={{
                   width: barWidth,
                   height: 58 * unit,
                   borderRadius: `0 ${theme.radius.md * unit}px ${theme.radius.md * unit}px 0`,
-                  background: barFill("right"),
+                  background: barFill(theme, "right"),
                 }}
               />
               <div
                 style={{
-                  ...valueStyle(valueSize),
+                  ...valueStyle(theme, valueSize),
                   // Zero-length bars leave no gap before their value.
                   marginLeft: Math.min(valueGap, barWidth),
                 }}
@@ -247,6 +249,7 @@ const Line: React.FC<ChartBodyProps> = ({
   format,
   contentWidth,
 }) => {
+  const theme = useTheme();
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const { unit, isVertical } = useLayout();
@@ -352,7 +355,7 @@ const Line: React.FC<ChartBodyProps> = ({
                 ),
                 top: positions[index]!.y - 24 * unit,
                 transform: "translate(-50%, -100%)",
-                ...valueStyle(valueSize),
+                ...valueStyle(theme, valueSize),
                 // A chip in the background color, so the line passes behind the value.
                 padding: `${6 * unit}px ${chipPadding}px`,
                 borderRadius: theme.radius.sm * unit,
@@ -374,7 +377,7 @@ const Line: React.FC<ChartBodyProps> = ({
               width: columnWidth,
               padding: `0 ${8 * unit}px`,
               textAlign: "center",
-              ...labelStyle(labelSize),
+              ...labelStyle(theme, labelSize),
               ...riseIn(
                 progressBetween(frame, starts[index]!, starts[index]! + 10),
                 16 * unit,
@@ -391,6 +394,7 @@ const Line: React.FC<ChartBodyProps> = ({
 
 /** The zero line under the bars or line; drawn in with the heading. */
 const Baseline: React.FC = () => {
+  const theme = useTheme();
   const frame = useCurrentFrame();
   const { unit } = useLayout();
   return (
@@ -411,6 +415,7 @@ export const ChartScene: React.FC<SceneProps<"chart">> = ({
   durationInFrames,
   reserveCaptions,
 }) => {
+  const theme = useTheme();
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const { unit, isVertical, width, paddingX } = useLayout();

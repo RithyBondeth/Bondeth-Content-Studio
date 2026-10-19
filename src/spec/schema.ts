@@ -1,6 +1,9 @@
 import { z } from "zod";
+import { ICON_NAMES } from "../lib/icon-names";
 import { SUPPORTED_LANGUAGES } from "../lib/languages";
+import { HEX_COLOR } from "../lib/color";
 import { DEFAULT_MUSIC_VOLUME } from "../lib/music";
+import { THEME_FONT_NAMES, THEME_PRESET_NAMES } from "../theme/presets";
 
 /**
  * The video spec: everything needed to render one video. The AI pipeline
@@ -141,6 +144,61 @@ export const codeSceneSchema = z.object({
   ...sceneBase,
 });
 
+export const IMAGE_LAYOUTS = ["full", "framed"] as const;
+export const IMAGE_MOTIONS = [
+  "zoom-in",
+  "zoom-out",
+  "pan-left",
+  "pan-right",
+  "none",
+] as const;
+
+export const imageSceneSchema = z.object({
+  type: z.literal("image"),
+  /**
+   * Path inside public/ or a full URL. Empty until an image is uploaded,
+   * picked from stock, or generated; a placeholder shows until then.
+   */
+  src: z.string().optional(),
+  /** What the image shows. Used as alt text and to find or generate an image. */
+  alt: z.string(),
+  /** Keywords for a stock photo search. Defaults to `alt`. */
+  search: z.string().optional(),
+  /** A prompt for an AI illustration. When set, the image step generates one if it can. */
+  prompt: z.string().optional(),
+  /** Short text shown with the image. */
+  caption: z.string().optional(),
+  /** Who made the image and its license, shown small in a corner. */
+  credit: z.string().optional(),
+  /** "full" fills the frame; "framed" shows it on a card. Defaults to "full". */
+  layout: z.enum(IMAGE_LAYOUTS).optional(),
+  /** Slow camera move over the image. Defaults to "zoom-in". */
+  motion: z.enum(IMAGE_MOTIONS).optional(),
+  ...sceneBase,
+});
+
+export const DIAGRAM_LAYOUTS = ["flow", "cycle", "hub"] as const;
+
+export const diagramNodeSchema = z.object({
+  label: z.string(),
+  icon: z.enum(ICON_NAMES).optional(),
+  /** Phrase from the narration where this node comes up; it appears there. */
+  cue: z.string().optional(),
+});
+
+export const diagramSceneSchema = z.object({
+  type: z.literal("diagram"),
+  heading: z.string().optional(),
+  /**
+   * "flow": steps joined by arrows. "cycle": steps around a loop that comes
+   * back to the start. "hub": the first node in the middle, joined to the
+   * rest around it. Defaults to "flow".
+   */
+  layout: z.enum(DIAGRAM_LAYOUTS).optional(),
+  nodes: z.array(diagramNodeSchema).min(2).max(6),
+  ...sceneBase,
+});
+
 export const ctaSceneSchema = z.object({
   type: z.literal("cta"),
   heading: z.string(),
@@ -158,8 +216,43 @@ export const sceneSchema = z.discriminatedUnion("type", [
   quoteSceneSchema,
   comparisonSceneSchema,
   codeSceneSchema,
+  imageSceneSchema,
+  diagramSceneSchema,
   ctaSceneSchema,
 ]);
+
+const hexColor = z
+  .string()
+  .regex(HEX_COLOR, "Use a 6-digit hex color, like #7C5CFF.");
+
+/** The video's look: a preset, plus any colors or font changed from it. */
+export const themeSettingSchema = z.object({
+  /** "midnight", "paper", "ember", "chalkboard", or "contrast". */
+  preset: z.enum(THEME_PRESET_NAMES),
+  /** Bars, buttons, and highlights. */
+  accent: hexColor.optional(),
+  background: hexColor.optional(),
+  text: hexColor.optional(),
+  /** Heading and body font. Defaults to the preset's. */
+  font: z.enum(THEME_FONT_NAMES).optional(),
+});
+
+/** Who made the video. Shown on the closing call to action. */
+export const brandSchema = z.object({
+  name: z.string().optional(),
+  /** e.g. "@bondeth" */
+  handle: z.string().optional(),
+  /** e.g. "bondeth.dev" */
+  website: z.string().optional(),
+});
+
+/**
+ * A project's identity: who the creator is and how their videos look. New
+ * videos in the project start with it.
+ */
+export const brandKitSchema = brandSchema.extend({
+  theme: themeSettingSchema.optional(),
+});
 
 export const videoSpecSchema = z.object({
   version: z.literal(1),
@@ -177,6 +270,10 @@ export const videoSpecSchema = z.object({
       volume: z.number().min(0).max(1).default(DEFAULT_MUSIC_VOLUME),
     })
     .optional(),
+  /** Defaults to the "midnight" preset. */
+  theme: themeSettingSchema.optional(),
+  /** Defaults to the creator in src/brand.ts. */
+  brand: brandSchema.optional(),
   scenes: z.array(sceneSchema).min(1),
 });
 
@@ -189,6 +286,12 @@ export type Transition = (typeof TRANSITIONS)[number];
 export type CodeStep = z.infer<typeof codeStepSchema>;
 export type ChartPoint = z.infer<typeof chartPointSchema>;
 export type ChartStyle = (typeof CHART_STYLES)[number];
+export type ImageLayout = (typeof IMAGE_LAYOUTS)[number];
+export type ImageMotion = (typeof IMAGE_MOTIONS)[number];
+export type DiagramLayout = (typeof DIAGRAM_LAYOUTS)[number];
+export type DiagramNode = z.infer<typeof diagramNodeSchema>;
+export type Brand = z.infer<typeof brandSchema>;
+export type BrandKit = z.infer<typeof brandKitSchema>;
 export type VideoSpec = z.infer<typeof videoSpecSchema>;
 /** A spec as written by hand, before defaults are applied. */
 export type VideoSpecInput = z.input<typeof videoSpecSchema>;

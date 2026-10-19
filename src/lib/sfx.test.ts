@@ -6,6 +6,7 @@ import {
   getChartPointStarts,
   getCodeStepStarts,
   getComparisonStarts,
+  getDiagramNodeStarts,
   getListItemStarts,
   getStatCountStart,
 } from "./reveals";
@@ -186,6 +187,11 @@ test("one sound per cue in every cued scene type", () => {
           sound: "pop",
           frame: start + frame,
         }));
+      case "diagram":
+        return getDiagramNodeStarts(scene, length, FPS).map((frame) => ({
+          sound: "pop",
+          frame: start + frame,
+        }));
       case "stat":
         return [
           { sound: "tick", frame: start + getStatCountStart(scene, FPS) },
@@ -198,16 +204,17 @@ test("one sound per cue in every cued scene type", () => {
     ({ sound }) => sound === "pop" || sound === "tick",
   );
   assert.deepEqual(reveals, expected);
-  // 3 list items, 1 stat, 4 chart bars, 2 comparison sides.
-  assert.equal(reveals.length, 10);
-  // Plus the slide, zoom and wipe into the list, stat and comparison scenes.
-  // The chart fades in, so it's silent.
+  // 3 list items, 1 stat, 4 chart bars, 2 comparison sides, 4 diagram nodes.
+  assert.equal(reveals.length, 14);
+  // Plus the slide, zoom, wipe and slide into the list, stat, comparison and
+  // diagram scenes. The chart fades in, so it's silent.
   assert.deepEqual(
     sounds.filter(({ sound }) => sound === "whoosh" || sound === "rise"),
     [
       { sound: "whoosh", frame: timing.starts[2] },
       { sound: "rise", frame: timing.starts[3] },
       { sound: "whoosh", frame: timing.starts[5] },
+      { sound: "whoosh", frame: timing.starts[7] },
     ],
   );
 });

@@ -87,6 +87,20 @@ export const whyIsTheSkyBlue: VideoSpecInput = {
         "And at sunset, light travels through much more air, so the blue scatters away before it reaches you, leaving the reds and oranges.",
     },
     {
+      type: "diagram",
+      transition: "slide",
+      heading: "The whole journey",
+      layout: "flow",
+      nodes: [
+        { label: "Sunlight", icon: "sun", cue: "sunlight" },
+        { label: "Air molecules", icon: "wind", cue: "hits the air" },
+        { label: "Blue scatters", icon: "waves", cue: "blue scatters" },
+        { label: "Your eyes", icon: "eye", cue: "your eyes" },
+      ],
+      narration:
+        "So, sunlight hits the air, the blue scatters across the sky, and it reaches your eyes from every direction.",
+    },
+    {
       type: "cta",
       emoji: "👋",
       heading: "Curious about everyday science?",

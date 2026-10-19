@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { draftToSpec } from "./script";
+import type { VideoSpecInput } from "../src/spec/schema";
+import { scriptPrompt } from "./prompts";
+import type { ContentPlan } from "./schemas";
+import { applyBrandKit, draftToSpec, kitCreator } from "./script";
 
 test("converts Claude's draft into a valid spec, dropping nulls", () => {
   const spec = draftToSpec(
@@ -180,4 +183,153 @@ test("rejects charts with negative values or a single point", () => {
   assert.throws(() =>
     draftToSpec(chartDraft([{ label: "a", value: 1, cue: null }]), "en"),
   );
+});
+
+test("image drafts become scenes that the image step can fill in", () => {
+  const spec = draftToSpec(
+    {
+      title: "Test",
+      music: "none",
+      scenes: [
+        {
+          type: "image",
+          kind: "illustration",
+          description: "Light scattering off air molecules",
+          searchTerms: "blue sky",
+          caption: null,
+          layout: "framed",
+          motion: "zoom-out",
+          narration: "Light bounces around.",
+          emoji: null,
+          transition: "fade",
+        },
+        {
+          type: "image",
+          kind: "photo",
+          description: "A clear blue sky over hills",
+          searchTerms: "blue sky hills",
+          caption: "Look up",
+          layout: "full",
+          motion: "pan-left",
+          narration: "Look up on a clear day.",
+          emoji: null,
+          transition: "fade",
+        },
+      ],
+    },
+    "en",
+  );
+  const [illustration, photo] = spec.scenes;
+  assert.deepEqual(illustration, {
+    type: "image",
+    alt: "Light scattering off air molecules",
+    search: "blue sky",
+    // Illustrations are generated from their description.
+    prompt: "Light scattering off air molecules",
+    caption: undefined,
+    layout: "framed",
+    motion: "zoom-out",
+    narration: "Light bounces around.",
+    emoji: undefined,
+    transition: "fade",
+  });
+  assert.equal(photo?.type === "image" && photo.prompt, undefined);
+  assert.equal(photo?.type === "image" && photo.src, undefined);
+});
+
+test("diagram drafts keep at most 6 nodes and drop null icons and cues", () => {
+  const spec = draftToSpec(
+    {
+      title: "Test",
+      music: "none",
+      scenes: [
+        {
+          type: "diagram",
+          heading: null,
+          layout: "cycle",
+          nodes: Array.from({ length: 7 }, (_, index) => ({
+            label: `Step ${index + 1}`,
+            icon: index === 0 ? "droplet" : null,
+            cue: index === 0 ? "water" : null,
+          })),
+          narration: "Water goes round and round.",
+          emoji: null,
+          transition: "fade",
+        },
+      ],
+    },
+    "en",
+  );
+  const [diagram] = spec.scenes;
+  assert.ok(diagram?.type === "diagram");
+  assert.equal(diagram.nodes.length, 6);
+  assert.deepEqual(diagram.nodes[0], {
+    label: "Step 1",
+    icon: "droplet",
+    cue: "water",
+  });
+  assert.deepEqual(diagram.nodes[1], {
+    label: "Step 2",
+    icon: undefined,
+    cue: undefined,
+  });
+});
+
+const plainSpec: VideoSpecInput = {
+  version: 1,
+  title: "Test",
+  scenes: [{ type: "title", heading: "Hi", narration: "Hi." }],
+};
+
+test("a brand kit gives new videos its theme and creator", () => {
+  const spec = applyBrandKit(plainSpec, {
+    name: " Ms. Rivera ",
+    handle: "@rivera",
+    website: "",
+    theme: { preset: "chalkboard", accent: "#22C55E" },
+  });
+  assert.deepEqual(spec.theme, { preset: "chalkboard", accent: "#22C55E" });
+  // Empty fields are dropped, so the video doesn't show a blank website.
+  assert.deepEqual(spec.brand, { name: "Ms. Rivera", handle: "@rivera" });
+});
+
+test("without a brand kit, new videos keep the default look", () => {
+  assert.deepEqual(applyBrandKit(plainSpec, undefined), plainSpec);
+  assert.deepEqual(applyBrandKit(plainSpec, { name: "  " }), plainSpec);
+  assert.equal(kitCreator({ handle: "" }), undefined);
+});
+
+const plan: ContentPlan = {
+  title: "Series",
+  audience: "Students",
+  goal: "Learn",
+  tone: "Friendly",
+  pillars: [],
+  videos: [
+    {
+      title: "Video",
+      pillar: "",
+      hook: "",
+      angle: "",
+      keyPoints: [],
+      callToAction: "Follow",
+    },
+  ],
+  schedule: { postsPerWeek: 3, notes: "" },
+};
+
+test("the script prompt names the project's creator when it has a brand kit", () => {
+  const prompt = scriptPrompt(plan, 0, {
+    seconds: 45,
+    language: "en",
+    creator: { name: "Ms. Rivera", handle: "@rivera" },
+  });
+  assert.match(prompt, /Creator: Ms\. Rivera/);
+  assert.match(prompt, /Creator handle: @rivera/);
+  assert.doesNotMatch(prompt, /@bondeth/);
+});
+
+test("the script prompt falls back to the default handle", () => {
+  const prompt = scriptPrompt(plan, 0, { seconds: 45, language: "en" });
+  assert.match(prompt, /Creator handle: @bondeth/);
 });

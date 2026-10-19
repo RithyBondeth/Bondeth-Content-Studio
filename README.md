@@ -20,7 +20,7 @@ An AI content studio for educators and explainers: Claude plans the series and w
 Most people who want to teach online get stuck in the same places: deciding what to post, writing the script, and editing the video. Bondeth Content Studio handles all three, while leaving you in control of every step.
 
 1. **Plan:** describe your idea, and Claude turns it into a content series with an audience, themes, a posting schedule, and a list of videos with hooks.
-2. **Script:** Claude writes each video as a sequence of scenes (title, list, statistic, chart, comparison, code, and more), with narration and on-screen text.
+2. **Script:** Claude writes each video as a sequence of scenes (title, list, statistic, chart, diagram, image, comparison, code, and more), with narration and on-screen text. Image scenes get a stock photo or an AI illustration automatically.
 3. **Voice:** ElevenLabs records the narration and returns word timings for the captions.
 4. **Render:** Remotion turns everything into an animated MP4 with word-by-word captions, in vertical (9:16) and landscape (16:9).
 
@@ -32,7 +32,7 @@ Educators, teachers, coaches, and anyone who explains things: science, history, 
 
 ## Getting started
 
-**Requirements:** Node.js 20 or newer, an [Anthropic API key](https://platform.claude.com/settings/keys), and an [ElevenLabs API key](https://elevenlabs.io/app/settings/api-keys) for voice-over.
+**Requirements:** Node.js 20 or newer, an [Anthropic API key](https://platform.claude.com/settings/keys), and an [ElevenLabs API key](https://elevenlabs.io/app/settings/api-keys) for voice-over. Optional: an [OpenAI API key](https://platform.openai.com/api-keys) for AI illustrations.
 
 ```bash
 git clone https://github.com/RithyBondeth/Bondeth-Content-Studio.git
@@ -54,8 +54,8 @@ Go to [http://localhost:3100](http://localhost:3100). No keys yet? Click **Try t
 The studio walks you through the whole process in your browser:
 
 1. **New project:** describe what you want to teach, choose how many videos and the language, and Claude writes a content plan.
-2. **Project:** review the plan, edit titles and hooks, then write scripts for one video or all of them. You can also add a video and write it yourself.
-3. **Editor:** a list of scenes, a form for the selected scene, and a live preview that updates as you type. Add, reorder, duplicate, and delete scenes, switch a scene's template, and edit narration, on-screen text, emoji, and timing. Changes save automatically.
+2. **Project:** review the plan, edit titles and hooks, set up the project's brand kit, then write scripts for one video or all of them. You can also add a video and write it yourself.
+3. **Editor:** a list of scenes, a form for the selected scene, and a live preview that updates as you type. Add, reorder, duplicate, and delete scenes, switch a scene's template, and edit narration, on-screen text, emoji, and timing, and pick the video's theme. Changes save automatically.
 4. **Voice:** record the narration with ElevenLabs. Only scenes whose narration changed are re-recorded.
 5. **Export:** render vertical or landscape MP4s on your computer, with progress, then play or download them.
 
@@ -78,6 +78,9 @@ npm run pipeline -- plan "Personal finance basics for university students" --vid
 # 2. Write scripts. Saves content/<plan>/videos/<nn>-<title>/spec.json for each video.
 npm run pipeline -- script personal-finance-basics
 
+# Find images for image scenes that don't have one yet (script does this too).
+npm run pipeline -- images personal-finance-basics
+
 # 3. Preview a video in Remotion Studio, with captions timed from the text.
 npm run pipeline -- preview personal-finance-basics --video 1
 
@@ -92,17 +95,17 @@ npm run pipeline -- list
 npm run pipeline -- list personal-finance-basics
 ```
 
-| Option              | Used by                                | Description                                                 |
-| ------------------- | -------------------------------------- | ----------------------------------------------------------- |
-| `--videos <n>`      | `plan`, `make`                         | Number of videos to plan (default 5)                        |
-| `--audience <text>` | `plan`, `make`                         | Who the videos are for                                      |
-| `--tone <text>`     | `plan`, `make`                         | Voice and style, e.g. "warm and playful"                    |
-| `--language <code>` | `plan`, `make`                         | Narration language, e.g. `en`, `es`, `km` (default `en`)    |
-| `--seconds <n>`     | `script`, `make`                       | Target length of each video (default 45)                    |
-| `--video <n\|all>`  | `script`, `voice`, `render`, `preview` | Which video to work on (default all; preview defaults to 1) |
-| `--format <name>`   | `render`, `make`                       | `vertical`, `landscape`, or `both` (default `vertical`)     |
-| `--no-voice`        | `make`                                 | Skip the voice-over; captions are timed from the text       |
-| `--force`           | `script`                               | Rewrite scripts that already exist                          |
+| Option              | Used by                                          | Description                                                 |
+| ------------------- | ------------------------------------------------ | ----------------------------------------------------------- |
+| `--videos <n>`      | `plan`, `make`                                   | Number of videos to plan (default 5)                        |
+| `--audience <text>` | `plan`, `make`                                   | Who the videos are for                                      |
+| `--tone <text>`     | `plan`, `make`                                   | Voice and style, e.g. "warm and playful"                    |
+| `--language <code>` | `plan`, `make`                                   | Narration language, e.g. `en`, `es`, `km` (default `en`)    |
+| `--seconds <n>`     | `script`, `make`                                 | Target length of each video (default 45)                    |
+| `--video <n\|all>`  | `script`, `images`, `voice`, `render`, `preview` | Which video to work on (default all; preview defaults to 1) |
+| `--format <name>`   | `render`, `make`                                 | `vertical`, `landscape`, or `both` (default `vertical`)     |
+| `--no-voice`        | `make`                                           | Skip the voice-over; captions are timed from the text       |
+| `--force`           | `script`                                         | Rewrite scripts that already exist                          |
 
 ## Scene types
 
@@ -118,6 +121,8 @@ A video is a list of scenes. Each scene has `narration` (what the voice says), a
 | `quote`      | A quote with its author                             | `quote`, `author?`                                                   |
 | `comparison` | Two sides, such as myth vs. fact                    | `heading?`, `left`, `right` (each `label` + `points`)                |
 | `code`       | Syntax-highlighted code that builds up step by step | `language`, `fileName?`, `steps` (`code`, `highlight?`)              |
+| `image`      | A photo or illustration with a slow camera move     | `alt`, `src?`, `caption?`, `credit?`, `layout?`, `motion?`           |
+| `diagram`    | Icons joined by arrows as a flow, cycle, or hub     | `heading?`, `layout?`, `nodes` (`label`, `icon?`, `cue?`)            |
 | `cta`        | The closing call to action                          | `heading`, `action`                                                  |
 
 Every scene also accepts `durationInSeconds` to override its length. Otherwise the length comes from the voice-over, or from the narration's word count before there is one.
@@ -147,6 +152,14 @@ A whole video spec looks like this:
 }
 ```
 
+An image scene's picture comes from one of three places, and the editor lets you switch between them:
+
+- **Stock photos** from [Openverse](https://openverse.org), openly licensed for commercial use and changes, with no key needed. Set `PEXELS_API_KEY` to search [Pexels](https://www.pexels.com/api/) instead. The creator and license are credited on the image.
+- **AI illustrations** from OpenAI's image model, when `OPENAI_API_KEY` is set. Claude marks scenes that a photo can't show, such as the inside of a cell, as illustrations.
+- **Your own upload**: JPEG, PNG, or WebP.
+
+Images are saved next to the voice-overs in `public/content/`. Until a scene has one, it shows a placeholder with its description. Diagram icons come from a set of about 130 [Lucide](https://lucide.dev) icons listed in [`src/lib/icon-names.ts`](src/lib/icon-names.ts).
+
 Background music is set in the editor's Music setting: pick one of the bundled beds (calm, upbeat, curious) or upload your own track, and set its volume. The script step also picks a bed to suit each video. In a spec it looks like `"music": { "src": "music/calm.wav", "volume": 0.15 }`; `src` is any path under `public/`. The beds in [`public/music/`](public/music/README.md) are CC0 and synthesized by `npm run music`. The music fades in and out and dips under the narration.
 
 ## Examples and templates
@@ -155,12 +168,34 @@ Background music is set in the editor's Music setting: pick one of the bundled b
 
 ## Customizing your brand
 
-| File                  | What it controls                                                            |
-| --------------------- | --------------------------------------------------------------------------- |
-| `src/brand.ts`        | Your name, handle, and website, used in calls to action and given to Claude |
-| `src/theme/tokens.ts` | Colors, radii, and the code highlighting theme                              |
-| `src/theme/fonts.ts`  | Fonts (loaded from Google Fonts)                                            |
-| `.env`                | Claude model, ElevenLabs voice, and ElevenLabs model                        |
+Each project has a **brand kit**, set up from the project page: your name, handle, and website, and a theme. Claude writes scripts with your name and handle in mind, the closing call to action shows your handle and website, and every new video starts with the kit's theme. Changing the name, handle, or website updates every video in the project; existing videos keep their own theme.
+
+A **theme** is one of five presets, each checked to meet [WCAG AA](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html) contrast for text on its background:
+
+| Preset       | Look                                       | Font                  |
+| ------------ | ------------------------------------------ | --------------------- |
+| `midnight`   | Dark navy with a violet glow (the default) | Inter                 |
+| `paper`      | Bright and clean, like a printed page      | Poppins               |
+| `ember`      | Warm browns with a glowing orange          | Playfair Display      |
+| `chalkboard` | Classroom green with chalk yellow          | Nunito                |
+| `contrast`   | Black, white, and yellow, for easy reading | Atkinson Hyperlegible |
+
+In the editor's Theme setting, pick a preset, or open "Customize colors and font" to change the accent, background, and text colors and the font. Colors worked out from yours, such as secondary text and cards, adjust to stay readable, and the editor warns you if a color you picked is hard to read. In a spec it looks like this; leave `theme` out for the default look:
+
+```json
+"theme": { "preset": "chalkboard", "accent": "#22C55E", "font": "poppins" },
+"brand": { "name": "Ms. Rivera", "handle": "@msrivera", "website": "rivera.edu" }
+```
+
+Fonts are `inter`, `poppins`, `nunito`, `montserrat`, `playfair-display`, and `atkinson-hyperlegible`, loaded from Google Fonts as a video needs them.
+
+| File                   | What it controls                                                |
+| ---------------------- | --------------------------------------------------------------- |
+| `src/brand.ts`         | The name, handle, and website for projects without a brand kit  |
+| `src/theme/presets.ts` | The theme presets, their colors and fonts, and the font choices |
+| `src/theme/resolve.ts` | How a theme's overrides are applied, and the contrast checks    |
+| `src/theme/fonts.ts`   | Loading fonts from Google Fonts                                 |
+| `.env`                 | Claude model, ElevenLabs voice, and ElevenLabs model            |
 
 ## Project structure
 
@@ -187,7 +222,7 @@ src/                      # The Remotion video app
 ├── components/           # Captions, code blocks, kinetic text, backgrounds
 ├── examples/             # Hand-written example videos
 ├── lib/                  # Timing, captions, highlighting, layout helpers
-└── theme/                # Design tokens and fonts
+└── theme/                # Theme presets, fonts, and the useTheme() hook
 content/                  # Generated plans and specs (git-ignored)
 public/content/           # Generated voice-overs (git-ignored)
 out/                      # Rendered videos (git-ignored)
@@ -207,12 +242,12 @@ out/                      # Rendered videos (git-ignored)
 
 ## Roadmap
 
-| Stage                                      | Goal                                               | Highlights                                                                             |
-| ------------------------------------------ | -------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| **1. Pipeline and local studio** (current) | Idea to finished video, in the browser or terminal | Content plans, scripts, 9 scene types, voice-over, captions, live editor, local export |
-| **2. Richer visuals**                      | Videos that look less templated                    | Stock and AI images, icons, charts, more transitions, background music library         |
-| **3. Hosted studio**                       | Anyone can use it without installing anything      | Accounts, brand kits, cloud rendering, sharing                                         |
-| **4. Publishing**                          | From plan to posted                                | Captions and hashtags per platform, scheduling, performance tracking                   |
+| Stage                                      | Goal                                               | Highlights                                                                                                                                           |
+| ------------------------------------------ | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **1. Pipeline and local studio** (current) | Idea to finished video, in the browser or terminal | Content plans, scripts, 11 scene types with stock and AI images and diagrams, themes and brand kits, voice-over, captions, live editor, local export |
+| **2. Richer visuals**                      | Videos that look less templated                    | Stock and AI images, icons, charts, more transitions, background music library                                                                       |
+| **3. Hosted studio**                       | Anyone can use it without installing anything      | Accounts, cloud rendering, sharing                                                                                                                   |
+| **4. Publishing**                          | From plan to posted                                | Captions and hashtags per platform, scheduling, performance tracking                                                                                 |
 
 ## Costs
 

@@ -3,7 +3,11 @@ import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { examples } from "../../src/examples";
-import type { VideoSpecInput } from "../../src/spec/schema";
+import {
+  brandKitSchema,
+  type BrandKit,
+  type VideoSpecInput,
+} from "../../src/spec/schema";
 import { FORMAT_NAMES, type VideoFormat } from "../../src/lib/formats";
 import {
   MAX_MUSIC_UPLOAD_BYTES,
@@ -12,6 +16,7 @@ import {
 } from "../../src/lib/music";
 import { OUT_DIR, PUBLIC_DIR, MEDIA_SUBDIR } from "../../pipeline/config";
 import type { ContentPlan } from "../../pipeline/schemas";
+import { applyBrandKit, kitCreator } from "../../pipeline/script";
 import {
   exists,
   listPlans,
@@ -218,7 +223,11 @@ export const addBlankVideo = async (slug: string, title: string) => {
   };
   await savePlan(updated);
   const index = updated.plan.videos.length - 1;
-  await saveSpec(updated, index, starterSpec(videoTitle));
+  await saveSpec(
+    updated,
+    index,
+    applyBrandKit(starterSpec(videoTitle), plan.brand),
+  );
   return index;
 };
 
@@ -228,6 +237,55 @@ export const updatePlanContent = async (slug: string, content: ContentPlan) => {
     throw new Error("Adding or removing videos isn't supported here.");
   }
   await savePlan({ ...plan, plan: content });
+};
+
+/**
+ * Saves a project's brand kit. The creator's name, handle, and website are
+ * one identity, so every scripted video picks them up; the theme is a
+ * starting point for new videos, so existing ones keep theirs.
+ */
+export const updateBrandKit = async (slug: string, input: BrandKit) => {
+  const result = brandKitSchema.safeParse(input);
+  if (!result.success) {
+    throw new Error(result.error.issues[0]?.message ?? "Invalid brand kit.");
+  }
+  const creator = kitCreator(result.data);
+  const kit: BrandKit = { ...creator, theme: result.data.theme };
+  if (!kit.theme) delete kit.theme;
+
+  const plan = await loadPlan(slug);
+  const updated: PlanFile = { ...plan, brand: kit };
+  if (!creator && !kit.theme) delete updated.brand;
+  await savePlan(updated);
+
+  await Promise.all(
+    plan.plan.videos.map(async (_, index) => {
+      const spec = await loadSpec(updated, index);
+      if (!spec) return;
+      const next: VideoSpecInput = { ...spec, brand: creator };
+      if (!creator) delete next.brand;
+      await saveSpec(updated, index, next);
+    }),
+  );
+  return updated.brand;
+};
+
+/**
+ * The media folder (relative to public/) of a video the studio was asked
+ * about. Only known plans and videos, so a slug can't point outside content/.
+ */
+export const videoMediaDir = async (
+  slug: string,
+  index: number,
+): Promise<string> => {
+  if (!(await listPlans()).includes(slug)) {
+    throw new Error("That project doesn't exist.");
+  }
+  const plan = await loadPlan(slug);
+  if (!Number.isInteger(index) || !plan.plan.videos[index]) {
+    throw new Error("That video doesn't exist.");
+  }
+  return mediaDir(plan, index);
 };
 
 /**
@@ -241,14 +299,7 @@ export const saveMusicUpload = async (
   fileName: string,
   bytes: Buffer,
 ): Promise<string> => {
-  // Only known plans, so the slug can't point outside content/.
-  if (!(await listPlans()).includes(slug)) {
-    throw new Error("That project doesn't exist.");
-  }
-  const plan = await loadPlan(slug);
-  if (!Number.isInteger(index) || !plan.plan.videos[index]) {
-    throw new Error("That video doesn't exist.");
-  }
+  const dir = await videoMediaDir(slug, index);
   if (bytes.length === 0) throw new Error("That file is empty.");
   if (bytes.length > MAX_MUSIC_UPLOAD_BYTES) {
     throw new Error(
@@ -263,7 +314,7 @@ export const saveMusicUpload = async (
       .join(", ");
     throw new Error(`Upload an audio file: ${formats}.`);
   }
-  const src = path.posix.join(mediaDir(plan, index), name);
+  const src = path.posix.join(dir, name);
   const file = publicPath(src);
   if (!(await exists(file))) {
     await fs.mkdir(path.dirname(file), { recursive: true });
