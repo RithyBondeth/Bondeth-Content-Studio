@@ -11,13 +11,14 @@ import {
 } from "remotion";
 import { Background } from "../components/Background";
 import { Captions } from "../components/Captions";
-import { SceneFadeContext } from "../components/SceneFrame";
+import { EntranceContext, SceneFadeContext } from "../components/SceneFrame";
 import { getSceneWords } from "../lib/captions";
 import { resolveMedia } from "../lib/media";
 import { getDuckFactor, getNarrationSpans, type Span } from "../lib/ducking";
 import { prepareCodeSteps, type PreparedCodeStep } from "../lib/prepare-code";
 import { getSoundSchedule, SOUNDS } from "../lib/sfx";
 import { FPS, getVideoTiming } from "../lib/timing";
+import { getSceneEntrance, getSceneTransition } from "../lib/scene-style";
 import { renderTransition } from "../lib/transitions";
 import { ChartScene } from "../scenes/ChartScene";
 import { CodeScene } from "../scenes/CodeScene";
@@ -29,6 +30,8 @@ import { ListScene } from "../scenes/ListScene";
 import { QuoteScene } from "../scenes/QuoteScene";
 import { StatementScene } from "../scenes/StatementScene";
 import { StatScene } from "../scenes/StatScene";
+import { StepsScene } from "../scenes/StepsScene";
+import { TimelineScene } from "../scenes/TimelineScene";
 import { TitleScene } from "../scenes/TitleScene";
 import { ThemeProvider } from "../theme/context";
 import { resolveTheme } from "../theme/resolve";
@@ -105,6 +108,10 @@ const SceneView: React.FC<SceneViewProps> = ({ scene, ...rest }) => {
       return <ImageScene scene={scene} {...rest} />;
     case "diagram":
       return <DiagramScene scene={scene} {...rest} />;
+    case "timeline":
+      return <TimelineScene scene={scene} {...rest} />;
+    case "steps":
+      return <StepsScene scene={scene} {...rest} />;
     case "cta":
       return <CtaScene scene={scene} {...rest} />;
   }
@@ -148,11 +155,13 @@ export const ExplainerVideo: React.FC<ExplainerVideoProps> = (props) => {
     [spec, timing],
   );
   const last = spec.scenes.length - 1;
+  const { width, height } = useVideoConfig();
+  const size = useMemo(() => ({ width, height }), [width, height]);
 
   return (
     <ThemeProvider theme={spec.theme} brand={spec.brand}>
       <AbsoluteFill>
-        <Background />
+        <Background style={spec.background} seed={spec.title} />
         {spec.music ? <Music music={spec.music} narration={narration} /> : null}
 
         {/* Sound effects, at most one per frame. */}
@@ -175,7 +184,7 @@ export const ExplainerVideo: React.FC<ExplainerVideoProps> = (props) => {
         <TransitionSeries>
           {spec.scenes.map((scene, index) => {
             const transitionFrames = timing.transitions[index]!;
-            const transition = scene.transition ?? "fade";
+            const transition = getSceneTransition(scene, index);
             return (
               <Fragment key={index}>
                 {transitionFrames > 0 && transition !== "cut"
@@ -183,6 +192,7 @@ export const ExplainerVideo: React.FC<ExplainerVideoProps> = (props) => {
                       `transition-${index}`,
                       transition,
                       transitionFrames,
+                      size,
                     )
                   : null}
                 <TransitionSeries.Sequence
@@ -190,16 +200,24 @@ export const ExplainerVideo: React.FC<ExplainerVideoProps> = (props) => {
                   name={`${index + 1}. ${scene.type}`}
                 >
                   {/* Each scene has its own backdrop, so wipes and slides reveal a whole frame. */}
-                  <Background frameOffset={timing.starts[index]} />
+                  <Background
+                    style={spec.background}
+                    seed={spec.title}
+                    frameOffset={timing.starts[index]}
+                  />
                   <SceneFadeContext.Provider
                     value={{ fadeIn: index === 0, fadeOut: index === last }}
                   >
-                    <SceneView
-                      scene={scene}
-                      durationInFrames={timing.scenes[index]!}
-                      reserveCaptions={spec.captions}
-                      codeSteps={props.codeSteps?.[index]}
-                    />
+                    <EntranceContext.Provider
+                      value={getSceneEntrance(spec.scenes, index)}
+                    >
+                      <SceneView
+                        scene={scene}
+                        durationInFrames={timing.scenes[index]!}
+                        reserveCaptions={spec.captions}
+                        codeSteps={props.codeSteps?.[index]}
+                      />
+                    </EntranceContext.Provider>
                   </SceneFadeContext.Provider>
                 </TransitionSeries.Sequence>
               </Fragment>

@@ -218,3 +218,28 @@ test("cues stay with their items when lines are removed or moved", () => {
   );
   assert.equal(moveCuesWithItems(items, ["a"], undefined), undefined);
 });
+
+test("flags timeline and steps cues by their path", () => {
+  assert.deepEqual(
+    findUnmatchedCues({
+      type: "timeline",
+      events: [
+        { date: "1957", label: "Sputnik", cue: "first satellite" },
+        { date: "1969", label: "Moon", cue: "never said" },
+      ],
+      narration: "The first satellite went up, then people walked on the Moon.",
+    }),
+    ["events.1.cue"],
+  );
+  assert.deepEqual(
+    findUnmatchedCues({
+      type: "steps",
+      steps: [
+        { title: "Boil", cue: "missing" },
+        { title: "Steep", cue: "let it steep" },
+      ],
+      narration: "Boil the water, then let it steep.",
+    }),
+    ["steps.0.cue"],
+  );
+});

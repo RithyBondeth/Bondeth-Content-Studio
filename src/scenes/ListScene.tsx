@@ -1,7 +1,7 @@
 import { useCurrentFrame, useVideoConfig } from "remotion";
 import { Emoji } from "../components/Emoji";
-import { SceneFrame } from "../components/SceneFrame";
-import { progressBetween, riseIn } from "../lib/animation";
+import { SceneFrame, useReveal } from "../components/SceneFrame";
+import { progressBetween } from "../lib/animation";
 import { getListItemStarts } from "../lib/reveals";
 import { useLayout } from "../lib/use-layout";
 import { useTheme } from "../theme/context";
@@ -46,6 +46,7 @@ export const ListScene: React.FC<SceneProps<"list">> = ({
 }) => {
   const theme = useTheme();
   const frame = useCurrentFrame();
+  const reveal = useReveal();
   const { fps } = useVideoConfig();
   const { unit, isVertical } = useLayout();
   const style = scene.style ?? "bullets";
@@ -64,7 +65,7 @@ export const ListScene: React.FC<SceneProps<"list">> = ({
           display: "flex",
           alignItems: "center",
           gap: 28 * unit,
-          ...riseIn(progressBetween(frame, 0, 12), 20 * unit),
+          ...reveal(progressBetween(frame, 0, 12), 20 * unit),
         }}
       >
         {scene.emoji ? <Emoji emoji={scene.emoji} size={96} /> : null}
@@ -91,7 +92,7 @@ export const ListScene: React.FC<SceneProps<"list">> = ({
                 display: "flex",
                 alignItems: "flex-start",
                 gap: 28 * unit,
-                ...riseIn(progressBetween(frame, start, start + 10), 24 * unit),
+                ...reveal(progressBetween(frame, start, start + 10), 24 * unit),
               }}
             >
               <Marker style={style} index={index} size={itemSize * 1.25} />

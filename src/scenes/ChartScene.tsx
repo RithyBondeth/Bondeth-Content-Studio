@@ -6,8 +6,8 @@ import {
   useVideoConfig,
 } from "remotion";
 import { Emoji } from "../components/Emoji";
-import { SceneFrame } from "../components/SceneFrame";
-import { progressBetween, riseIn } from "../lib/animation";
+import { SceneFrame, useReveal } from "../components/SceneFrame";
+import { progressBetween } from "../lib/animation";
 import {
   countDecimals,
   fitFontSize,
@@ -71,6 +71,7 @@ const Columns: React.FC<ChartBodyProps> = ({
 }) => {
   const theme = useTheme();
   const frame = useCurrentFrame();
+  const reveal = useReveal();
   const { unit } = useLayout();
   const fractions = getChartFractions(points.map((point) => point.value));
   // Columns share the width; bars are capped so a few bars don't turn into slabs.
@@ -158,7 +159,7 @@ const Columns: React.FC<ChartBodyProps> = ({
               width: columnWidth,
               textAlign: "center",
               ...labelStyle(theme, labelSize),
-              ...riseIn(
+              ...reveal(
                 progressBetween(frame, starts[index]!, starts[index]! + 10),
                 16 * unit,
               ),
@@ -181,6 +182,7 @@ const Rows: React.FC<ChartBodyProps> = ({
 }) => {
   const theme = useTheme();
   const frame = useCurrentFrame();
+  const reveal = useReveal();
   const { unit } = useLayout();
   const fractions = getChartFractions(points.map((point) => point.value));
   const valueSize = 50 * unit;
@@ -212,7 +214,7 @@ const Rows: React.FC<ChartBodyProps> = ({
               display: "flex",
               flexDirection: "column",
               gap: 12 * unit,
-              ...riseIn(progressBetween(frame, start, start + 10), 20 * unit),
+              ...reveal(progressBetween(frame, start, start + 10), 20 * unit),
             }}
           >
             <div style={labelStyle(theme, 44 * unit)}>{point.label}</div>
@@ -251,6 +253,7 @@ const Line: React.FC<ChartBodyProps> = ({
 }) => {
   const theme = useTheme();
   const frame = useCurrentFrame();
+  const reveal = useReveal();
   const { fps } = useVideoConfig();
   const { unit, isVertical } = useLayout();
   const columnWidth = contentWidth / points.length;
@@ -378,7 +381,7 @@ const Line: React.FC<ChartBodyProps> = ({
               padding: `0 ${8 * unit}px`,
               textAlign: "center",
               ...labelStyle(theme, labelSize),
-              ...riseIn(
+              ...reveal(
                 progressBetween(frame, starts[index]!, starts[index]! + 10),
                 16 * unit,
               ),
@@ -417,6 +420,7 @@ export const ChartScene: React.FC<SceneProps<"chart">> = ({
 }) => {
   const theme = useTheme();
   const frame = useCurrentFrame();
+  const reveal = useReveal();
   const { fps } = useVideoConfig();
   const { unit, isVertical, width, paddingX } = useLayout();
   const contentWidth = width - paddingX * 2;
@@ -442,7 +446,7 @@ export const ChartScene: React.FC<SceneProps<"chart">> = ({
           display: "flex",
           alignItems: "center",
           gap: 28 * unit,
-          ...riseIn(progressBetween(frame, 0, 12), 20 * unit),
+          ...reveal(progressBetween(frame, 0, 12), 20 * unit),
         }}
       >
         {scene.emoji ? <Emoji emoji={scene.emoji} size={96} /> : null}

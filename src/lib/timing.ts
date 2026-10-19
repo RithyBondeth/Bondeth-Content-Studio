@@ -1,4 +1,5 @@
 import type { Scene, VideoSpec } from "../spec/schema";
+import { getSceneTransition } from "./scene-style";
 
 export const FPS = 30;
 
@@ -39,10 +40,11 @@ export const TRANSITION_FRAMES = 15;
 /** Frames of the transition into a scene, never more than half of either scene. */
 const getTransitionFrames = (
   scene: Scene,
+  index: number,
   frames: number,
   previousFrames: number,
 ) =>
-  (scene.transition ?? "fade") === "cut"
+  getSceneTransition(scene, index) === "cut"
     ? 0
     : Math.min(
         TRANSITION_FRAMES,
@@ -73,7 +75,7 @@ export const getVideoTiming = (spec: VideoSpec): VideoTiming => {
   const transitions = spec.scenes.map((scene, index) =>
     index === 0
       ? 0
-      : getTransitionFrames(scene, scenes[index]!, scenes[index - 1]!),
+      : getTransitionFrames(scene, index, scenes[index]!, scenes[index - 1]!),
   );
   const sequences = scenes.map(
     (frames, index) => frames + (transitions[index + 1] ?? 0),
