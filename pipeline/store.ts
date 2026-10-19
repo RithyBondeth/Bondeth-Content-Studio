@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import type { PublishKit } from "../src/lib/publish";
 import type { BrandKit, VideoSpecInput } from "../src/spec/schema";
 import { CONTENT_DIR, MEDIA_SUBDIR, OUT_DIR, PUBLIC_DIR } from "./config";
 import type { ContentPlan } from "./schemas";
@@ -81,6 +82,10 @@ export const videoKey = (plan: PlanFile, index: number) => {
 export const specPath = (plan: PlanFile, index: number) =>
   path.join(planDir(plan.slug), "videos", videoKey(plan, index), "spec.json");
 
+/** The video's publish kit: post text per platform and the cover scene. */
+export const publishPath = (plan: PlanFile, index: number) =>
+  path.join(path.dirname(specPath(plan, index)), "publish.json");
+
 /** Media folder for a video, relative to public/ (what staticFile() expects). */
 export const mediaDir = (plan: PlanFile, index: number) =>
   path.posix.join(MEDIA_SUBDIR, plan.slug, videoKey(plan, index));
@@ -89,6 +94,10 @@ export const publicPath = (relative: string) => path.join(PUBLIC_DIR, relative);
 
 export const outputPath = (plan: PlanFile, index: number, format: string) =>
   path.join(OUT_DIR, plan.slug, `${videoKey(plan, index)}-${format}.mp4`);
+
+/** The cover image exported for one format of a video. */
+export const coverPath = (plan: PlanFile, index: number, format: string) =>
+  path.join(OUT_DIR, plan.slug, `${videoKey(plan, index)}-${format}-cover.png`);
 
 const exists = async (file: string) =>
   fs.access(file).then(
@@ -151,5 +160,19 @@ export const loadSpec = async (
 
 export const saveSpec = (plan: PlanFile, index: number, spec: VideoSpecInput) =>
   writeJson(specPath(plan, index), spec);
+
+export const loadPublishKit = async (
+  plan: PlanFile,
+  index: number,
+): Promise<PublishKit | null> => {
+  const file = publishPath(plan, index);
+  return (await exists(file)) ? readJson<PublishKit>(file) : null;
+};
+
+export const savePublishKit = (
+  plan: PlanFile,
+  index: number,
+  kit: PublishKit,
+) => writeJson(publishPath(plan, index), kit);
 
 export { exists };

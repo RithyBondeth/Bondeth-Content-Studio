@@ -58,6 +58,7 @@ The studio walks you through the whole process in your browser:
 3. **Editor:** a list of scenes, a form for the selected scene, and a live preview that updates as you type. Add, reorder, duplicate, and delete scenes, switch a scene's template, and edit narration, on-screen text, emoji, and timing, and pick the video's theme. Changes save automatically.
 4. **Voice:** pick a narrator for the project in its brand kit, or for one video in the editor's Voice setting, then record the narration with ElevenLabs. Only scenes whose narration, voice, or voice settings changed are re-recorded.
 5. **Export:** render vertical or landscape MP4s on your computer, with progress, then play or download them.
+6. **Publish:** Claude writes a title, post text, call to action, and hashtags for TikTok, YouTube Shorts, Instagram Reels, and YouTube in one go. Edit them with live character counters, copy them, and export a cover image from any scene. See [Publishing](#publishing).
 
 The studio runs locally and stores everything in this folder, the same files the command line uses.
 
@@ -94,23 +95,27 @@ npm run pipeline -- voice personal-finance-basics --voice JBFqnCBsd6RMkjVDRZzb
 # 5. Render to MP4.
 npm run pipeline -- render personal-finance-basics --format both
 
+# 6. Write post text and hashtags for each platform, and export cover images.
+npm run pipeline -- publish personal-finance-basics --video 1
+
 # See plans, and the status of each video in a plan.
 npm run pipeline -- list
 npm run pipeline -- list personal-finance-basics
 ```
 
-| Option              | Used by                                          | Description                                                 |
-| ------------------- | ------------------------------------------------ | ----------------------------------------------------------- |
-| `--videos <n>`      | `plan`, `make`                                   | Number of videos to plan (default 5)                        |
-| `--audience <text>` | `plan`, `make`                                   | Who the videos are for                                      |
-| `--tone <text>`     | `plan`, `make`                                   | Voice and style, e.g. "warm and playful"                    |
-| `--language <code>` | `plan`, `make`                                   | Narration language, e.g. `en`, `es`, `km` (default `en`)    |
-| `--seconds <n>`     | `script`, `make`                                 | Target length of each video (default 45)                    |
-| `--video <n\|all>`  | `script`, `images`, `voice`, `render`, `preview` | Which video to work on (default all; preview defaults to 1) |
-| `--format <name>`   | `render`, `make`                                 | `vertical`, `landscape`, or `both` (default `vertical`)     |
-| `--no-voice`        | `make`                                           | Skip the voice-over; captions are timed from the text       |
-| `--voice <id>`      | `voice`, `make`                                  | ElevenLabs voice to record with, saved as the video's voice |
-| `--force`           | `script`                                         | Rewrite scripts that already exist                          |
+| Option              | Used by                                                     | Description                                                 |
+| ------------------- | ----------------------------------------------------------- | ----------------------------------------------------------- |
+| `--videos <n>`      | `plan`, `make`                                              | Number of videos to plan (default 5)                        |
+| `--audience <text>` | `plan`, `make`                                              | Who the videos are for                                      |
+| `--tone <text>`     | `plan`, `make`                                              | Voice and style, e.g. "warm and playful"                    |
+| `--language <code>` | `plan`, `make`                                              | Narration language, e.g. `en`, `es`, `km` (default `en`)    |
+| `--seconds <n>`     | `script`, `make`                                            | Target length of each video (default 45)                    |
+| `--video <n\|all>`  | `script`, `images`, `voice`, `render`, `preview`, `publish` | Which video to work on (default all; preview defaults to 1) |
+| `--format <name>`   | `render`, `make`                                            | `vertical`, `landscape`, or `both` (default `vertical`)     |
+| `--no-voice`        | `make`                                                      | Skip the voice-over; captions are timed from the text       |
+| `--voice <id>`      | `voice`, `make`                                             | ElevenLabs voice to record with, saved as the video's voice |
+| `--cover <n>`       | `publish`                                                   | Scene to use as the cover image (default: the title scene)  |
+| `--force`           | `script`, `publish`                                         | Rewrite scripts or publish kits that already exist          |
 
 ## Scene types
 
@@ -229,6 +234,57 @@ A video's voice is used whole: it doesn't borrow the project's settings. In a sp
 
 The voice and its settings are part of each scene's recording, so changing them re-records those scenes the next time you click Record voice or run `voice`; projects without a voice keep their existing recordings. Without an ElevenLabs key the voice list can't load, but you can still paste a voice ID from the [voice library](https://elevenlabs.io/app/voice-library).
 
+## Publishing
+
+A video's publish kit is everything you need to post it: for each platform, a title (where the platform has one), the post text, a call to action, and hashtags, plus a cover image. Claude writes all four platforms in one call, in the plan's tone and language, from the video's narration and the plan's audience, pillar, hook, and call to action. It's saved as `publish.json` next to the video's `spec.json`, so you can edit it in the studio or by hand, and regenerate it whenever you like.
+
+| Platform        | Render    | Title | Post text (with hashtags) | Hashtags |
+| --------------- | --------- | ----- | ------------------------- | -------- |
+| TikTok          | Vertical  | None  | 2,200 characters          | 3-5      |
+| YouTube Shorts  | Vertical  | 100   | 5,000 characters          | 3-5      |
+| Instagram Reels | Vertical  | None  | 2,200 characters          | 3-5      |
+| YouTube         | Landscape | 100   | 5,000 characters          | 3-8      |
+
+The limits come from each platform's own documentation, checked in October 2026. TikTok's app allows 4,000 characters, but its posting API and most schedulers take 2,200, so we stay under that. Instagram allows at most 5 hashtags per post since December 2025, and YouTube doesn't allow `<` or `>` in titles or descriptions. Characters are counted the way the platforms count them, so an emoji counts as 2. The limits live in `src/lib/publish.ts` if they change.
+
+Generated posts are trimmed to fit, and hashtags are tidied up: a `#`, no spaces or punctuation, multi-word tags in CamelCase (`#SkyColour`), and no repeats. In the studio, a tab with a warning dot needs attention, for example a post that's too long after editing.
+
+The cover is one frame of a scene, without captions, exported as a PNG for each format (vertical for TikTok, Shorts, and Reels; landscape for YouTube) to `out/<plan>/<video>-<format>-cover.png`. It defaults to the title scene; pick another in the Publish panel or with `--cover <n>`.
+
+```json
+{
+  "version": 1,
+  "coverScene": 0,
+  "generatedAt": "2026-10-19T10:00:00.000Z",
+  "posts": {
+    "tiktok": {
+      "title": null,
+      "text": "Why is the sky blue and not violet?",
+      "callToAction": "Follow for part 2.",
+      "hashtags": ["#Science", "#Physics", "#LearnOnTikTok"]
+    },
+    "shorts": {
+      "title": "Why is the sky blue?",
+      "text": "...",
+      "callToAction": "...",
+      "hashtags": ["..."]
+    },
+    "reels": {
+      "title": null,
+      "text": "...",
+      "callToAction": "...",
+      "hashtags": ["..."]
+    },
+    "youtube": {
+      "title": "...",
+      "text": "...",
+      "callToAction": "...",
+      "hashtags": ["..."]
+    }
+  }
+}
+```
+
 ## Project structure
 
 ```
@@ -239,10 +295,11 @@ app/                      # The web studio (Next.js)
 └── _components/          # UI components, including the editor
 studio/server/            # Studio server code: projects, render jobs, key status
 pipeline/                 # The idea → video pipeline (runs in Node)
-├── cli.ts                # Commands: plan, script, preview, voice, voices, render, make, list
+├── cli.ts                # Commands: plan, script, preview, voice, voices, render, publish, make, list
 ├── prompts.ts            # Instructions given to Claude
 ├── schemas.ts            # The plan and script formats Claude must return
 ├── plan.ts / script.ts   # Claude steps
+├── publish.ts            # Publish kits: post text and hashtags per platform
 ├── voice.ts              # ElevenLabs voice-over and word timings
 ├── voices.ts             # Lists the ElevenLabs account's voices
 ├── render.ts             # Renders with Remotion, reporting progress
@@ -258,7 +315,7 @@ src/                      # The Remotion video app
 └── theme/                # Theme presets, fonts, and the useTheme() hook
 content/                  # Generated plans and specs (git-ignored)
 public/content/           # Generated voice-overs (git-ignored)
-out/                      # Rendered videos (git-ignored)
+out/                      # Rendered videos and cover images (git-ignored)
 ```
 
 ## Scripts
@@ -280,11 +337,11 @@ out/                      # Rendered videos (git-ignored)
 | **1. Pipeline and local studio** (current) | Idea to finished video, in the browser or terminal | Content plans, scripts, 11 scene types with stock and AI images and diagrams, themes and brand kits, voice-over, captions, live editor, local export |
 | **2. Richer visuals**                      | Videos that look less templated                    | Stock and AI images, icons, charts, more transitions, background music library                                                                       |
 | **3. Hosted studio**                       | Anyone can use it without installing anything      | Accounts, cloud rendering, sharing                                                                                                                   |
-| **4. Publishing**                          | From plan to posted                                | Captions and hashtags per platform, scheduling, performance tracking                                                                                 |
+| **4. Publishing**                          | From plan to posted                                | Captions and hashtags per platform (done), scheduling, performance tracking                                                                          |
 
 ## Costs
 
-Each video calls the Claude API once to write the script, plus once per plan, and ElevenLabs once per scene. Check current [Claude](https://platform.claude.com/docs/en/about-claude/pricing) and [ElevenLabs](https://elevenlabs.io/pricing) pricing. Rendering runs on your machine and is free.
+Each video calls the Claude API once to write the script and once for its publish kit, plus once per plan, and ElevenLabs once per scene. Check current [Claude](https://platform.claude.com/docs/en/about-claude/pricing) and [ElevenLabs](https://elevenlabs.io/pricing) pricing. Rendering runs on your machine and is free.
 
 ## Author
 

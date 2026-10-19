@@ -7,7 +7,12 @@ import path from "node:path";
 import readline from "node:readline";
 import type { VideoFormat } from "../../src/lib/formats";
 import { ROOT } from "../../pipeline/config";
-import { loadPlan, loadSpec, outputPath } from "../../pipeline/store";
+import {
+  coverPath,
+  loadPlan,
+  loadSpec,
+  outputPath,
+} from "../../pipeline/store";
 import type { WorkerMessage } from "../../pipeline/render-worker";
 
 export type RenderJob = {
@@ -15,6 +20,10 @@ export type RenderJob = {
   slug: string;
   index: number;
   format: VideoFormat;
+  /** A video, or a cover image of one scene. */
+  kind: "video" | "cover";
+  /** For covers: the 0-based scene to export. */
+  scene?: number;
   status: "queued" | "bundling" | "rendering" | "done" | "error";
   /** 0 to 1 within the current stage. */
   progress: number;
@@ -78,7 +87,9 @@ const runJob = async (job: RenderJob) => {
           path.join(ROOT, "pipeline", "render-worker.ts"),
           specFile,
           job.format,
-          outputPath(plan, job.index, job.format),
+          ...(job.kind === "cover"
+            ? [coverPath(plan, job.index, job.format), String(job.scene ?? 0)]
+            : [outputPath(plan, job.index, job.format)]),
         ],
         { cwd: ROOT, stdio: ["ignore", "pipe", "pipe"] },
       );
@@ -123,12 +134,16 @@ export const startRenderJob = (
   slug: string,
   index: number,
   format: VideoFormat,
+  cover?: { scene: number },
 ) => {
+  const kind = cover ? "cover" : "video";
   const existing = [...store.jobs.values()].find(
     (job) =>
       job.slug === slug &&
       job.index === index &&
       job.format === format &&
+      job.kind === kind &&
+      job.scene === cover?.scene &&
       !["done", "error"].includes(job.status),
   );
   if (existing) return existing;
@@ -138,6 +153,8 @@ export const startRenderJob = (
     slug,
     index,
     format,
+    kind,
+    ...(cover ? { scene: cover.scene } : {}),
     status: "queued",
     progress: 0,
   };
