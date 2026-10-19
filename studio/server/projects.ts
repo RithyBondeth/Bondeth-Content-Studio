@@ -7,6 +7,7 @@ import {
   brandKitSchema,
   type BrandKit,
   type VideoSpecInput,
+  type VoiceSetting,
 } from "../../src/spec/schema";
 import { FORMAT_NAMES, type VideoFormat } from "../../src/lib/formats";
 import {
@@ -17,6 +18,7 @@ import {
 import { OUT_DIR, PUBLIC_DIR, MEDIA_SUBDIR } from "../../pipeline/config";
 import type { ContentPlan } from "../../pipeline/schemas";
 import { applyBrandKit, kitCreator } from "../../pipeline/script";
+import { scenesToRecord, voiceForVideo } from "../../pipeline/voice";
 import {
   exists,
   listPlans,
@@ -242,7 +244,8 @@ export const updatePlanContent = async (slug: string, content: ContentPlan) => {
 /**
  * Saves a project's brand kit. The creator's name, handle, and website are
  * one identity, so every scripted video picks them up; the theme is a
- * starting point for new videos, so existing ones keep theirs.
+ * starting point for new videos, so existing ones keep theirs. The voice is
+ * read when recording, so it applies to every video without its own.
  */
 export const updateBrandKit = async (slug: string, input: BrandKit) => {
   const result = brandKitSchema.safeParse(input);
@@ -250,12 +253,17 @@ export const updateBrandKit = async (slug: string, input: BrandKit) => {
     throw new Error(result.error.issues[0]?.message ?? "Invalid brand kit.");
   }
   const creator = kitCreator(result.data);
-  const kit: BrandKit = { ...creator, theme: result.data.theme };
+  const kit: BrandKit = {
+    ...creator,
+    theme: result.data.theme,
+    voice: result.data.voice,
+  };
   if (!kit.theme) delete kit.theme;
+  if (!kit.voice) delete kit.voice;
 
   const plan = await loadPlan(slug);
   const updated: PlanFile = { ...plan, brand: kit };
-  if (!creator && !kit.theme) delete updated.brand;
+  if (!creator && !kit.theme && !kit.voice) delete updated.brand;
   await savePlan(updated);
 
   await Promise.all(
@@ -268,6 +276,38 @@ export const updateBrandKit = async (slug: string, input: BrandKit) => {
     }),
   );
   return updated.brand;
+};
+
+export type VoiceChange = {
+  index: number;
+  title: string;
+  /** Recorded scenes (0-based) that would be recorded again. */
+  scenes: number[];
+};
+
+/**
+ * What switching the project's voice to `voice` would re-record: for each
+ * video that follows the project's voice, the scenes already recorded with
+ * a different voice or settings.
+ */
+export const projectVoiceChanges = async (
+  slug: string,
+  voice: VoiceSetting | undefined,
+): Promise<VoiceChange[]> => {
+  const plan = await loadPlan(slug);
+  const changes: VoiceChange[] = [];
+  for (const [index, video] of plan.plan.videos.entries()) {
+    const spec = await loadSpec(plan, index);
+    if (!spec || spec.voice) continue;
+    const pending = await scenesToRecord(
+      spec,
+      mediaDir(plan, index),
+      voiceForVideo(spec, { projectVoice: voice }),
+    );
+    const scenes = pending.filter((scene) => spec.scenes[scene]?.audio);
+    if (scenes.length) changes.push({ index, title: video.title, scenes });
+  }
+  return changes;
 };
 
 /**

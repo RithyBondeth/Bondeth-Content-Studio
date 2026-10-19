@@ -8,6 +8,7 @@ import {
   type BrandKit,
   type ImageLayout,
   type VideoSpecInput,
+  type VoiceSetting,
 } from "../src/spec/schema";
 import { createPlan } from "../pipeline/plan";
 import type { ContentPlan } from "../pipeline/schemas";
@@ -20,12 +21,14 @@ import {
   searchStockImages,
   type StockImage,
 } from "../pipeline/images";
-import { addVoiceOver } from "../pipeline/voice";
+import { addVoiceOver, scenesToRecord, voiceForVideo } from "../pipeline/voice";
+import { listVoices } from "../pipeline/voices";
 import {
   addBlankVideo,
   createExampleProject,
   deleteProject,
   listRenders,
+  projectVoiceChanges,
   updateBrandKit,
   updatePlanContent,
   videoMediaDir,
@@ -142,10 +145,48 @@ export const recordVoiceAction = async (slug: string, index: number) =>
     const plan = await loadPlan(slug);
     const spec = await loadSpec(plan, index);
     if (!spec) throw new Error("Write the script first.");
-    const result = await addVoiceOver(spec, mediaDir(plan, index));
+    const result = await addVoiceOver(spec, mediaDir(plan, index), {
+      projectVoice: plan.brand?.voice,
+    });
     await saveSpec(plan, index, result.spec);
     return result;
   });
+
+/** The voices in the ElevenLabs account. `fresh` skips the short cache. */
+export const listVoicesAction = async (fresh = false) =>
+  run(() => listVoices({ fresh }));
+
+/**
+ * Which scenes Record voice would generate for this version of the video
+ * (saved or not), and the voice it would use.
+ */
+export const scenesToRecordAction = async (
+  slug: string,
+  index: number,
+  spec: VideoSpecInput,
+) =>
+  run(async () => {
+    const result = videoSpecSchema.safeParse(spec);
+    if (!result.success) {
+      throw new Error(result.error.issues[0]?.message ?? "Invalid video.");
+    }
+    const plan = await loadPlan(slug);
+    const voice = voiceForVideo(spec, { projectVoice: plan.brand?.voice });
+    return {
+      scenes: await scenesToRecord(
+        spec,
+        await videoMediaDir(slug, index),
+        voice,
+      ),
+      voice,
+    };
+  });
+
+/** Recorded scenes that switching the project's voice would record again. */
+export const projectVoiceChangesAction = async (
+  slug: string,
+  voice: VoiceSetting | undefined,
+) => run(() => projectVoiceChanges(slug, voice));
 
 export const startRenderAction = async (
   slug: string,

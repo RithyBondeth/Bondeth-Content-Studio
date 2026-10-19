@@ -482,7 +482,11 @@ export const ProjectView = ({
           </div>
         )}
 
-        <BrandKitCard key={JSON.stringify(plan.brand ?? null)} plan={plan} />
+        <BrandKitCard
+          key={JSON.stringify(plan.brand ?? null)}
+          plan={plan}
+          canListVoices={keys.elevenLabs}
+        />
 
         <section
           className="flex flex-col gap-4"
