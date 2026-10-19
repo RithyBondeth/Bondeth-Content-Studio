@@ -1,5 +1,5 @@
 import type { VoiceSummary } from "../src/lib/voice";
-import { requireEnv } from "./config";
+import { requireEnv } from "./settings";
 
 const API_URL = "https://api.elevenlabs.io/v2/voices";
 /** ElevenLabs' largest page. */
@@ -46,7 +46,7 @@ export const listVoices = async ({
 }: { fresh?: boolean } = {}): Promise<VoiceSummary[]> => {
   const apiKey = requireEnv(
     "ELEVENLABS_API_KEY",
-    "Add it to .env (see .env.example) to choose a voice.",
+    "Add your ElevenLabs key in Settings to choose a voice.",
   );
   if (!fresh && cache?.key === apiKey && Date.now() - cache.at < CACHE_MS) {
     return cache.voices;
@@ -67,7 +67,7 @@ export const listVoices = async ({
       const detail = await response.text();
       throw new Error(
         response.status === 401
-          ? "ElevenLabs didn't accept ELEVENLABS_API_KEY. Check it in .env, and that it's allowed to read voices."
+          ? "ElevenLabs didn't accept ELEVENLABS_API_KEY. Check it in Settings, and that it's allowed to read voices."
           : `ElevenLabs returned ${response.status} ${response.statusText}: ${detail.slice(0, 300)}`,
       );
     }

@@ -119,7 +119,7 @@ const VoiceRow = ({
 /**
  * Picks an ElevenLabs voice from the account, with a sample for each, and
  * tunes how it sounds. Leaving it on the first option falls back to
- * `fallback` (the project's voice, or the one in .env).
+ * `fallback` (the project's voice, or the default from Settings or .env).
  */
 export const VoicePicker = ({
   value,
@@ -141,7 +141,7 @@ export const VoicePicker = ({
       : {
           kind: "error",
           message:
-            "Add ELEVENLABS_API_KEY to .env to see your voices. You can still paste a voice ID.",
+            "Add your ElevenLabs key in Settings to see your voices. You can still paste a voice ID.",
         },
   );
   const [query, setQuery] = useState("");

@@ -40,6 +40,7 @@ import {
   scenesToRecordAction,
 } from "../../actions";
 import { AppearanceSwitch } from "../Appearance";
+import { SettingsLink } from "../Header";
 import { useConfirm } from "../ConfirmDialog";
 import { AiButton, SETUP } from "../AiChoice";
 import { useToast } from "../Toast";
@@ -735,6 +736,7 @@ export const VideoEditor = ({
             />
           </div>
           <SaveIndicator state={saveState} />
+          <SettingsLink className="hidden md:inline-flex" />
           <AppearanceSwitch className="hidden md:flex" />
           <FormatToggle value={format} onChange={setFormat} />
           {/* Your own voice is recorded per scene; this voices every other scene with AI. */}

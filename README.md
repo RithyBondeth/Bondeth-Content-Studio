@@ -38,16 +38,14 @@ Educators, teachers, coaches, and anyone who explains things: science, history, 
 git clone https://github.com/RithyBondeth/Bondeth-Content-Studio.git
 cd Bondeth-Content-Studio
 npm install
-cp .env.example .env
-```
-
-Add your keys to `.env`, then open the studio:
-
-```bash
 npm run studio
 ```
 
-Go to [http://localhost:3100](http://localhost:3100). No keys yet? Everything except the AI writing works without them: type what you want to teach and choose **Plan it myself**, then write the scripts and posts yourself, record your own voice, and render. Or open the example project to look around first.
+Go to [http://localhost:3100](http://localhost:3100) and open **Settings** (the gear at the top right). Paste each key, press **Test connection** to check it works, and **Save**. Changes apply straight away, with no restart. Keys are saved in `.studio/settings.json` in this folder, which is git-ignored and readable only by you.
+
+Prefer a file? Copy `.env.example` to `.env` and fill it in instead (restart the studio after editing it). Anything saved in Settings takes priority over `.env`, and the command line reads both.
+
+No keys yet? Everything except the AI writing works without them: type what you want to teach and choose **Plan it myself**, then write the scripts and posts yourself, record your own voice, and render. Or open the example project to look around first.
 
 ## The web studio
 
@@ -64,9 +62,11 @@ The studio runs locally and stores everything in this folder, the same files the
 
 ## AI providers
 
-Every step AI can do has a by-hand option right next to it: **Plan it myself** or **Plan with AI**, **Write myself** or **Write with AI** for scripts and posts, your own recording or **AI voice-over**, and stock or uploaded images or **AI image**. If a service isn't set up, its button says **Set up**, and clicking it explains what to add to `.env`.
+Every step AI can do has a by-hand option right next to it: **Plan it myself** or **Plan with AI**, **Write myself** or **Write with AI** for scripts and posts, your own recording or **AI voice-over**, and stock or uploaded images or **AI image**. If a service isn't set up, its button says **Set up**, and clicking it opens that part of Settings in a new tab. Once the key is saved, go back and the button is ready.
 
-Claude writes plans, scripts, and posts by default: set `ANTHROPIC_API_KEY` and you're done. To use another model, set `LLM_PROVIDER` and `LLM_MODEL` in `.env`, plus the provider's key:
+Claude writes plans, scripts, and posts by default: paste a Claude key in **Settings → AI writing** and you're done. To use another model, pick its provider there and enter the model name and key. Settings tests the key and model with a quick, free call.
+
+With `.env` instead, set `ANTHROPIC_API_KEY`, or `LLM_PROVIDER` and `LLM_MODEL` plus the provider's key:
 
 | `LLM_PROVIDER` | Key                      | Notes                                       |
 | -------------- | ------------------------ | ------------------------------------------- |
@@ -191,8 +191,8 @@ A whole video spec looks like this:
 
 An image scene's picture comes from one of three places, and the editor lets you switch between them:
 
-- **Stock photos** from [Openverse](https://openverse.org), openly licensed for commercial use and changes, with no key needed. Set `PEXELS_API_KEY` to search [Pexels](https://www.pexels.com/api/) instead. The creator and license are credited on the image.
-- **AI illustrations** from OpenAI's image model, when `OPENAI_API_KEY` is set. Claude marks scenes that a photo can't show, such as the inside of a cell, as illustrations.
+- **Stock photos** from [Openverse](https://openverse.org), openly licensed for commercial use and changes, with no key needed. Add a Pexels key in Settings (or `PEXELS_API_KEY` in `.env`) to search [Pexels](https://www.pexels.com/api/) instead. The creator and license are credited on the image.
+- **AI illustrations** from OpenAI's image model, when an OpenAI key is set in Settings (or `OPENAI_API_KEY` in `.env`). Claude marks scenes that a photo can't show, such as the inside of a cell, as illustrations.
 - **Your own upload**: JPEG, PNG, or WebP.
 
 Images are saved next to the voice-overs in `public/content/`. Until a scene has one, it shows a placeholder with its description. Diagram icons come from a set of about 130 [Lucide](https://lucide.dev) icons listed in [`src/lib/icon-names.ts`](src/lib/icon-names.ts).
@@ -232,7 +232,8 @@ Fonts are `inter`, `poppins`, `nunito`, `montserrat`, `playfair-display`, and `a
 | `src/theme/presets.ts` | The theme presets, their colors and fonts, and the font choices |
 | `src/theme/resolve.ts` | How a theme's overrides are applied, and the contrast checks    |
 | `src/theme/fonts.ts`   | Loading fonts from Google Fonts                                 |
-| `.env`                 | AI provider and model, ElevenLabs voice, and ElevenLabs model   |
+| Settings, or `.env`    | AI provider and model, and the default ElevenLabs voice         |
+| `.env`                 | ElevenLabs model and OpenAI image model                         |
 
 ## Voices
 
@@ -250,7 +251,7 @@ Settings you don't touch use ElevenLabs' defaults, shown in brackets. A video ca
 1. `--voice <id>` on the command line (it's then saved as the video's voice)
 2. The video's own voice
 3. The project's brand kit voice
-4. `ELEVENLABS_VOICE_ID` in `.env`
+4. The default voice in Settings, or `ELEVENLABS_VOICE_ID` in `.env`
 5. George, one of ElevenLabs' default voices
 
 A video's voice is used whole: it doesn't borrow the project's settings. In a spec or plan file it looks like this; `name` is only for display:
@@ -353,9 +354,10 @@ Anything not made yet (say, the landscape render) is left out and listed in `REA
 app/                      # The web studio (Next.js)
 ├── page.tsx              # Home: new project and project list
 ├── projects/             # Project overview and video editor pages
+├── settings/             # API keys and AI provider, with connection tests
 ├── actions.ts            # Server actions the UI calls
 └── _components/          # UI components, including the editor
-studio/server/            # Studio server code: projects, render jobs, key status
+studio/server/            # Studio server code: projects, render jobs, settings, key status
 pipeline/                 # The idea → video pipeline (runs in Node)
 ├── cli.ts                # Commands: plan, script, preview, voice, voices, render, publish, bundle, make, list
 ├── prompts.ts            # Instructions given to Claude
@@ -367,6 +369,8 @@ pipeline/                 # The idea → video pipeline (runs in Node)
 ├── voice.ts              # ElevenLabs voice-over and word timings
 ├── recording.ts          # Your own recordings: converted to MP3, trimmed, timed
 ├── voices.ts             # Lists the ElevenLabs account's voices
+├── settings.ts           # Settings saved from the studio, laid over .env
+├── connections.ts        # The cheap calls behind "Test connection"
 ├── render.ts             # Renders with Remotion, reporting progress
 ├── render-worker.ts      # Runs one render in its own process, for the studio
 └── store.ts              # Where plans, specs, and media are saved

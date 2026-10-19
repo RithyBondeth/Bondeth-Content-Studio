@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import type { ImageLayout, SceneOf, VideoSpecInput } from "../src/spec/schema";
 import { config } from "./config";
+import { getEnv } from "./settings";
 import { exists, publicPath } from "./store";
 
 /** One result from a stock photo search. */
@@ -157,7 +158,7 @@ export const searchStockImages = async (
     throw new Error("Type what the image should show.");
   }
   const orientation = orientationFor(layout);
-  const pexelsKey = process.env.PEXELS_API_KEY;
+  const pexelsKey = getEnv("PEXELS_API_KEY");
   return pexelsKey
     ? searchPexels(trimmed, orientation, pexelsKey)
     : searchOpenverse(trimmed, orientation);
@@ -222,7 +223,7 @@ export const downloadImage = async (
 const ILLUSTRATION_STYLE =
   "Style: a clean, modern flat illustration with soft lighting and rich colors on a dark navy background. No text, letters, numbers, logos or watermarks.";
 
-export const canGenerateImages = () => Boolean(process.env.OPENAI_API_KEY);
+export const canGenerateImages = () => Boolean(getEnv("OPENAI_API_KEY"));
 
 /** Generates an illustration with OpenAI's image model and stores it. */
 export const generateImage = async (
@@ -230,10 +231,10 @@ export const generateImage = async (
   mediaDir: string,
   layout?: ImageLayout,
 ): Promise<string> => {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = getEnv("OPENAI_API_KEY");
   if (!apiKey) {
     throw new Error(
-      "OPENAI_API_KEY is not set. Add it to .env to generate images, or pick a stock photo.",
+      "OpenAI images aren't set up. Add your OpenAI key in Settings to generate images, or pick a stock photo.",
     );
   }
   if (!prompt.trim()) {

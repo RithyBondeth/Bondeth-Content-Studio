@@ -10,7 +10,8 @@ import type {
 import { isSelfRecorded } from "../src/lib/recording";
 import { resolveVoice, type ResolvedVoice } from "../src/lib/voice";
 import { alignmentToWords, type CharacterAlignment } from "./alignment";
-import { config, requireEnv } from "./config";
+import { config } from "./config";
+import { getEnv, requireEnv } from "./settings";
 import { exists, publicPath } from "./store";
 
 const API_URL = "https://api.elevenlabs.io/v1/text-to-speech";
@@ -45,7 +46,7 @@ const synthesize = async (
 ): Promise<TimestampsResponse> => {
   const apiKey = requireEnv(
     "ELEVENLABS_API_KEY",
-    "Add it to .env (see .env.example), or render without voice-over.",
+    "Add your ElevenLabs key in Settings, or render without voice-over.",
   );
 
   const response = await fetch(
@@ -109,7 +110,7 @@ export type VoiceOptions = {
   onProgress?: (message: string) => void;
 };
 
-/** The voice a video is recorded with: command, video, project, then .env. */
+/** The voice a video is recorded with: command, video, project, then Settings or .env. */
 export const voiceForVideo = (
   spec: VideoSpecInput,
   options: Pick<VoiceOptions, "projectVoice" | "command"> = {},
@@ -118,7 +119,7 @@ export const voiceForVideo = (
     command: options.command,
     video: spec.voice,
     project: options.projectVoice,
-    fallbackId: config.elevenLabs.voiceId,
+    fallbackId: getEnv("ELEVENLABS_VOICE_ID") ?? config.elevenLabs.voiceId,
   });
 
 const sceneAudioSrc = (

@@ -267,7 +267,7 @@ export const BrandKitCard = ({
                 }
                 fallback={{
                   title: "Default voice",
-                  detail: "ELEVENLABS_VOICE_ID from .env, or George",
+                  detail: "The default voice from Settings, or George",
                 }}
                 canList={canListVoices}
               />
