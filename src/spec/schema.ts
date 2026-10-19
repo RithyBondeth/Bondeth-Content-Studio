@@ -247,11 +247,36 @@ export const brandSchema = z.object({
 });
 
 /**
- * A project's identity: who the creator is and how their videos look. New
- * videos in the project start with it.
+ * ElevenLabs voice settings. Any left out use ElevenLabs' defaults. Ranges
+ * are in src/lib/voice.ts.
+ */
+export const voiceSettingsSchema = z.object({
+  /** 0 to 1. Lower sounds more expressive; higher sounds steadier. */
+  stability: z.number().min(0).max(1).optional(),
+  /** 0 to 1. How closely the voice sticks to the original speaker. */
+  similarity: z.number().min(0).max(1).optional(),
+  /** 0 to 1. Exaggerates the speaker's style. 0 is the most natural. */
+  style: z.number().min(0).max(1).optional(),
+  /** 0.7 to 1.2. 1 is normal speed. */
+  speed: z.number().min(0.7).max(1.2).optional(),
+});
+
+/** Which ElevenLabs voice narrates, and how it sounds. */
+export const voiceSettingSchema = z.object({
+  voiceId: z.string().trim().min(1, "Pick a voice."),
+  /** The voice's name, for showing in the studio. Not sent to ElevenLabs. */
+  name: z.string().optional(),
+  settings: voiceSettingsSchema.optional(),
+});
+
+/**
+ * A project's identity: who the creator is and how their videos look and
+ * sound. New videos in the project start with it.
  */
 export const brandKitSchema = brandSchema.extend({
   theme: themeSettingSchema.optional(),
+  /** The narrator for every video that doesn't pick its own. */
+  voice: voiceSettingSchema.optional(),
 });
 
 export const videoSpecSchema = z.object({
@@ -274,6 +299,8 @@ export const videoSpecSchema = z.object({
   theme: themeSettingSchema.optional(),
   /** Defaults to the creator in src/brand.ts. */
   brand: brandSchema.optional(),
+  /** Overrides the project's voice. Defaults to the brand kit's, then .env's. */
+  voice: voiceSettingSchema.optional(),
   scenes: z.array(sceneSchema).min(1),
 });
 
@@ -292,6 +319,8 @@ export type DiagramLayout = (typeof DIAGRAM_LAYOUTS)[number];
 export type DiagramNode = z.infer<typeof diagramNodeSchema>;
 export type Brand = z.infer<typeof brandSchema>;
 export type BrandKit = z.infer<typeof brandKitSchema>;
+export type VoiceSettings = z.infer<typeof voiceSettingsSchema>;
+export type VoiceSetting = z.infer<typeof voiceSettingSchema>;
 export type VideoSpec = z.infer<typeof videoSpecSchema>;
 /** A spec as written by hand, before defaults are applied. */
 export type VideoSpecInput = z.input<typeof videoSpecSchema>;

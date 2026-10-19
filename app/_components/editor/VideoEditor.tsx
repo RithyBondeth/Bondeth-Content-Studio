@@ -24,10 +24,15 @@ import {
   type SceneType,
   type VideoSpec,
   type VideoSpecInput,
+  type VoiceSetting as VoiceValue,
 } from "../../../src/spec/schema";
 import type { KeyStatus as Keys } from "../../../studio/server/env";
 import type { RenderFile } from "../../../studio/server/projects";
-import { recordVoiceAction, saveSpecAction } from "../../actions";
+import {
+  recordVoiceAction,
+  saveSpecAction,
+  scenesToRecordAction,
+} from "../../actions";
 import { useToast } from "../Toast";
 import { Alert, Button, Skeleton, cx } from "../ui";
 import { MusicSetting } from "./MusicSetting";
@@ -37,6 +42,7 @@ import { SceneForm } from "./SceneForm";
 import { SceneList } from "./SceneList";
 import type { ThemeSetting as ThemeValue } from "../../../src/theme/resolve";
 import { ThemeSetting } from "./ThemeSetting";
+import { VoiceSetting } from "./VoiceSetting";
 
 type SaveState =
   | { kind: "saved" }
@@ -199,6 +205,7 @@ export const VideoEditor = ({
   initialRenders,
   keys,
   brandTheme,
+  projectVoice,
 }: {
   slug: string;
   projectTitle: string;
@@ -209,6 +216,8 @@ export const VideoEditor = ({
   keys: Keys;
   /** The project's brand kit theme, offered in the theme picker. */
   brandTheme?: ThemeValue;
+  /** The project's brand kit voice, used when the video doesn't pick one. */
+  projectVoice?: VoiceValue;
 }) => {
   const notify = useToast();
   const [spec, setSpec] = useState<VideoSpecInput>(initialSpec);
@@ -300,7 +309,32 @@ export const VideoEditor = ({
   });
   const totalSeconds = timing ? timing.total / FPS : 0;
   const voicedCount = spec.scenes.filter((scene) => scene.audio).length;
-  const allVoiced = voicedCount === spec.scenes.length;
+
+  // Which scenes Record voice would generate. The server works it out, since
+  // a voice or settings change makes recorded scenes out of date too.
+  const [pending, setPending] = useState<number[] | null>(null);
+  const voiceKey = JSON.stringify({
+    voice: spec.voice,
+    scenes: spec.scenes.map((scene) => [scene.narration, scene.audio?.src]),
+  });
+  useEffect(() => {
+    if (!parsed.success) return;
+    let current = true;
+    const timer = setTimeout(() => {
+      void scenesToRecordAction(slug, index, latestSpec.current).then(
+        (result) => {
+          if (current) setPending(result.ok ? result.data.scenes : null);
+        },
+      );
+    }, 300);
+    return () => {
+      current = false;
+      clearTimeout(timer);
+    };
+    // voiceKey covers everything in the spec that changes the answer.
+  }, [voiceKey, parsed.success, slug, index]);
+  const toRecord = pending?.length ?? spec.scenes.length - voicedCount;
+  const allVoiced = toRecord === 0;
 
   const playingScene =
     playingFrame === null || !timing
@@ -495,7 +529,7 @@ export const VideoEditor = ({
               : allVoiced
                 ? "Voice ready"
                 : voicedCount
-                  ? `Record voice (${spec.scenes.length - voicedCount} left)`
+                  ? `Record voice (${toRecord} left)`
                   : "Record voice"}
           </Button>
         </div>
@@ -576,6 +610,19 @@ export const VideoEditor = ({
               music={spec.music}
               onChange={(music) =>
                 setSpec((current) => ({ ...current, music }))
+              }
+            />
+            <VoiceSetting
+              voice={spec.voice}
+              projectVoice={projectVoice}
+              canList={keys.elevenLabs}
+              pending={voicedCount ? pending : null}
+              onChange={(voice) =>
+                setSpec((current) => {
+                  const next = { ...current, voice };
+                  if (!voice) delete next.voice;
+                  return next;
+                })
               }
             />
           </div>

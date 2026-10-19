@@ -30,6 +30,7 @@ export default async function VideoPage({
       initialRenders={await listRenders(plan, index)}
       keys={getKeyStatus()}
       brandTheme={plan.brand?.theme}
+      projectVoice={plan.brand?.voice}
     />
   );
 }

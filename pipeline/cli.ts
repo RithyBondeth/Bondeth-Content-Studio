@@ -18,7 +18,9 @@ import {
   type PlanFile,
 } from "./store";
 import { addImages } from "./images";
+import { filterVoices, voiceLabels } from "../src/lib/voice";
 import { addVoiceOver } from "./voice";
+import { listVoices } from "./voices";
 
 const HELP = `Content Studio pipeline: idea → content plan → script → voice-over → video
 
@@ -33,6 +35,7 @@ Commands:
   preview <plan>        Open one video in Remotion Studio (--video, default 1)
   make "<idea>"         Do all of the above in one go
   list [plan]           Show plans, or the videos in one plan and their status
+  voices [search]       List the voices in your ElevenLabs account
 
 Options:
   --videos <n>          Number of videos to plan (plan, make; default 5)
@@ -43,12 +46,15 @@ Options:
   --video <n|all>       Which video(s) to work on (script, images, voice, render; default all)
   --format <name>       vertical, landscape, or both (render, make; default vertical)
   --no-voice            Skip the voice-over; captions are timed from the text (make)
+  --voice <id>          ElevenLabs voice to record with; saved as each video's voice (voice, make)
   --force               Rewrite scripts that already exist (script)
 
 Examples:
   npm run pipeline -- plan "Personal finance basics for university students" --videos 7
   npm run pipeline -- script personal-finance-basics --video 1
   npm run pipeline -- voice personal-finance-basics --video 1
+  npm run pipeline -- voices british
+  npm run pipeline -- voice personal-finance-basics --voice JBFqnCBsd6RMkjVDRZzb
   npm run pipeline -- render personal-finance-basics --video 1 --format both
   npm run pipeline -- make "Why history matters" --videos 3 --no-voice
 `;
@@ -64,6 +70,7 @@ const { values, positionals } = parseArgs({
     video: { type: "string" },
     format: { type: "string" },
     "no-voice": { type: "boolean" },
+    voice: { type: "string" },
     force: { type: "boolean" },
     help: { type: "boolean", short: "h" },
   },
@@ -228,6 +235,12 @@ const images = async (planSlug: string) => {
 };
 
 const voice = async (planSlug: string) => {
+  const commandVoice = values.voice?.trim();
+  if (values.voice !== undefined && !commandVoice) {
+    throw new Error(
+      "--voice needs a voice id. See them with: npm run pipeline -- voices",
+    );
+  }
   const file = await loadPlan(planSlug);
   const indexes = selectVideos(file);
   step(`Recording voice-overs for "${file.plan.title}"`);
@@ -239,12 +252,24 @@ const voice = async (planSlug: string) => {
       log(`  ${index + 1}. ${title}: no script yet, skipping`);
       continue;
     }
-    const result = await addVoiceOver(spec, mediaDir(file, index), (message) =>
-      log(`  ${index + 1}. ${message}`),
-    );
+    // --voice becomes the video's own voice, so the studio records with it too.
+    const voiced = commandVoice
+      ? {
+          ...spec,
+          voice:
+            spec.voice?.voiceId === commandVoice
+              ? spec.voice
+              : { voiceId: commandVoice },
+        }
+      : spec;
+    const result = await addVoiceOver(voiced, mediaDir(file, index), {
+      projectVoice: file.brand?.voice,
+      onProgress: (message) => log(`  ${index + 1}. ${message}`),
+    });
     await saveSpec(file, index, result.spec);
+    const voiceName = result.voice.name ?? result.voice.voiceId;
     log(
-      `  ${index + 1}. ${title}: ${result.generated} recorded, ${result.reused} unchanged, ${formatSeconds(specSeconds(result.spec))}`,
+      `  ${index + 1}. ${title}: ${result.generated} recorded, ${result.reused} unchanged, ${formatSeconds(specSeconds(result.spec))} (voice: ${voiceName}, from ${result.voice.source})`,
     );
   }
   log(`\nNext: npm run pipeline -- render ${file.slug}`);
@@ -345,6 +370,23 @@ const list = async (planSlug: string | undefined) => {
   }
 };
 
+const voices = async (search: string | undefined) => {
+  const all = await listVoices();
+  const matches = search ? filterVoices(all, search) : all;
+  if (!matches.length) {
+    log(search ? `No voices match "${search}".` : "No voices found.");
+    return;
+  }
+  const width = Math.max(...matches.map((v) => v.name.length));
+  for (const v of matches) {
+    const labels = voiceLabels(v).join(", ");
+    log(`${v.id}  ${v.name.padEnd(width)}  ${labels}`);
+  }
+  log(
+    `\n${matches.length} voice(s). Use one with: npm run pipeline -- voice <plan> --voice <id>`,
+  );
+};
+
 const main = async () => {
   const [command, argument] = positionals;
   if (values.help || !command) {
@@ -376,6 +418,9 @@ const main = async () => {
       break;
     case "list":
       await list(argument);
+      break;
+    case "voices":
+      await voices(argument);
       break;
     default:
       throw new Error(

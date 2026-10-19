@@ -56,7 +56,7 @@ The studio walks you through the whole process in your browser:
 1. **New project:** describe what you want to teach, choose how many videos and the language, and Claude writes a content plan.
 2. **Project:** review the plan, edit titles and hooks, set up the project's brand kit, then write scripts for one video or all of them. You can also add a video and write it yourself.
 3. **Editor:** a list of scenes, a form for the selected scene, and a live preview that updates as you type. Add, reorder, duplicate, and delete scenes, switch a scene's template, and edit narration, on-screen text, emoji, and timing, and pick the video's theme. Changes save automatically.
-4. **Voice:** record the narration with ElevenLabs. Only scenes whose narration changed are re-recorded.
+4. **Voice:** pick a narrator for the project in its brand kit, or for one video in the editor's Voice setting, then record the narration with ElevenLabs. Only scenes whose narration, voice, or voice settings changed are re-recorded.
 5. **Export:** render vertical or landscape MP4s on your computer, with progress, then play or download them.
 
 The studio runs locally and stores everything in this folder, the same files the command line uses.
@@ -87,6 +87,10 @@ npm run pipeline -- preview personal-finance-basics --video 1
 # 4. Record the voice-over. Unchanged scenes are skipped on re-runs.
 npm run pipeline -- voice personal-finance-basics
 
+# List the voices in your ElevenLabs account (optionally filtered), then record with one.
+npm run pipeline -- voices british
+npm run pipeline -- voice personal-finance-basics --voice JBFqnCBsd6RMkjVDRZzb
+
 # 5. Render to MP4.
 npm run pipeline -- render personal-finance-basics --format both
 
@@ -105,6 +109,7 @@ npm run pipeline -- list personal-finance-basics
 | `--video <n\|all>`  | `script`, `images`, `voice`, `render`, `preview` | Which video to work on (default all; preview defaults to 1) |
 | `--format <name>`   | `render`, `make`                                 | `vertical`, `landscape`, or `both` (default `vertical`)     |
 | `--no-voice`        | `make`                                           | Skip the voice-over; captions are timed from the text       |
+| `--voice <id>`      | `voice`, `make`                                  | ElevenLabs voice to record with, saved as the video's voice |
 | `--force`           | `script`                                         | Rewrite scripts that already exist                          |
 
 ## Scene types
@@ -197,6 +202,33 @@ Fonts are `inter`, `poppins`, `nunito`, `montserrat`, `playfair-display`, and `a
 | `src/theme/fonts.ts`   | Loading fonts from Google Fonts                                 |
 | `.env`                 | Claude model, ElevenLabs voice, and ElevenLabs model            |
 
+## Voices
+
+Each project can have its own narrator. In the project's brand kit, search your ElevenLabs voices by name, accent, gender, or age, play a sample of each, and pick one. Sliders tune how it sounds:
+
+| Setting      | Range      | What it does                                               |
+| ------------ | ---------- | ---------------------------------------------------------- |
+| `stability`  | 0 to 1     | Lower sounds more expressive; higher sounds steadier (0.5) |
+| `similarity` | 0 to 1     | How closely it sticks to the original speaker (0.75)       |
+| `style`      | 0 to 1     | Exaggerates the speaker's style; 0 is the most natural (0) |
+| `speed`      | 0.7 to 1.2 | 1 is normal speed (1)                                      |
+
+Settings you don't touch use ElevenLabs' defaults, shown in brackets. A video can pick a different voice in the editor's Voice setting, which also shows which scenes the next recording will redo. The voice used is the first one set of:
+
+1. `--voice <id>` on the command line (it's then saved as the video's voice)
+2. The video's own voice
+3. The project's brand kit voice
+4. `ELEVENLABS_VOICE_ID` in `.env`
+5. George, one of ElevenLabs' default voices
+
+A video's voice is used whole: it doesn't borrow the project's settings. In a spec or plan file it looks like this; `name` is only for display:
+
+```json
+"voice": { "voiceId": "JBFqnCBsd6RMkjVDRZzb", "name": "George", "settings": { "speed": 0.95, "stability": 0.6 } }
+```
+
+The voice and its settings are part of each scene's recording, so changing them re-records those scenes the next time you click Record voice or run `voice`; projects without a voice keep their existing recordings. Without an ElevenLabs key the voice list can't load, but you can still paste a voice ID from the [voice library](https://elevenlabs.io/app/voice-library).
+
 ## Project structure
 
 ```
@@ -207,11 +239,12 @@ app/                      # The web studio (Next.js)
 └── _components/          # UI components, including the editor
 studio/server/            # Studio server code: projects, render jobs, key status
 pipeline/                 # The idea → video pipeline (runs in Node)
-├── cli.ts                # Commands: plan, script, preview, voice, render, make, list
+├── cli.ts                # Commands: plan, script, preview, voice, voices, render, make, list
 ├── prompts.ts            # Instructions given to Claude
 ├── schemas.ts            # The plan and script formats Claude must return
 ├── plan.ts / script.ts   # Claude steps
 ├── voice.ts              # ElevenLabs voice-over and word timings
+├── voices.ts             # Lists the ElevenLabs account's voices
 ├── render.ts             # Renders with Remotion, reporting progress
 ├── render-worker.ts      # Runs one render in its own process, for the studio
 └── store.ts              # Where plans, specs, and media are saved
