@@ -6,7 +6,7 @@ export const STAGES: Stage[] = ["script", "voice", "render", "publish"];
 export type VideoProgress = {
   status: "draft" | "scripted" | "voiced";
   rendered: boolean;
-  /** Whether Claude has written its posts. */
+  /** Whether AI has written its posts. */
   hasPosts: boolean;
 };
 

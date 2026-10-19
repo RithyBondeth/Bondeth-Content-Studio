@@ -1,19 +1,16 @@
 "use client";
 
-import {
-  ArrowUp,
-  Check,
-  Globe,
-  Layers,
-  Loader2,
-  Sparkles,
-  Users,
-} from "lucide-react";
+import { Check, Globe, Layers, Loader2, Sparkles, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { createExampleProjectAction, createProjectAction } from "../actions";
+import {
+  createBlankProjectAction,
+  createExampleProjectAction,
+  createProjectAction,
+} from "../actions";
+import { ChoiceButtons, SETUP } from "./AiChoice";
 import { useToast } from "./Toast";
-import { Button, Input, Kbd, cx } from "./ui";
+import { Input, Kbd, cx } from "./ui";
 
 const LANGUAGES = [
   ["en", "English"],
@@ -37,7 +34,7 @@ const EXAMPLE_IDEAS = [
   "Fascinating moments from world history",
 ];
 
-// Shown one after another while Claude works, so the wait feels alive.
+// Shown one after another while the AI works, so the wait feels alive.
 const PLANNING_STEPS = [
   "Understanding your idea",
   "Choosing the right audience",
@@ -140,7 +137,7 @@ const PlanningOverlay = ({ idea }: { idea: string }) => {
   );
 };
 
-export const NewProjectForm = ({ hasClaude }: { hasClaude: boolean }) => {
+export const NewProjectForm = ({ hasAi }: { hasAi: boolean }) => {
   const router = useRouter();
   const notify = useToast();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -150,26 +147,34 @@ export const NewProjectForm = ({ hasClaude }: { hasClaude: boolean }) => {
   const [audience, setAudience] = useState("");
   const [tone, setTone] = useState("");
   const [showMore, setShowMore] = useState(false);
-  const [pending, setPending] = useState<"plan" | "example" | null>(null);
+  const [pending, setPending] = useState<"plan" | "blank" | "example" | null>(
+    null,
+  );
 
-  const canPlan = hasClaude && idea.trim().length > 0 && pending === null;
+  const canCreate = idea.trim().length > 0 && pending === null;
 
-  const createPlan = async () => {
-    if (!canPlan) return;
-    setPending("plan");
-    const result = await createProjectAction({
+  /** With AI, the idea becomes a full plan. Without, it's the project's title and you plan it yourself. */
+  const create = async (withAi: boolean) => {
+    if (!canCreate) return;
+    setPending(withAi ? "plan" : "blank");
+    const input = {
       idea,
       videos: Number(videos),
       language,
       audience,
       tone,
-    });
+    };
+    const result = withAi
+      ? await createProjectAction(input)
+      : await createBlankProjectAction(input);
     if (result.ok) {
       router.push(`/projects/${result.data}`);
     } else {
       notify({
         tone: "error",
-        title: "Couldn't create the plan",
+        title: withAi
+          ? "Couldn't create the plan"
+          : "Couldn't create the project",
         description: result.error,
       });
       setPending(null);
@@ -197,7 +202,7 @@ export const NewProjectForm = ({ hasClaude }: { hasClaude: boolean }) => {
       <form
         onSubmit={(event) => {
           event.preventDefault();
-          void createPlan();
+          void create(hasAi);
         }}
         className="group relative rounded-3xl bg-gradient-to-b from-line-strong to-line p-px shadow-2xl shadow-black/40 transition focus-within:from-accent/70 focus-within:to-pink/30"
       >
@@ -211,12 +216,12 @@ export const NewProjectForm = ({ hasClaude }: { hasClaude: boolean }) => {
             rows={3}
             value={idea}
             onChange={(event) => setIdea(event.target.value)}
-            placeholder="Describe your idea, e.g. personal finance basics for university students…"
+            placeholder="What do you want to teach? e.g. Personal finance basics for university students"
             disabled={pending !== null}
             onKeyDown={(event) => {
               if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
                 event.preventDefault();
-                void createPlan();
+                void create(hasAi);
               }
             }}
             className="block min-h-32 w-full resize-none rounded-t-3xl bg-transparent px-5 pt-5 pb-2 text-[17px] leading-relaxed placeholder:text-faint focus:outline-none"
@@ -276,16 +281,23 @@ export const NewProjectForm = ({ hasClaude }: { hasClaude: boolean }) => {
               <span className="hidden items-center gap-1 text-xs text-faint md:flex">
                 <Kbd>⌘ Enter</Kbd>
               </span>
-              <Button
-                type="submit"
-                variant="primary"
-                disabled={!canPlan}
-                loading={pending === "plan"}
-                icon={<ArrowUp className="size-4" aria-hidden />}
-                title={hasClaude ? undefined : "Add ANTHROPIC_API_KEY to .env"}
-              >
-                Create plan
-              </Button>
+              <ChoiceButtons
+                manual={{
+                  label: "Plan it myself",
+                  onSelect: () => void create(false),
+                  loading: pending === "blank",
+                  disabled: !canCreate,
+                }}
+                ai={{
+                  label: "Plan with AI",
+                  service: "AI writing",
+                  available: hasAi,
+                  setup: SETUP.writing,
+                  onSelect: () => void create(true),
+                  loading: pending === "plan",
+                  disabled: hasAi && !canCreate,
+                }}
+              />
             </div>
           </div>
         </div>
@@ -309,42 +321,21 @@ export const NewProjectForm = ({ hasClaude }: { hasClaude: boolean }) => {
         ))}
       </div>
 
-      {!hasClaude ? (
-        <div className="mx-auto mt-2 flex w-full max-w-2xl flex-col items-center gap-3 rounded-2xl border border-dashed border-line-strong bg-surface/40 p-4 text-center sm:flex-row sm:text-left">
-          <p className="flex-1 text-sm text-muted">
-            Add{" "}
-            <code className="rounded bg-raised px-1.5 py-0.5 font-mono text-[13px] text-text">
-              ANTHROPIC_API_KEY
-            </code>{" "}
-            to{" "}
-            <code className="rounded bg-raised px-1.5 py-0.5 font-mono text-[13px] text-text">
-              .env
-            </code>{" "}
-            and restart to plan with Claude. Until then, explore with a
-            ready-made project.
-          </p>
-          <Button
-            variant="secondary"
-            loading={pending === "example"}
-            disabled={pending !== null}
-            onClick={() => void createExample()}
-            icon={
-              <Sparkles className="size-4 text-accent-bright" aria-hidden />
-            }
-          >
-            Open example project
-          </Button>
-        </div>
-      ) : (
+      <p className="mx-auto max-w-xl text-center text-xs leading-relaxed text-faint">
+        <span className="text-muted">Plan it myself</span> makes your text the
+        series title, with empty videos for you to fill in.{" "}
+        <span className="text-muted">Plan with AI</span> turns it into a full
+        plan with an audience, themes, and hooks. You can edit everything either
+        way.{" "}
         <button
           type="button"
           onClick={() => void createExample()}
           disabled={pending !== null}
-          className="mx-auto text-xs text-faint underline-offset-4 hover:text-muted hover:underline"
+          className="underline underline-offset-4 hover:text-muted"
         >
-          Or open an example project
+          {pending === "example" ? "Opening…" : "Or open an example project"}
         </button>
-      )}
+      </p>
     </div>
   );
 };

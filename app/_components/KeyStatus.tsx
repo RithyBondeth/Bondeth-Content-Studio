@@ -25,7 +25,7 @@ export const KeyStatus = ({ status }: { status: Status }) => (
     aria-label="Connected services"
   >
     <KeyRound className="size-3.5 text-faint" aria-hidden />
-    <Dot ok={status.claude} label="Claude" />
+    <Dot ok={status.ai} label={status.aiName} />
     <Dot ok={status.elevenLabs} label="ElevenLabs" />
     <Dot ok={status.openai} label="OpenAI images" />
   </div>

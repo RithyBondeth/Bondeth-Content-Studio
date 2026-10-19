@@ -250,26 +250,29 @@ export const BrandKitCard = ({
             Existing videos keep their own theme; change it from each
             video&apos;s Theme setting.
           </p>
-          <Field
-            label="Voice"
-            hint="Play a sample to hear each voice. The sliders change the recording, not the sample."
-          >
-            <VoicePicker
-              value={draft.voice}
-              onChange={(voice) =>
-                setDraft((current) => {
-                  const next = { ...current, voice };
-                  if (!voice) delete next.voice;
-                  return next;
-                })
-              }
-              fallback={{
-                title: "Default voice",
-                detail: "ELEVENLABS_VOICE_ID from .env, or George",
-              }}
-              canList={canListVoices}
-            />
-          </Field>
+          {/* Without ElevenLabs there's no voice to pick: you narrate each scene yourself. */}
+          {canListVoices ? (
+            <Field
+              label="Voice"
+              hint="Play a sample to hear each voice. The sliders change the recording, not the sample."
+            >
+              <VoicePicker
+                value={draft.voice}
+                onChange={(voice) =>
+                  setDraft((current) => {
+                    const next = { ...current, voice };
+                    if (!voice) delete next.voice;
+                    return next;
+                  })
+                }
+                fallback={{
+                  title: "Default voice",
+                  detail: "ELEVENLABS_VOICE_ID from .env, or George",
+                }}
+                canList={canListVoices}
+              />
+            </Field>
+          ) : null}
           {voiceChanges.length ? (
             <Alert tone="info">
               <p>With this voice, recording again will redo:</p>

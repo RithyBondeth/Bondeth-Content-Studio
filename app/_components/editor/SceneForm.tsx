@@ -34,6 +34,7 @@ import {
   Select,
   Textarea,
 } from "../ui";
+import { AiButton, SETUP } from "../AiChoice";
 import { ImageFields, type ImageContext } from "./ImageFields";
 import { SCENE_META } from "./scene-meta";
 import { TemplateMenu } from "./TemplateMenu";
@@ -45,6 +46,8 @@ type SceneFormProps = {
   imageContext: ImageContext;
   onChange: (scene: Scene) => void;
   onChangeType: (type: SceneType) => void;
+  /** Voices every scene without your own recording, with ElevenLabs. */
+  aiVoice: { available: boolean; loading: boolean; onSelect: () => void };
 };
 
 const QUICK_EMOJI = [
@@ -921,6 +924,7 @@ export const SceneForm = ({
   imageContext,
   onChange,
   onChangeType,
+  aiVoice,
 }: SceneFormProps) => {
   const narrationId = useId();
   const emojiId = useId();
@@ -1017,7 +1021,7 @@ export const SceneForm = ({
           <Alert tone="warning">
             The narration changed after you recorded it, so your recording and
             captions no longer match. Re-record this scene, or remove the
-            recording to use an ElevenLabs voice.
+            recording to use AI voice-over instead.
           </Alert>
         ) : null}
         <VoiceRecorder
@@ -1032,6 +1036,23 @@ export const SceneForm = ({
             onChange(next);
           }}
         />
+        {isSelfRecorded(scene.audio) ? null : (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <span className="text-xs text-faint">Or let AI read it:</span>
+            <AiButton
+              size="sm"
+              lead={false}
+              option={{
+                label: "AI voice-over",
+                description:
+                  "Voices this and every other scene you haven't recorded yourself",
+                service: "AI voice",
+                setup: SETUP.voice,
+                ...aiVoice,
+              }}
+            />
+          </div>
+        )}
       </Section>
 
       <Section

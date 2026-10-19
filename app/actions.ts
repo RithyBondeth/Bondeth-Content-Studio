@@ -40,11 +40,13 @@ import { addVoiceOver, scenesToRecord, voiceForVideo } from "../pipeline/voice";
 import { listVoices } from "../pipeline/voices";
 import {
   addBlankVideo,
+  createBlankProject,
   createExampleProject,
   deleteProject,
   listCovers,
   listRenders,
   projectVoiceChanges,
+  startScriptByHand,
   updateBrandKit,
   updatePlanContent,
   videoMediaDir,
@@ -93,6 +95,14 @@ export const createProjectAction = async (input: NewProjectInput) =>
     return plan.slug;
   });
 
+/** Starts a project without AI: the idea becomes its title, with empty video slots. */
+export const createBlankProjectAction = async (input: NewProjectInput) =>
+  run(async () => {
+    const slug = await createBlankProject({ ...input, title: input.idea });
+    revalidatePath("/");
+    return slug;
+  });
+
 export const createExampleProjectAction = async () =>
   run(async () => {
     const slug = await createExampleProject();
@@ -124,6 +134,13 @@ export const addVideoAction = async (slug: string, title: string) =>
     const index = await addBlankVideo(slug, title);
     revalidatePath(`/projects/${slug}`);
     return index;
+  });
+
+/** Gives a planned video a starter script to write by hand. */
+export const startScriptAction = async (slug: string, index: number) =>
+  run(async () => {
+    await startScriptByHand(slug, index);
+    revalidatePath(`/projects/${slug}`);
   });
 
 export const writeScriptAction = async (
@@ -250,7 +267,7 @@ export const generateImageAction = async (
     generateImage(prompt, await videoMediaDir(slug, index), layout),
   );
 
-/** Writes (or rewrites) the video's posts for every platform with Claude. */
+/** Writes (or rewrites) the video's posts for every platform with the AI provider. */
 export const generatePublishKitAction = async (
   slug: string,
   index: number,
