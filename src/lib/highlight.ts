@@ -18,7 +18,9 @@ import tsx from "shiki/langs/tsx.mjs";
 import typescript from "shiki/langs/typescript.mjs";
 import yaml from "shiki/langs/yaml.mjs";
 import githubDarkDefault from "shiki/themes/github-dark-default.mjs";
-import { theme } from "../theme/tokens";
+import githubDarkHighContrast from "shiki/themes/github-dark-high-contrast.mjs";
+import githubLightDefault from "shiki/themes/github-light-default.mjs";
+import type { CodeTheme } from "../theme/presets";
 import type { SupportedLanguage } from "./languages";
 
 // Only these languages are bundled. To support another one, import it above,
@@ -53,7 +55,8 @@ let highlighterPromise: Promise<HighlighterCore> | null = null;
 
 const getHighlighter = () => {
   highlighterPromise ??= createHighlighterCore({
-    themes: [githubDarkDefault],
+    // One for each name in CODE_THEMES (theme/presets.ts).
+    themes: [githubDarkDefault, githubLightDefault, githubDarkHighContrast],
     langs: Object.values(languages),
     // The JavaScript engine avoids loading WebAssembly in the browser bundle.
     engine: createJavaScriptRegexEngine(),
@@ -68,11 +71,12 @@ export const normalizeCode = (code: string) =>
 export const highlightCode = async (
   code: string,
   lang: SupportedLanguage,
+  codeTheme: CodeTheme,
 ): Promise<HighlightedLine[]> => {
   const highlighter = await getHighlighter();
   const { tokens } = highlighter.codeToTokens(normalizeCode(code), {
     lang,
-    theme: theme.codeTheme,
+    theme: codeTheme,
   });
 
   return tokens.map((line) =>

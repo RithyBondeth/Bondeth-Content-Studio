@@ -4,7 +4,7 @@ import { SceneFrame } from "../components/SceneFrame";
 import { progressBetween, riseIn } from "../lib/animation";
 import { getListItemStarts } from "../lib/reveals";
 import { useLayout } from "../lib/use-layout";
-import { theme } from "../theme/tokens";
+import { useTheme } from "../theme/context";
 import type { SceneProps } from "./types";
 
 const Marker: React.FC<{
@@ -12,6 +12,7 @@ const Marker: React.FC<{
   index: number;
   size: number;
 }> = ({ style, index, size }) => {
+  const theme = useTheme();
   const isDot = style === "bullets";
   return (
     <div
@@ -43,6 +44,7 @@ export const ListScene: React.FC<SceneProps<"list">> = ({
   durationInFrames,
   reserveCaptions,
 }) => {
+  const theme = useTheme();
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const { unit, isVertical } = useLayout();

@@ -4,7 +4,7 @@ import { KineticText } from "../components/KineticText";
 import { SceneFrame } from "../components/SceneFrame";
 import { progressBetween, riseIn, useEnter } from "../lib/animation";
 import { useLayout } from "../lib/use-layout";
-import { theme } from "../theme/tokens";
+import { useTheme } from "../theme/context";
 import type { SceneProps } from "./types";
 
 export const TitleScene: React.FC<SceneProps<"title">> = ({
@@ -12,6 +12,7 @@ export const TitleScene: React.FC<SceneProps<"title">> = ({
   durationInFrames,
   reserveCaptions,
 }) => {
+  const theme = useTheme();
   const frame = useCurrentFrame();
   const { unit, isVertical } = useLayout();
   const bar = useEnter(10);

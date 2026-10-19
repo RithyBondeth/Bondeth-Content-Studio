@@ -31,6 +31,7 @@ import {
   writeScriptAction,
 } from "../../actions";
 import { useConfirm } from "../../_components/ConfirmDialog";
+import { BrandKitCard } from "./BrandKitCard";
 import { Header } from "../../_components/Header";
 import { KeyStatus } from "../../_components/KeyStatus";
 import { Menu } from "../../_components/Menu";
@@ -480,6 +481,8 @@ export const ProjectView = ({
             </Card>
           </div>
         )}
+
+        <BrandKitCard key={JSON.stringify(plan.brand ?? null)} plan={plan} />
 
         <section
           className="flex flex-col gap-4"

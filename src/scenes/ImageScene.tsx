@@ -6,7 +6,8 @@ import { progressBetween, riseIn } from "../lib/animation";
 import { resolveMedia } from "../lib/media";
 import { useLayout } from "../lib/use-layout";
 import type { ImageMotion } from "../spec/schema";
-import { theme } from "../theme/tokens";
+import { withAlpha } from "../lib/color";
+import { useTheme } from "../theme/context";
 import type { SceneProps } from "./types";
 
 /** How far the slow camera move zooms in, and pans as a share of the width. */
@@ -34,6 +35,7 @@ const Picture: React.FC<{
   scene: SceneProps<"image">["scene"];
   durationInFrames: number;
 }> = ({ scene, durationInFrames }) => {
+  const theme = useTheme();
   const frame = useCurrentFrame();
   const { unit } = useLayout();
   const progress = progressBetween(frame, 0, durationInFrames);
@@ -83,6 +85,7 @@ const Credit: React.FC<{ credit: string; style?: React.CSSProperties }> = ({
   credit,
   style,
 }) => {
+  const theme = useTheme();
   const { unit } = useLayout();
   return (
     <div
@@ -105,9 +108,11 @@ const FullImage: React.FC<SceneProps<"image">> = ({
   durationInFrames,
   reserveCaptions,
 }) => {
+  const theme = useTheme();
   const frame = useCurrentFrame();
   const { unit, isVertical, paddingX } = useLayout();
-  const shade = "rgba(11, 15, 23, 0.82)";
+  // The background color, so text over the image reads in light and dark themes.
+  const shade = withAlpha(theme.colors.background, 0.82);
 
   return (
     <SceneFrame
@@ -145,7 +150,7 @@ const FullImage: React.FC<SceneProps<"image">> = ({
                 lineHeight: 1.1,
                 letterSpacing: "-0.02em",
                 color: theme.colors.text,
-                textShadow: `0 ${4 * unit}px ${24 * unit}px rgba(0, 0, 0, 0.6)`,
+                textShadow: `0 ${4 * unit}px ${24 * unit}px ${theme.isDark ? "rgba(0, 0, 0, 0.6)" : withAlpha(theme.colors.background, 0.8)}`,
               }}
             >
               {scene.caption}
@@ -162,7 +167,7 @@ const FullImage: React.FC<SceneProps<"image">> = ({
             bottom: 24 * unit,
             maxWidth: 700 * unit,
             textAlign: "right",
-            color: "rgba(229, 231, 235, 0.7)",
+            color: withAlpha(theme.colors.text, 0.7),
           }}
         />
       ) : null}
@@ -176,6 +181,7 @@ const FramedImage: React.FC<SceneProps<"image">> = ({
   durationInFrames,
   reserveCaptions,
 }) => {
+  const theme = useTheme();
   const frame = useCurrentFrame();
   const { unit, isVertical, width, paddingX } = useLayout();
   const cardWidth = width - paddingX * 2;

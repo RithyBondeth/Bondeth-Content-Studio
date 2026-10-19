@@ -1,11 +1,12 @@
 import { AbsoluteFill, useCurrentFrame } from "remotion";
-import { theme } from "../theme/tokens";
+import { useTheme } from "../theme/context";
 
-/** Dark backdrop with slowly drifting accent glows and a faint dot grid. */
+/** The theme's backdrop, with slowly drifting accent glows and a faint dot grid. */
 export const Background: React.FC<{
   /** Frame in the video where the current sequence starts, so the drift stays continuous across scenes. */
   frameOffset?: number;
 }> = ({ frameOffset = 0 }) => {
+  const theme = useTheme();
   const frame = useCurrentFrame() + frameOffset;
   const drift = Math.sin(frame / 90) * 6;
 

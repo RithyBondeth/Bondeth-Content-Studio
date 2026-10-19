@@ -54,8 +54,8 @@ Go to [http://localhost:3100](http://localhost:3100). No keys yet? Click **Try t
 The studio walks you through the whole process in your browser:
 
 1. **New project:** describe what you want to teach, choose how many videos and the language, and Claude writes a content plan.
-2. **Project:** review the plan, edit titles and hooks, then write scripts for one video or all of them. You can also add a video and write it yourself.
-3. **Editor:** a list of scenes, a form for the selected scene, and a live preview that updates as you type. Add, reorder, duplicate, and delete scenes, switch a scene's template, and edit narration, on-screen text, emoji, and timing. Changes save automatically.
+2. **Project:** review the plan, edit titles and hooks, set up the project's brand kit, then write scripts for one video or all of them. You can also add a video and write it yourself.
+3. **Editor:** a list of scenes, a form for the selected scene, and a live preview that updates as you type. Add, reorder, duplicate, and delete scenes, switch a scene's template, and edit narration, on-screen text, emoji, and timing, and pick the video's theme. Changes save automatically.
 4. **Voice:** record the narration with ElevenLabs. Only scenes whose narration changed are re-recorded.
 5. **Export:** render vertical or landscape MP4s on your computer, with progress, then play or download them.
 
@@ -168,12 +168,34 @@ Background music is set in the editor's Music setting: pick one of the bundled b
 
 ## Customizing your brand
 
-| File                  | What it controls                                                            |
-| --------------------- | --------------------------------------------------------------------------- |
-| `src/brand.ts`        | Your name, handle, and website, used in calls to action and given to Claude |
-| `src/theme/tokens.ts` | Colors, radii, and the code highlighting theme                              |
-| `src/theme/fonts.ts`  | Fonts (loaded from Google Fonts)                                            |
-| `.env`                | Claude model, ElevenLabs voice, and ElevenLabs model                        |
+Each project has a **brand kit**, set up from the project page: your name, handle, and website, and a theme. Claude writes scripts with your name and handle in mind, the closing call to action shows your handle and website, and every new video starts with the kit's theme. Changing the name, handle, or website updates every video in the project; existing videos keep their own theme.
+
+A **theme** is one of five presets, each checked to meet [WCAG AA](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html) contrast for text on its background:
+
+| Preset       | Look                                       | Font                  |
+| ------------ | ------------------------------------------ | --------------------- |
+| `midnight`   | Dark navy with a violet glow (the default) | Inter                 |
+| `paper`      | Bright and clean, like a printed page      | Poppins               |
+| `ember`      | Warm browns with a glowing orange          | Playfair Display      |
+| `chalkboard` | Classroom green with chalk yellow          | Nunito                |
+| `contrast`   | Black, white, and yellow, for easy reading | Atkinson Hyperlegible |
+
+In the editor's Theme setting, pick a preset, or open "Customize colors and font" to change the accent, background, and text colors and the font. Colors worked out from yours, such as secondary text and cards, adjust to stay readable, and the editor warns you if a color you picked is hard to read. In a spec it looks like this; leave `theme` out for the default look:
+
+```json
+"theme": { "preset": "chalkboard", "accent": "#22C55E", "font": "poppins" },
+"brand": { "name": "Ms. Rivera", "handle": "@msrivera", "website": "rivera.edu" }
+```
+
+Fonts are `inter`, `poppins`, `nunito`, `montserrat`, `playfair-display`, and `atkinson-hyperlegible`, loaded from Google Fonts as a video needs them.
+
+| File                   | What it controls                                                |
+| ---------------------- | --------------------------------------------------------------- |
+| `src/brand.ts`         | The name, handle, and website for projects without a brand kit  |
+| `src/theme/presets.ts` | The theme presets, their colors and fonts, and the font choices |
+| `src/theme/resolve.ts` | How a theme's overrides are applied, and the contrast checks    |
+| `src/theme/fonts.ts`   | Loading fonts from Google Fonts                                 |
+| `.env`                 | Claude model, ElevenLabs voice, and ElevenLabs model            |
 
 ## Project structure
 
@@ -200,7 +222,7 @@ src/                      # The Remotion video app
 ├── components/           # Captions, code blocks, kinetic text, backgrounds
 ├── examples/             # Hand-written example videos
 ├── lib/                  # Timing, captions, highlighting, layout helpers
-└── theme/                # Design tokens and fonts
+└── theme/                # Theme presets, fonts, and the useTheme() hook
 content/                  # Generated plans and specs (git-ignored)
 public/content/           # Generated voice-overs (git-ignored)
 out/                      # Rendered videos (git-ignored)
@@ -220,12 +242,12 @@ out/                      # Rendered videos (git-ignored)
 
 ## Roadmap
 
-| Stage                                      | Goal                                               | Highlights                                                                                                                    |
-| ------------------------------------------ | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| **1. Pipeline and local studio** (current) | Idea to finished video, in the browser or terminal | Content plans, scripts, 11 scene types with stock and AI images and diagrams, voice-over, captions, live editor, local export |
-| **2. Richer visuals**                      | Videos that look less templated                    | Stock and AI images, icons, charts, more transitions, background music library                                                |
-| **3. Hosted studio**                       | Anyone can use it without installing anything      | Accounts, brand kits, cloud rendering, sharing                                                                                |
-| **4. Publishing**                          | From plan to posted                                | Captions and hashtags per platform, scheduling, performance tracking                                                          |
+| Stage                                      | Goal                                               | Highlights                                                                                                                                           |
+| ------------------------------------------ | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **1. Pipeline and local studio** (current) | Idea to finished video, in the browser or terminal | Content plans, scripts, 11 scene types with stock and AI images and diagrams, themes and brand kits, voice-over, captions, live editor, local export |
+| **2. Richer visuals**                      | Videos that look less templated                    | Stock and AI images, icons, charts, more transitions, background music library                                                                       |
+| **3. Hosted studio**                       | Anyone can use it without installing anything      | Accounts, cloud rendering, sharing                                                                                                                   |
+| **4. Publishing**                          | From plan to posted                                | Captions and hashtags per platform, scheduling, performance tracking                                                                                 |
 
 ## Costs
 

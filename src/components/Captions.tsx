@@ -5,9 +5,10 @@ import {
   useVideoConfig,
 } from "remotion";
 import { toCaptionPages } from "../lib/captions";
+import { withAlpha } from "../lib/color";
 import { useLayout } from "../lib/use-layout";
 import type { WordTiming } from "../spec/schema";
-import { theme } from "../theme/tokens";
+import { useTheme } from "../theme/context";
 
 type CaptionsProps = {
   /** Word timings relative to the start of the scene. */
@@ -19,6 +20,7 @@ const LINGER_SECONDS = 0.5;
 
 /** Short-form style captions: a few words at a time, current word highlighted. */
 export const Captions: React.FC<CaptionsProps> = ({ words }) => {
+  const theme = useTheme();
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const { unit, isVertical, captionZone, paddingX } = useLayout();
@@ -78,10 +80,14 @@ export const Captions: React.FC<CaptionsProps> = ({ words }) => {
                 padding: `${2 * unit}px ${14 * unit}px`,
                 borderRadius: theme.radius.sm * unit,
                 backgroundColor: isActive ? theme.colors.accent : "transparent",
-                color: isSpoken ? theme.colors.text : theme.colors.textMuted,
+                color: isActive
+                  ? theme.colors.captionActiveText
+                  : isSpoken
+                    ? theme.colors.text
+                    : theme.colors.textMuted,
                 textShadow: isActive
                   ? "none"
-                  : `0 ${4 * unit}px ${18 * unit}px rgba(0, 0, 0, 0.8)`,
+                  : `0 ${4 * unit}px ${18 * unit}px ${theme.isDark ? "rgba(0, 0, 0, 0.8)" : withAlpha(theme.colors.background, 0.9)}`,
               }}
             >
               {word.text}

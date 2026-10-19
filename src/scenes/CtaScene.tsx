@@ -1,11 +1,10 @@
 import { useCurrentFrame } from "remotion";
-import { brand } from "../brand";
 import { Emoji } from "../components/Emoji";
 import { KineticText } from "../components/KineticText";
 import { SceneFrame } from "../components/SceneFrame";
 import { progressBetween, useEnter } from "../lib/animation";
 import { useLayout } from "../lib/use-layout";
-import { theme } from "../theme/tokens";
+import { useBrand, useTheme } from "../theme/context";
 import type { SceneProps } from "./types";
 
 export const CtaScene: React.FC<SceneProps<"cta">> = ({
@@ -13,6 +12,9 @@ export const CtaScene: React.FC<SceneProps<"cta">> = ({
   durationInFrames,
   reserveCaptions,
 }) => {
+  const theme = useTheme();
+  const brand = useBrand();
+  const credit = [brand.handle, brand.website].filter(Boolean).join(" · ");
   const frame = useCurrentFrame();
   const { unit, isVertical } = useLayout();
   const words = scene.heading.split(/\s+/).length;
@@ -52,16 +54,18 @@ export const CtaScene: React.FC<SceneProps<"cta">> = ({
       >
         {scene.action}
       </div>
-      <div
-        style={{
-          fontFamily: theme.fonts.mono,
-          fontSize: 34 * unit,
-          color: theme.colors.textMuted,
-          opacity: progressBetween(frame, buttonDelay + 10, buttonDelay + 22),
-        }}
-      >
-        {brand.handle} · {brand.website}
-      </div>
+      {credit ? (
+        <div
+          style={{
+            fontFamily: theme.fonts.mono,
+            fontSize: 34 * unit,
+            color: theme.colors.textMuted,
+            opacity: progressBetween(frame, buttonDelay + 10, buttonDelay + 22),
+          }}
+        >
+          {credit}
+        </div>
+      ) : null}
     </SceneFrame>
   );
 };

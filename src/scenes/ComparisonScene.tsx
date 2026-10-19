@@ -4,7 +4,7 @@ import { SceneFrame } from "../components/SceneFrame";
 import { progressBetween, riseIn } from "../lib/animation";
 import { getComparisonStarts } from "../lib/reveals";
 import { useLayout } from "../lib/use-layout";
-import { theme } from "../theme/tokens";
+import { useTheme } from "../theme/context";
 import type { SceneProps } from "./types";
 
 type Side = SceneProps<"comparison">["scene"]["left"];
@@ -14,6 +14,7 @@ const SideCard: React.FC<{
   start: number;
   accent: boolean;
 }> = ({ side, start, accent }) => {
+  const theme = useTheme();
   const frame = useCurrentFrame();
   const { unit, isVertical } = useLayout();
 
@@ -71,6 +72,7 @@ export const ComparisonScene: React.FC<SceneProps<"comparison">> = ({
   durationInFrames,
   reserveCaptions,
 }) => {
+  const theme = useTheme();
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const { unit, isVertical } = useLayout();

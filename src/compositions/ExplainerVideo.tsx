@@ -30,6 +30,8 @@ import { QuoteScene } from "../scenes/QuoteScene";
 import { StatementScene } from "../scenes/StatementScene";
 import { StatScene } from "../scenes/StatScene";
 import { TitleScene } from "../scenes/TitleScene";
+import { ThemeProvider } from "../theme/context";
+import { resolveTheme } from "../theme/resolve";
 import {
   videoSpecSchema,
   type Scene,
@@ -53,11 +55,16 @@ export const calculateExplainerMetadata: CalculateMetadataFunction<
   }
   const spec = result.data;
 
+  const { codeTheme } = resolveTheme(spec.theme);
   const codeSteps: Record<number, PreparedCodeStep[]> = {};
   await Promise.all(
     spec.scenes.map(async (scene, index) => {
       if (scene.type === "code") {
-        codeSteps[index] = await prepareCodeSteps(scene.steps, scene.language);
+        codeSteps[index] = await prepareCodeSteps(
+          scene.steps,
+          scene.language,
+          codeTheme,
+        );
       }
     }),
   );
@@ -143,78 +150,80 @@ export const ExplainerVideo: React.FC<ExplainerVideoProps> = (props) => {
   const last = spec.scenes.length - 1;
 
   return (
-    <AbsoluteFill>
-      <Background />
-      {spec.music ? <Music music={spec.music} narration={narration} /> : null}
+    <ThemeProvider theme={spec.theme} brand={spec.brand}>
+      <AbsoluteFill>
+        <Background />
+        {spec.music ? <Music music={spec.music} narration={narration} /> : null}
 
-      {/* Sound effects, at most one per frame. */}
-      {sounds.map(({ sound, frame }) => (
-        <Sequence
-          key={`${sound}-${frame}`}
-          from={frame}
-          durationInFrames={SOUNDS[sound].durationInFrames}
-          layout="none"
-          name={`sfx: ${sound}`}
-        >
-          <Html5Audio
-            src={staticFile(SOUNDS[sound].src)}
-            volume={SOUNDS[sound].volume}
-          />
-        </Sequence>
-      ))}
+        {/* Sound effects, at most one per frame. */}
+        {sounds.map(({ sound, frame }) => (
+          <Sequence
+            key={`${sound}-${frame}`}
+            from={frame}
+            durationInFrames={SOUNDS[sound].durationInFrames}
+            layout="none"
+            name={`sfx: ${sound}`}
+          >
+            <Html5Audio
+              src={staticFile(SOUNDS[sound].src)}
+              volume={SOUNDS[sound].volume}
+            />
+          </Sequence>
+        ))}
 
-      {/* Visuals. Each scene stays up while the next one transitions in over it. */}
-      <TransitionSeries>
-        {spec.scenes.map((scene, index) => {
-          const transitionFrames = timing.transitions[index]!;
-          const transition = scene.transition ?? "fade";
-          return (
-            <Fragment key={index}>
-              {transitionFrames > 0 && transition !== "cut"
-                ? renderTransition(
-                    `transition-${index}`,
-                    transition,
-                    transitionFrames,
-                  )
-                : null}
-              <TransitionSeries.Sequence
-                durationInFrames={timing.sequences[index]!}
-                name={`${index + 1}. ${scene.type}`}
-              >
-                {/* Each scene has its own backdrop, so wipes and slides reveal a whole frame. */}
-                <Background frameOffset={timing.starts[index]} />
-                <SceneFadeContext.Provider
-                  value={{ fadeIn: index === 0, fadeOut: index === last }}
+        {/* Visuals. Each scene stays up while the next one transitions in over it. */}
+        <TransitionSeries>
+          {spec.scenes.map((scene, index) => {
+            const transitionFrames = timing.transitions[index]!;
+            const transition = scene.transition ?? "fade";
+            return (
+              <Fragment key={index}>
+                {transitionFrames > 0 && transition !== "cut"
+                  ? renderTransition(
+                      `transition-${index}`,
+                      transition,
+                      transitionFrames,
+                    )
+                  : null}
+                <TransitionSeries.Sequence
+                  durationInFrames={timing.sequences[index]!}
+                  name={`${index + 1}. ${scene.type}`}
                 >
-                  <SceneView
-                    scene={scene}
-                    durationInFrames={timing.scenes[index]!}
-                    reserveCaptions={spec.captions}
-                    codeSteps={props.codeSteps?.[index]}
-                  />
-                </SceneFadeContext.Provider>
-              </TransitionSeries.Sequence>
-            </Fragment>
+                  {/* Each scene has its own backdrop, so wipes and slides reveal a whole frame. */}
+                  <Background frameOffset={timing.starts[index]} />
+                  <SceneFadeContext.Provider
+                    value={{ fadeIn: index === 0, fadeOut: index === last }}
+                  >
+                    <SceneView
+                      scene={scene}
+                      durationInFrames={timing.scenes[index]!}
+                      reserveCaptions={spec.captions}
+                      codeSteps={props.codeSteps?.[index]}
+                    />
+                  </SceneFadeContext.Provider>
+                </TransitionSeries.Sequence>
+              </Fragment>
+            );
+          })}
+        </TransitionSeries>
+
+        {/* Voice-over and captions run on their own timeline, so they never overlap or move with a transition. */}
+        {spec.scenes.map((scene, index) => {
+          return (
+            <Sequence
+              key={index}
+              from={timing.starts[index]}
+              durationInFrames={timing.scenes[index]}
+              name={`${index + 1}. voice-over`}
+            >
+              {scene.audio ? (
+                <Html5Audio src={resolveMedia(scene.audio.src)} />
+              ) : null}
+              {spec.captions ? <Captions words={getSceneWords(scene)} /> : null}
+            </Sequence>
           );
         })}
-      </TransitionSeries>
-
-      {/* Voice-over and captions run on their own timeline, so they never overlap or move with a transition. */}
-      {spec.scenes.map((scene, index) => {
-        return (
-          <Sequence
-            key={index}
-            from={timing.starts[index]}
-            durationInFrames={timing.scenes[index]}
-            name={`${index + 1}. voice-over`}
-          >
-            {scene.audio ? (
-              <Html5Audio src={resolveMedia(scene.audio.src)} />
-            ) : null}
-            {spec.captions ? <Captions words={getSceneWords(scene)} /> : null}
-          </Sequence>
-        );
-      })}
-    </AbsoluteFill>
+      </AbsoluteFill>
+    </ThemeProvider>
   );
 };

@@ -1,4 +1,5 @@
 import type { CodeStep } from "../spec/schema";
+import type { CodeTheme } from "../theme/presets";
 import { findAddedLines } from "./diff-lines";
 import {
   highlightCode,
@@ -18,6 +19,7 @@ export type PreparedCodeStep = {
 export const prepareCodeSteps = async (
   steps: CodeStep[],
   language: SupportedLanguage,
+  codeTheme: CodeTheme,
 ): Promise<PreparedCodeStep[]> => {
   const plainLines = steps.map((step) =>
     normalizeCode(step.code).split(/\r?\n/),
@@ -25,7 +27,7 @@ export const prepareCodeSteps = async (
 
   return Promise.all(
     steps.map(async (step, index) => ({
-      lines: await highlightCode(step.code, language),
+      lines: await highlightCode(step.code, language, codeTheme),
       addedLines: findAddedLines(
         plainLines[index - 1] ?? [],
         plainLines[index]!,

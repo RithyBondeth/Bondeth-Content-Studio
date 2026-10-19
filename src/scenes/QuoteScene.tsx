@@ -3,7 +3,7 @@ import { KineticText } from "../components/KineticText";
 import { SceneFrame } from "../components/SceneFrame";
 import { progressBetween, riseIn, useEnter } from "../lib/animation";
 import { useLayout } from "../lib/use-layout";
-import { theme } from "../theme/tokens";
+import { useTheme } from "../theme/context";
 import type { SceneProps } from "./types";
 
 export const QuoteScene: React.FC<SceneProps<"quote">> = ({
@@ -11,6 +11,7 @@ export const QuoteScene: React.FC<SceneProps<"quote">> = ({
   durationInFrames,
   reserveCaptions,
 }) => {
+  const theme = useTheme();
   const frame = useCurrentFrame();
   const { unit, isVertical } = useLayout();
   const mark = useEnter(0, 14);

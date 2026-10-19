@@ -1,7 +1,7 @@
 import { interpolate, useCurrentFrame } from "remotion";
 import type { HighlightedLine } from "../lib/highlight";
 import { useLayout } from "../lib/use-layout";
-import { theme } from "../theme/tokens";
+import { useTheme } from "../theme/context";
 
 export const CODE_LINE_HEIGHT = 1.6;
 // Width of the line-number gutter, in characters.
@@ -28,6 +28,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
   highlightedLines,
   fontSize,
 }) => {
+  const theme = useTheme();
   const frame = useCurrentFrame();
   const { unit } = useLayout();
 
@@ -47,6 +48,8 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
       style={{
         fontFamily: theme.fonts.mono,
         fontSize,
+        // For code that isn't highlighted yet.
+        color: theme.colors.text,
         lineHeight: CODE_LINE_HEIGHT,
         whiteSpace: "pre",
         // Show "=>" and "!==" as typed, so viewers can copy them.

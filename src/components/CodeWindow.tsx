@@ -1,5 +1,5 @@
 import { useLayout } from "../lib/use-layout";
-import { theme } from "../theme/tokens";
+import { useTheme } from "../theme/context";
 
 type CodeWindowProps = {
   fileName?: string;
@@ -11,6 +11,7 @@ export const CodeWindow: React.FC<CodeWindowProps> = ({
   fileName,
   children,
 }) => {
+  const theme = useTheme();
   const { unit } = useLayout();
 
   return (
