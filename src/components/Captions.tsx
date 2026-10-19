@@ -4,7 +4,11 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
-import { toCaptionPages } from "../lib/captions";
+import {
+  CAPTION_LINGER_SECONDS,
+  captionWordsPerPage,
+  toCaptionPages,
+} from "../lib/captions";
 import { withAlpha } from "../lib/color";
 import { useLayout } from "../lib/use-layout";
 import type { WordTiming } from "../spec/schema";
@@ -15,9 +19,6 @@ type CaptionsProps = {
   words: WordTiming[];
 };
 
-/** How long a page stays up after its last word, if nothing replaces it. */
-const LINGER_SECONDS = 0.5;
-
 /** Short-form style captions: a few words at a time, current word highlighted. */
 export const Captions: React.FC<CaptionsProps> = ({ words }) => {
   const theme = useTheme();
@@ -26,10 +27,10 @@ export const Captions: React.FC<CaptionsProps> = ({ words }) => {
   const { unit, isVertical, captionZone, paddingX } = useLayout();
   const time = frame / fps;
 
-  const pages = toCaptionPages(words, isVertical ? 3 : 6);
+  const pages = toCaptionPages(words, captionWordsPerPage(isVertical));
   const pageIndex = pages.findIndex((page, index) => {
     const next = pages[index + 1];
-    const end = next ? next.start : page.end + LINGER_SECONDS;
+    const end = next ? next.start : page.end + CAPTION_LINGER_SECONDS;
     return time >= page.start && time < end;
   });
   const page = pages[pageIndex];

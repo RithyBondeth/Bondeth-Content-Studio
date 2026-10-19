@@ -39,6 +39,13 @@ export const getSceneWords = (scene: Scene): WordTiming[] =>
   scene.audio?.words ??
   estimateWordTimings(scene.narration, getSceneSeconds(scene));
 
+/** Words per caption page: fewer on vertical videos, where the screen is narrow. */
+export const captionWordsPerPage = (isVertical: boolean) =>
+  isVertical ? 3 : 6;
+
+/** How long a page stays up after its last word, if nothing replaces it. */
+export const CAPTION_LINGER_SECONDS = 0.5;
+
 const SENTENCE_END = /[.!?…:;]$/;
 
 /**
