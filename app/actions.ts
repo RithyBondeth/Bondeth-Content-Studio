@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import type { VideoFormat } from "../src/lib/formats";
 import { FORMAT_NAMES } from "../src/lib/formats";
+import { publishKitSchema, type PublishKit } from "../src/lib/publish";
 import {
   videoSpecSchema,
   type BrandKit,
@@ -13,7 +14,15 @@ import {
 import { createPlan } from "../pipeline/plan";
 import type { ContentPlan } from "../pipeline/schemas";
 import { createVideoSpec } from "../pipeline/script";
-import { loadPlan, loadSpec, mediaDir, saveSpec } from "../pipeline/store";
+import { createPublishKit } from "../pipeline/publish";
+import {
+  loadPlan,
+  loadPublishKit,
+  loadSpec,
+  mediaDir,
+  savePublishKit,
+  saveSpec,
+} from "../pipeline/store";
 import {
   addImages,
   downloadImage,
@@ -27,6 +36,7 @@ import {
   addBlankVideo,
   createExampleProject,
   deleteProject,
+  listCovers,
   listRenders,
   projectVoiceChanges,
   updateBrandKit,
@@ -233,3 +243,60 @@ export const generateImageAction = async (
   run(async () =>
     generateImage(prompt, await videoMediaDir(slug, index), layout),
   );
+
+/** Writes (or rewrites) the video's posts for every platform with Claude. */
+export const generatePublishKitAction = async (
+  slug: string,
+  index: number,
+  coverScene?: number,
+) =>
+  run(async () => {
+    const plan = await loadPlan(slug);
+    const spec = await loadSpec(plan, index);
+    if (!spec) throw new Error("Write the script first.");
+    const previous = await loadPublishKit(plan, index);
+    const kit = await createPublishKit(
+      plan,
+      index,
+      spec,
+      coverScene === undefined
+        ? previous
+        : { version: 1, ...previous, coverScene },
+    );
+    await savePublishKit(plan, index, kit);
+    return kit;
+  });
+
+export const savePublishKitAction = async (
+  slug: string,
+  index: number,
+  kit: PublishKit,
+) =>
+  run(async () => {
+    const result = publishKitSchema.safeParse(kit);
+    if (!result.success) {
+      throw new Error(
+        result.error.issues[0]?.message ?? "Invalid publish kit.",
+      );
+    }
+    await savePublishKit(await loadPlan(slug), index, result.data);
+  });
+
+/** Exports one scene as the cover image for a format. Poll it with getRenderJobAction. */
+export const startCoverAction = async (
+  slug: string,
+  index: number,
+  format: VideoFormat,
+  scene: number,
+): Promise<Result<RenderJob>> =>
+  run(async () => {
+    if (!FORMAT_NAMES.includes(format)) throw new Error("Unknown format.");
+    if (!Number.isInteger(scene) || scene < 0) throw new Error("Pick a scene.");
+    return { ...startRenderJob(slug, index, format, { scene }) };
+  });
+
+export const listCoversAction = async (
+  slug: string,
+  index: number,
+): Promise<Result<RenderFile[]>> =>
+  run(async () => listCovers(await loadPlan(slug), index));

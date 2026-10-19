@@ -3,9 +3,15 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { bundle } from "@remotion/bundler";
-import { renderMedia, selectComposition } from "@remotion/renderer";
+import {
+  renderMedia,
+  renderStill,
+  selectComposition,
+} from "@remotion/renderer";
 import type { VideoFormat } from "../src/lib/formats";
-import type { VideoSpecInput } from "../src/spec/schema";
+import { coverFrame } from "../src/lib/publish";
+import { getVideoTiming } from "../src/lib/timing";
+import { videoSpecSchema, type VideoSpecInput } from "../src/spec/schema";
 import { ROOT } from "./config";
 
 export type RenderProgress = {
@@ -55,6 +61,38 @@ export const renderVideo = async (
     onProgress: ({ progress }) =>
       onProgress?.({ stage: "rendering", progress }),
   });
+};
+
+/**
+ * Exports one frame of a scene as a PNG cover image. Captions are turned off
+ * so the cover shows only the scene.
+ */
+export const renderCover = async (
+  spec: VideoSpecInput,
+  format: VideoFormat,
+  scene: number,
+  outputFile: string,
+  onProgress?: (progress: RenderProgress) => void,
+) => {
+  await fs.mkdir(path.dirname(outputFile), { recursive: true });
+  const url = await getServeUrl(onProgress);
+  const inputProps = { spec: { ...spec, captions: false } };
+  const composition = await selectComposition({
+    serveUrl: url,
+    id: `explainer-${format}`,
+    inputProps,
+  });
+  onProgress?.({ stage: "rendering", progress: 0 });
+  await renderStill({
+    composition,
+    serveUrl: url,
+    output: outputFile,
+    imageFormat: "png",
+    inputProps,
+    overwrite: true,
+    frame: coverFrame(getVideoTiming(videoSpecSchema.parse(spec)), scene),
+  });
+  onProgress?.({ stage: "rendering", progress: 1 });
 };
 
 /** Opens Remotion Studio with the spec loaded into the explainer compositions. */

@@ -1,7 +1,13 @@
 import { notFound } from "next/navigation";
-import { listPlans, loadPlan, loadSpec } from "../../../../../pipeline/store";
+import { blankPublishKit } from "../../../../../pipeline/publish";
+import {
+  listPlans,
+  loadPlan,
+  loadPublishKit,
+  loadSpec,
+} from "../../../../../pipeline/store";
 import { getKeyStatus } from "../../../../../studio/server/env";
-import { listRenders } from "../../../../../studio/server/projects";
+import { listCovers, listRenders } from "../../../../../studio/server/projects";
 import { VideoEditor } from "../../../../_components/editor/VideoEditor";
 
 export const dynamic = "force-dynamic";
@@ -28,6 +34,10 @@ export default async function VideoPage({
       videoCount={plan.plan.videos.length}
       initialSpec={spec}
       initialRenders={await listRenders(plan, index)}
+      initialPublishKit={
+        (await loadPublishKit(plan, index)) ?? blankPublishKit(spec)
+      }
+      initialCovers={await listCovers(plan, index)}
       keys={getKeyStatus()}
       brandTheme={plan.brand?.theme}
       projectVoice={plan.brand?.voice}

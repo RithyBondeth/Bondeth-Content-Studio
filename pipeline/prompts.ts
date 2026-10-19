@@ -1,5 +1,6 @@
 import { brand } from "../src/brand";
-import type { Brand } from "../src/spec/schema";
+import { PLATFORM_RULES, PLATFORMS } from "../src/lib/publish";
+import type { Brand, VideoSpecInput } from "../src/spec/schema";
 import type { ContentPlan } from "./schemas";
 import type { PlanOptions } from "./store";
 
@@ -102,6 +103,64 @@ export const scriptPrompt = (
     "",
     "## Requirements",
     `Target length: about ${options.seconds} seconds, so about ${targetWords} words of narration in total.`,
+    `Language: ${options.language}`,
+  ].join("\n");
+};
+
+const platformGuide = PLATFORMS.map((platform) => {
+  const rules = PLATFORM_RULES[platform];
+  const title =
+    rules.titleLimit === null
+      ? "no title"
+      : `title up to ${rules.titleLimit} characters`;
+  return `- ${platform} (${rules.label}): ${title}; ${rules.textLabel.toLowerCase()} up to ${rules.textLimit} characters including the call to action and hashtags; ${rules.hashtags.min}-${rules.hashtags.max} hashtags. ${rules.notes}`;
+}).join("\n");
+
+export const PUBLISH_SYSTEM = `You write the text that goes with a short animated explainer video when a creator posts it: titles, captions and descriptions, a call to action, and hashtags, for each platform. The creators are educators and explainers, often not marketers, so the text should sound like a helpful teacher, not an advert.
+
+Platforms:
+${platformGuide}
+
+What makes good post text:
+- Open with the video's hook or the question it answers, so the first line makes someone want to watch.
+- Say what the viewer will learn, plainly. Promise only what the video actually covers.
+- Write in the series' tone and in the requested language. Keep hashtags in the language people search in for this topic.
+- No clickbait, no all-caps, no invented facts or numbers, and at most one or two emoji per post.
+- Don't put hashtags in the title, caption, or description; they go in the hashtags list.
+- Hashtags mix the topic, the subject area, and the audience. Specific beats generic: #PhotosynthesisExplained beats #Viral. Never use #fyp, #viral, or similar.
+- The call to action follows the series' call to action, worded naturally for each platform (follow on TikTok and Instagram, subscribe on YouTube).`;
+
+export const publishPrompt = (
+  plan: ContentPlan,
+  videoIndex: number,
+  spec: VideoSpecInput,
+  options: { language: string; creator?: Brand },
+) => {
+  const video = plan.videos[videoIndex];
+  const creator = options.creator ?? { handle: brand.handle };
+  return [
+    "## Series",
+    `Title: ${plan.title}`,
+    `Audience: ${plan.audience}`,
+    `Tone: ${plan.tone}`,
+    ...(creator.name ? [`Creator: ${creator.name}`] : []),
+    ...(creator.handle ? [`Creator handle: ${creator.handle}`] : []),
+    ...(creator.website ? [`Creator website: ${creator.website}`] : []),
+    "",
+    `## This video (${videoIndex + 1} of ${plan.videos.length})`,
+    `Title: ${spec.title}`,
+    ...(video
+      ? [
+          `Pillar: ${video.pillar}`,
+          `Hook: ${video.hook}`,
+          `Call to action: ${video.callToAction}`,
+        ]
+      : []),
+    "",
+    "## Narration",
+    ...spec.scenes.map((scene) => scene.narration.trim()).filter(Boolean),
+    "",
+    "## Requirements",
     `Language: ${options.language}`,
   ].join("\n");
 };

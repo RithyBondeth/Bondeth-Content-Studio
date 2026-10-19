@@ -4,11 +4,13 @@
  * Next.js server.
  *
  * Usage: tsx pipeline/render-worker.ts <spec.json> <vertical|landscape> <output.mp4>
+ *        tsx pipeline/render-worker.ts <spec.json> <vertical|landscape> <cover.png> <scene>
+ * With a scene number (0-based), it exports that scene as a cover image instead.
  */
 import fs from "node:fs/promises";
 import { FORMAT_NAMES, type VideoFormat } from "../src/lib/formats";
 import type { VideoSpecInput } from "../src/spec/schema";
-import { renderVideo } from "./render";
+import { renderCover, renderVideo, type RenderProgress } from "./render";
 
 export type WorkerMessage =
   | { type: "progress"; stage: "bundling" | "rendering"; progress: number }
@@ -19,28 +21,36 @@ const send = (message: WorkerMessage) =>
   process.stdout.write(`${JSON.stringify(message)}\n`);
 
 const main = async () => {
-  const [specFile, format, output] = process.argv.slice(2);
+  const [specFile, format, output, scene] = process.argv.slice(2);
   if (!specFile || !output || !FORMAT_NAMES.includes(format as VideoFormat)) {
-    throw new Error("Usage: render-worker <spec.json> <format> <output.mp4>");
+    throw new Error(
+      "Usage: render-worker <spec.json> <format> <output.mp4|cover.png> [scene]",
+    );
   }
   const spec = JSON.parse(
     await fs.readFile(specFile, "utf8"),
   ) as VideoSpecInput;
 
   let last = "";
-  await renderVideo(
-    spec,
-    format as VideoFormat,
-    output,
-    ({ stage, progress }) => {
-      // Only report whole-percent changes to keep the output small.
-      const key = `${stage}:${Math.floor(progress * 100)}`;
-      if (key !== last) {
-        last = key;
-        send({ type: "progress", stage, progress });
-      }
-    },
-  );
+  const onProgress = ({ stage, progress }: RenderProgress) => {
+    // Only report whole-percent changes to keep the output small.
+    const key = `${stage}:${Math.floor(progress * 100)}`;
+    if (key !== last) {
+      last = key;
+      send({ type: "progress", stage, progress });
+    }
+  };
+  if (scene !== undefined) {
+    await renderCover(
+      spec,
+      format as VideoFormat,
+      Number(scene),
+      output,
+      onProgress,
+    );
+  } else {
+    await renderVideo(spec, format as VideoFormat, output, onProgress);
+  }
   send({ type: "done" });
 };
 

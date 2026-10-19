@@ -20,6 +20,7 @@ import type { ContentPlan } from "../../pipeline/schemas";
 import { applyBrandKit, kitCreator } from "../../pipeline/script";
 import { scenesToRecord, voiceForVideo } from "../../pipeline/voice";
 import {
+  coverPath,
   exists,
   listPlans,
   loadPlan,
@@ -70,25 +71,32 @@ const statusOf = (spec: VideoSpecInput | null): VideoStatus =>
       ? "voiced"
       : "scripted";
 
-export const listRenders = async (
-  plan: PlanFile,
-  index: number,
+/** Each format's file in out/ that exists, with a URL the studio can load it from. */
+const listOutFiles = async (
+  fileFor: (format: VideoFormat) => string,
 ): Promise<RenderFile[]> => {
-  const renders: RenderFile[] = [];
+  const files: RenderFile[] = [];
   for (const format of FORMAT_NAMES) {
-    const file = outputPath(plan, index, format);
+    const file = fileFor(format);
     const stat = await fs.stat(file).catch(() => null);
     if (stat) {
       const relative = path.relative(OUT_DIR, file).split(path.sep).join("/");
-      renders.push({
+      files.push({
         format,
         url: `/api/files/${relative}?v=${stat.mtimeMs.toFixed(0)}`,
         updatedAt: stat.mtime.toISOString(),
       });
     }
   }
-  return renders;
+  return files;
 };
+
+export const listRenders = (plan: PlanFile, index: number) =>
+  listOutFiles((format) => outputPath(plan, index, format));
+
+/** The cover images exported for a video. */
+export const listCovers = (plan: PlanFile, index: number) =>
+  listOutFiles((format) => coverPath(plan, index, format));
 
 export const getVideoSummaries = async (
   plan: PlanFile,

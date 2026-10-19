@@ -262,3 +262,34 @@ export const videoDraftSchema = z.object({
 
 export type SceneDraft = z.infer<typeof sceneDraftSchema>;
 export type VideoDraft = z.infer<typeof videoDraftSchema>;
+
+const platformPostDraft = (title: string | null, text: string) =>
+  z.object({
+    title: title
+      ? z.string().describe(title)
+      : z.null().describe("Always null: this platform has no title"),
+    text: z.string().describe(text),
+    callToAction: z
+      .string()
+      .describe(
+        "One short line asking viewers to do the plan's call to action, worded for this platform",
+      ),
+    hashtags: z
+      .array(z.string())
+      .describe("Hashtags without spaces, most relevant first"),
+  });
+
+export const publishDraftSchema = z.object({
+  tiktok: platformPostDraft(null, "The caption, without hashtags"),
+  shorts: platformPostDraft(
+    "The Short's title",
+    "The description, without hashtags",
+  ),
+  reels: platformPostDraft(null, "The caption, without hashtags"),
+  youtube: platformPostDraft(
+    "The landscape video's title",
+    "The description, without hashtags",
+  ),
+});
+
+export type PublishDraft = z.infer<typeof publishDraftSchema>;
