@@ -245,7 +245,8 @@ export const SceneList = ({
       <p className="hidden items-center justify-center gap-1.5 text-[11px] text-faint lg:flex">
         <Kbd>↑</Kbd>
         <Kbd>↓</Kbd>
-        to switch scenes
+        to switch scenes ·<Kbd>Space</Kbd>
+        to play
       </p>
     </div>
   );

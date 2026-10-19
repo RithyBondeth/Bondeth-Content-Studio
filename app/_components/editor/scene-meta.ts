@@ -242,3 +242,72 @@ export const convertScene = (scene: Scene, type: SceneType): Scene => {
       return { ...next, ...base };
   }
 };
+
+/** Plain names for scene fields, for saying what a template switch removes. */
+const FIELD_NAMES: Record<string, string> = {
+  subheading: "subheading",
+  highlight: "highlighted words",
+  items: "list items",
+  cues: "cues",
+  style: "style",
+  value: "number",
+  label: "label",
+  source: "source",
+  cue: "cue",
+  points: "data points",
+  unit: "unit",
+  author: "author",
+  left: "left side",
+  right: "right side",
+  language: "language",
+  fileName: "file name",
+  steps: "code steps",
+  src: "image",
+  alt: "image description",
+  search: "image search",
+  prompt: "image prompt",
+  credit: "image credit",
+  layout: "layout",
+  motion: "camera move",
+  nodes: "diagram nodes",
+  action: "button text",
+};
+
+/** Fields that are always kept, or that every template has. */
+const KEPT = new Set([
+  "type",
+  "narration",
+  "emoji",
+  "transition",
+  "durationInSeconds",
+  "audio",
+]);
+
+const isEmpty = (value: unknown) =>
+  value === undefined ||
+  value === "" ||
+  (Array.isArray(value) && value.length === 0);
+
+/**
+ * What switching a scene to another template would throw away: fields with
+ * content that the new template doesn't keep. Empty when nothing is lost,
+ * such as switching a title to a statement, which keeps its text.
+ */
+export const droppedFields = (scene: Scene, type: SceneType): string[] => {
+  if (scene.type === type) return [];
+  const next = convertScene(scene, type) as Record<string, unknown>;
+  const kept = new Set(
+    Object.values(next)
+      .filter((value) => typeof value === "string")
+      .map((value) => value as string),
+  );
+  const names = Object.entries(scene)
+    .filter(([key, value]) => {
+      if (KEPT.has(key) || isEmpty(value)) return false;
+      if (JSON.stringify(next[key]) === JSON.stringify(value)) return false;
+      // Text carried into another field, like a heading becoming a statement.
+      return !(typeof value === "string" && kept.has(value));
+    })
+    .map(([key]) => FIELD_NAMES[key] ?? key);
+  return [...new Set(names)];
+};
