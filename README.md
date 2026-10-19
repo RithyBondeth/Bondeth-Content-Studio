@@ -148,21 +148,30 @@ npm run pipeline -- list personal-finance-basics
 
 A video is a list of scenes. Each scene has `narration` (what the voice says), an optional `emoji`, and fields for its template.
 
-| Type         | Shows                                               | Fields                                                               |
-| ------------ | --------------------------------------------------- | -------------------------------------------------------------------- |
-| `title`      | The opening hook                                    | `heading`, `subheading?`                                             |
-| `statement`  | One big idea, revealed word by word                 | `text`, `highlight?` (words to color)                                |
-| `list`       | A heading and items that appear one by one          | `heading`, `items`, `style?` (`bullets`, `numbered`, `checks`)       |
-| `stat`       | A number that counts up                             | `value` (e.g. `"73%"`), `label`, `source?`                           |
-| `chart`      | Bars or a line that grow in as each value is said   | `heading`, `points` (`label`, `value`), `unit?`, `style?`, `source?` |
-| `quote`      | A quote with its author                             | `quote`, `author?`                                                   |
-| `comparison` | Two sides, such as myth vs. fact                    | `heading?`, `left`, `right` (each `label` + `points`)                |
-| `code`       | Syntax-highlighted code that builds up step by step | `language`, `fileName?`, `steps` (`code`, `highlight?`)              |
-| `image`      | A photo or illustration with a slow camera move     | `alt`, `src?`, `caption?`, `credit?`, `layout?`, `motion?`           |
-| `diagram`    | Icons joined by arrows as a flow, cycle, or hub     | `heading?`, `layout?`, `nodes` (`label`, `icon?`, `cue?`)            |
-| `cta`        | The closing call to action                          | `heading`, `action`                                                  |
+| Type         | Shows                                                  | Fields                                                               |
+| ------------ | ------------------------------------------------------ | -------------------------------------------------------------------- |
+| `title`      | The opening hook                                       | `heading`, `subheading?`                                             |
+| `statement`  | One big idea, revealed word by word                    | `text`, `highlight?` (words to color)                                |
+| `list`       | A heading and items that appear one by one             | `heading`, `items`, `style?` (`bullets`, `numbered`, `checks`)       |
+| `stat`       | A number that counts up                                | `value` (e.g. `"73%"`), `label`, `source?`                           |
+| `chart`      | Bars or a line that grow in as each value is said      | `heading`, `points` (`label`, `value`), `unit?`, `style?`, `source?` |
+| `quote`      | A quote with its author                                | `quote`, `author?`                                                   |
+| `comparison` | Two sides, such as myth vs. fact                       | `heading?`, `left`, `right` (each `label` + `points`)                |
+| `code`       | Syntax-highlighted code that builds up step by step    | `language`, `fileName?`, `steps` (`code`, `highlight?`)              |
+| `image`      | A photo or illustration with a slow camera move        | `alt`, `src?`, `caption?`, `credit?`, `layout?`, `motion?`           |
+| `diagram`    | Icons joined by arrows as a flow, cycle, or hub        | `heading?`, `layout?`, `nodes` (`label`, `icon?`, `cue?`)            |
+| `timeline`   | Dated events along a line that draws as each comes up  | `heading?`, `events` (`date`, `label`, `detail?`, `cue?`)            |
+| `steps`      | Numbered steps with icons, the current one highlighted | `heading?`, `steps` (`title`, `detail?`, `icon?`, `cue?`)            |
+| `cta`        | The closing call to action                             | `heading`, `action`                                                  |
 
 Every scene also accepts `durationInSeconds` to override its length. Otherwise the length comes from the voice-over, or from the narration's word count before there is one.
+
+Every scene can also set how it looks as it arrives:
+
+- `transition`: how it replaces the previous scene. `fade`, `slide`, `push`, `wipe`, `zoom`, `iris` (a growing circle), `clock` (a clock-hand sweep), `flip` (a card flip), `blur`, `split` (opens from the middle), or `cut`. Leave it out and scenes take turns through fade, slide, zoom, push, blur, and iris, so neighbours never share one.
+- `entrance`: how its text and items come in. `rise`, `slide`, `pop`, `blur`, or `typewriter` (text typed out with a caret). Leave it out and scenes of the same type take turns through rise, slide, and pop.
+
+And a video can set its `background`, the slow-moving pattern behind every scene, drawn in the theme's colors: `glow` (the default), `gradient`, `shapes`, `particles`, `grid`, `noise` (film grain), or `plain`. Everything moves with the frame number alone, and shapes and particles are placed with a seed from the video's title, so a render always matches the preview.
 
 A whole video spec looks like this:
 
@@ -172,6 +181,7 @@ A whole video spec looks like this:
   "title": "Why Is the Sky Blue?",
   "language": "en",
   "captions": true,
+  "background": "particles",
   "scenes": [
     {
       "type": "title",
@@ -183,6 +193,7 @@ A whole video spec looks like this:
       "type": "stat",
       "value": "6x",
       "label": "more scattering for blue light than for red",
+      "transition": "zoom",
       "narration": "Blue light scatters about six times more than red light."
     }
   ]
@@ -195,13 +206,13 @@ An image scene's picture comes from one of three places, and the editor lets you
 - **AI illustrations** from OpenAI's image model, when an OpenAI key is set in Settings (or `OPENAI_API_KEY` in `.env`). Claude marks scenes that a photo can't show, such as the inside of a cell, as illustrations.
 - **Your own upload**: JPEG, PNG, or WebP.
 
-Images are saved next to the voice-overs in `public/content/`. Until a scene has one, it shows a placeholder with its description. Diagram icons come from a set of about 130 [Lucide](https://lucide.dev) icons listed in [`src/lib/icon-names.ts`](src/lib/icon-names.ts).
+Images are saved next to the voice-overs in `public/content/`. Until a scene has one, it shows a placeholder with its description. Diagram and step icons come from a set of about 190 [Lucide](https://lucide.dev) icons listed in [`src/lib/icon-names.ts`](src/lib/icon-names.ts).
 
-Background music is set in the editor's Music setting: pick one of the bundled beds (calm, upbeat, curious) or upload your own track, and set its volume. The script step also picks a bed to suit each video. In a spec it looks like `"music": { "src": "music/calm.wav", "volume": 0.15 }`; `src` is any path under `public/`. The beds in [`public/music/`](public/music/README.md) are CC0 and synthesized by `npm run music`. The music fades in and out and dips under the narration.
+Background music is set in the editor's Music setting: pick one of the bundled beds (calm, upbeat, curious, inspiring, playful, focused, dramatic) or upload your own track, and set its volume. The script step also picks a bed to suit each video. In a spec it looks like `"music": { "src": "music/calm.wav", "volume": 0.15 }`; `src` is any path under `public/`. The beds in [`public/music/`](public/music/README.md) are CC0 and synthesized by `npm run music`. The music fades in and out and dips under the narration.
 
 ## Examples and templates
 
-`npm run dev` opens Remotion Studio with two hand-written examples in `src/examples/`: a science explainer that uses most scene types, and a coding explainer. Use them to preview template changes.
+`npm run dev` opens Remotion Studio with three hand-written examples in `src/examples/`: a science explainer that uses most scene types, a coding explainer, and a biology explainer that shows off the timeline and steps scenes, an animated background, and picked transitions and entrances. Use them to preview template changes.
 
 ## Customizing your brand
 
@@ -401,12 +412,12 @@ out/                      # Renders, covers, caption files, and bundles (git-ign
 
 ## Roadmap
 
-| Stage                                      | Goal                                               | Highlights                                                                                                                                           |
-| ------------------------------------------ | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **1. Pipeline and local studio** (current) | Idea to finished video, in the browser or terminal | Content plans, scripts, 11 scene types with stock and AI images and diagrams, themes and brand kits, voice-over, captions, live editor, local export |
-| **2. Richer visuals**                      | Videos that look less templated                    | Stock and AI images, icons, charts, more transitions, background music library                                                                       |
-| **3. Hosted studio**                       | Anyone can use it without installing anything      | Accounts, cloud rendering, sharing                                                                                                                   |
-| **4. Publishing**                          | From plan to posted                                | Captions and hashtags per platform (done), caption files and download-for-posting bundles (done), scheduling, performance tracking                   |
+| Stage                                      | Goal                                               | Highlights                                                                                                                                                                                                                                       |
+| ------------------------------------------ | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **1. Pipeline and local studio** (current) | Idea to finished video, in the browser or terminal | Content plans, scripts, 11 scene types with stock and AI images and diagrams, themes and brand kits, voice-over, captions, live editor, local export                                                                                             |
+| **2. Richer visuals** (in progress)        | Videos that look less templated                    | Stock and AI images, icons, and charts (done); 11 transitions with a varied default, animated backgrounds, entrance styles, timeline and steps scenes, 7 music moods, about 190 icons (done); next: more scene layouts and per-scene backgrounds |
+| **3. Hosted studio**                       | Anyone can use it without installing anything      | Accounts, cloud rendering, sharing                                                                                                                                                                                                               |
+| **4. Publishing**                          | From plan to posted                                | Captions and hashtags per platform (done), caption files and download-for-posting bundles (done), scheduling, performance tracking                                                                                                               |
 
 ## Costs
 

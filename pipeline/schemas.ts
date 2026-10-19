@@ -1,10 +1,12 @@
 import { z } from "zod";
+import { BACKGROUND_STYLES } from "../src/lib/backgrounds";
 import { ICON_NAMES } from "../src/lib/icon-names";
 import { SUPPORTED_LANGUAGES } from "../src/lib/languages";
 import { MUSIC_MOODS } from "../src/lib/music";
 import {
   CHART_STYLES,
   DIAGRAM_LAYOUTS,
+  ENTRANCES,
   IMAGE_LAYOUTS,
   IMAGE_MOTIONS,
   TRANSITIONS,
@@ -68,8 +70,15 @@ const sceneFields = {
   emoji: nullableString.describe("One emoji as the scene's visual, or null"),
   transition: z
     .enum(TRANSITIONS)
+    .nullable()
     .describe(
-      "How this scene replaces the previous one; ignored on the first scene",
+      "How this scene replaces the previous one, or null to let the video vary it automatically; ignored on the first scene",
+    ),
+  entrance: z
+    .enum(ENTRANCES)
+    .nullable()
+    .describe(
+      "How the scene's text and items come in, or null to let the video vary it automatically",
     ),
 };
 
@@ -231,6 +240,53 @@ const diagramDraft = z.object({
   ...sceneFields,
 });
 
+const timelineDraft = z.object({
+  type: z.literal("timeline"),
+  heading: nullableString,
+  events: z
+    .array(
+      z.object({
+        date: z
+          .string()
+          .describe("When, as shown: a year, a date, or a stage like 'Day 3'"),
+        label: z.string().describe("What happened, in 1-5 words"),
+        detail: nullableString.describe(
+          "A short line under the label, up to about 6 words, or null",
+        ),
+        cue: nullableString.describe(
+          "The first 1-4 words of the narration where this event comes up, copied exactly, or null",
+        ),
+      }),
+    )
+    .describe("2-6 events, in time order"),
+  ...sceneFields,
+});
+
+const stepsDraft = z.object({
+  type: z.literal("steps"),
+  heading: nullableString,
+  steps: z
+    .array(
+      z.object({
+        title: z.string().describe("The step, in 1-5 words"),
+        detail: nullableString.describe(
+          "A short line under the title, up to about 6 words, or null",
+        ),
+        icon: z
+          .enum(ICON_NAMES)
+          .nullable()
+          .describe(
+            "The icon that fits best, or null to show the step's number",
+          ),
+        cue: nullableString.describe(
+          "The first 1-4 words of the narration where this step comes up, copied exactly, or null",
+        ),
+      }),
+    )
+    .describe("2-5 steps, in the order they're done"),
+  ...sceneFields,
+});
+
 const ctaDraft = z.object({
   type: z.literal("cta"),
   heading: z.string(),
@@ -249,6 +305,8 @@ export const sceneDraftSchema = z.discriminatedUnion("type", [
   codeDraft,
   imageDraft,
   diagramDraft,
+  timelineDraft,
+  stepsDraft,
   ctaDraft,
 ]);
 
@@ -257,6 +315,9 @@ export const videoDraftSchema = z.object({
   music: z
     .enum([...MUSIC_MOODS, "none"])
     .describe("Background music bed that fits the video's mood, or none"),
+  background: z
+    .enum(BACKGROUND_STYLES)
+    .describe("The moving pattern behind every scene"),
   scenes: z.array(sceneDraftSchema),
 });
 
