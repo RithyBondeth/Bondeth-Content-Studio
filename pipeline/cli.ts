@@ -1,3 +1,4 @@
+import fs from "node:fs/promises";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { FORMAT_NAMES, type VideoFormat } from "../src/lib/formats";
@@ -10,11 +11,14 @@ import {
   clampCoverScene,
   PLATFORM_RULES,
   PLATFORMS,
+  type Platform,
 } from "../src/lib/publish";
 import { blankPublishKit, createPublishKit } from "./publish";
 import { openStudio, renderCover, renderVideo } from "./render";
 import { createVideoSpec } from "./script";
 import {
+  bundlePath,
+  captionPath,
   coverPath,
   exists,
   listPlans,
@@ -29,6 +33,8 @@ import {
   specPath,
   type PlanFile,
 } from "./store";
+import { BUNDLE_PIECE_LABELS } from "../src/lib/bundle";
+import { buildBundle, writeCaptionFiles } from "./bundle";
 import { addImages } from "./images";
 import { filterVoices, voiceLabels } from "../src/lib/voice";
 import { addVoiceOver } from "./voice";
@@ -46,6 +52,7 @@ Commands:
   render <plan>         Render videos to MP4
   preview <plan>        Open one video in Remotion Studio (--video, default 1)
   publish <plan>        Write titles, captions and hashtags per platform, and export cover images
+  bundle <plan>         Zip each platform's video, cover, post text and captions, ready to post
   make "<idea>"         Do all of the above in one go
   list [plan]           Show plans, or the videos in one plan and their status
   voices [search]       List the voices in your ElevenLabs account
@@ -56,10 +63,11 @@ Options:
   --tone <text>         Voice and style (plan, make)
   --language <code>     Narration language, e.g. en, es, km (plan, make; default en)
   --seconds <n>         Target length per video (script, make; default 45)
-  --video <n|all>       Which video(s) to work on (script, images, voice, render; default all)
+  --video <n|all>       Which video(s) to work on (script, images, voice, render, publish, bundle; default all)
   --format <name>       vertical, landscape, or both (render, make; default vertical)
   --no-voice            Skip the voice-over; captions are timed from the text (make)
   --voice <id>          ElevenLabs voice to record with; saved as each video's voice (voice, make)
+  --platform <name>     tiktok, shorts, reels, or youtube (bundle; default all)
   --cover <n>           Scene to use as the cover image (publish; default: the title scene)
   --force               Rewrite scripts or publish kits that already exist (script, publish)
 
@@ -71,6 +79,7 @@ Examples:
   npm run pipeline -- voice personal-finance-basics --voice JBFqnCBsd6RMkjVDRZzb
   npm run pipeline -- render personal-finance-basics --video 1 --format both
   npm run pipeline -- publish personal-finance-basics --video 1 --cover 3
+  npm run pipeline -- bundle personal-finance-basics --video 1 --platform tiktok
   npm run pipeline -- make "Why history matters" --videos 3 --no-voice
 `;
 
@@ -87,6 +96,7 @@ const { values, positionals } = parseArgs({
     "no-voice": { type: "boolean" },
     voice: { type: "string" },
     cover: { type: "string" },
+    platform: { type: "string" },
     force: { type: "boolean" },
     help: { type: "boolean", short: "h" },
   },
@@ -322,6 +332,8 @@ const render = async (planSlug: string) => {
         }
       });
       rendered.push(output);
+      const captions = await writeCaptionFiles(file, index, format);
+      if (captions) rendered.push(captions.srt.file, captions.vtt.file);
     }
   }
   if (rendered.length) {
@@ -413,6 +425,40 @@ const publish = async (planSlug: string) => {
   }
 };
 
+const selectPlatforms = (): Platform[] => {
+  if (!values.platform || values.platform === "all") return [...PLATFORMS];
+  if ((PLATFORMS as readonly string[]).includes(values.platform))
+    return [values.platform as Platform];
+  throw new Error(`--platform must be one of: ${PLATFORMS.join(", ")}, all.`);
+};
+
+const bundle = async (planSlug: string) => {
+  const file = await loadPlan(planSlug);
+  const indexes = selectVideos(file);
+  const platforms = selectPlatforms();
+  step(`Bundling "${file.plan.title}" for posting`);
+
+  for (const index of indexes) {
+    const title = file.plan.videos[index]!.title;
+    if (!(await loadSpec(file, index))) {
+      log(`  ${index + 1}. ${title}: no script yet, skipping`);
+      continue;
+    }
+    for (const platform of platforms) {
+      const { zip, contents } = await buildBundle(file, index, platform);
+      const output = bundlePath(file, index, platform);
+      await fs.mkdir(path.dirname(output), { recursive: true });
+      await fs.writeFile(output, zip);
+      const missing = contents.missing.map(
+        (piece) => BUNDLE_PIECE_LABELS[piece],
+      );
+      log(
+        `  ${index + 1}. ${PLATFORM_RULES[platform].label}: ${relative(output)}${missing.length ? `  (missing: ${missing.join(", ")}; see README.txt inside)` : ""}`,
+      );
+    }
+  }
+};
+
 const make = async (idea: string) => {
   const file = await plan(idea);
   await script(file.slug);
@@ -466,6 +512,16 @@ const list = async (planSlug: string | undefined) => {
       const cover = coverPath(file, index, format);
       if (await exists(cover))
         log(`     Cover (${format}): ${relative(cover)}`);
+      const captions = captionPath(file, index, format, "srt");
+      if (await exists(captions))
+        log(`     Captions (${format}): ${relative(captions)} (and .vtt)`);
+    }
+    for (const platform of PLATFORMS) {
+      const zip = bundlePath(file, index, platform);
+      if (await exists(zip))
+        log(
+          `     Bundle (${PLATFORM_RULES[platform].label}): ${relative(zip)}`,
+        );
     }
   }
 };
@@ -515,6 +571,11 @@ const main = async () => {
       break;
     case "publish":
       await publish(requireArg(argument, "publish <plan> [--video <n>]"));
+      break;
+    case "bundle":
+      await bundle(
+        requireArg(argument, "bundle <plan> [--video <n>] [--platform <name>]"),
+      );
       break;
     case "make":
       await make(requireArg(argument, 'make "<idea>"'));
