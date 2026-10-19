@@ -366,7 +366,9 @@ export const ImageFields = ({
           <p className="text-xs leading-relaxed text-faint">
             {scene.src
               ? (scene.credit ?? "Your image.")
-              : "Search stock photos, generate an illustration, or upload your own. A placeholder shows until then."}
+              : context.canGenerate
+                ? "Search stock photos, generate an illustration, or upload your own. A placeholder shows until then."
+                : "Search free stock photos or upload your own. A placeholder shows until then."}
           </p>
           {scene.src ? (
             <Button
@@ -387,9 +389,15 @@ export const ImageFields = ({
       <div
         role="tablist"
         aria-label="Image source"
-        className="grid grid-cols-3 gap-1 rounded-xl border border-line p-1"
+        className={cx(
+          "grid gap-1 rounded-xl border border-line p-1",
+          context.canGenerate ? "grid-cols-3" : "grid-cols-2",
+        )}
       >
-        {SOURCES.map((option) => (
+        {/* Generate only appears when an OpenAI key is set. */}
+        {SOURCES.filter(
+          (option) => option.value !== "generate" || context.canGenerate,
+        ).map((option) => (
           <button
             key={option.value}
             type="button"

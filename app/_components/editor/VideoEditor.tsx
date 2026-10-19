@@ -737,32 +737,30 @@ export const VideoEditor = ({
           <SaveIndicator state={saveState} />
           <AppearanceSwitch className="hidden md:flex" />
           <FormatToggle value={format} onChange={setFormat} />
-          <Button
-            variant={allVoiced ? "secondary" : "primary"}
-            loading={voicing}
-            disabled={!keys.elevenLabs}
-            title={
-              keys.elevenLabs
-                ? "Record the narration with ElevenLabs"
-                : "Add ELEVENLABS_API_KEY to .env"
-            }
-            onClick={() => void recordVoice()}
-            icon={
-              allVoiced ? (
-                <Check className="size-4 text-success" aria-hidden />
-              ) : (
-                <Mic className="size-4" aria-hidden />
-              )
-            }
-          >
-            {voicing
-              ? "Recording…"
-              : allVoiced
-                ? "Voice ready"
-                : voicedCount
-                  ? `Record voice (${toRecord} left)`
-                  : "Record voice"}
-          </Button>
+          {/* Without ElevenLabs you record or upload your own voice per scene. */}
+          {keys.elevenLabs ? (
+            <Button
+              variant={allVoiced ? "secondary" : "primary"}
+              loading={voicing}
+              title="Record the narration with ElevenLabs"
+              onClick={() => void recordVoice()}
+              icon={
+                allVoiced ? (
+                  <Check className="size-4 text-success" aria-hidden />
+                ) : (
+                  <Mic className="size-4" aria-hidden />
+                )
+              }
+            >
+              {voicing
+                ? "Recording…"
+                : allVoiced
+                  ? "Voice ready"
+                  : voicedCount
+                    ? `Record voice (${toRecord} left)`
+                    : "Record voice"}
+            </Button>
+          ) : null}
         </div>
       </header>
 

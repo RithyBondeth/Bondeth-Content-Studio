@@ -92,6 +92,11 @@ export const platformPostSchema = z.object({
 
 export type PlatformPost = z.infer<typeof platformPostSchema>;
 
+/** Whether any post has been written: blank posts opened to write by hand don't count. */
+export const hasWrittenPosts = (posts: PublishKit["posts"]) =>
+  !!posts &&
+  Object.values(posts).some((post) => post.text.trim() || post.title?.trim());
+
 /** Empty posts for every platform, to write by hand. */
 export const blankPosts = (): Record<Platform, PlatformPost> => ({
   tiktok: { title: null, text: "", callToAction: "", hashtags: [] },

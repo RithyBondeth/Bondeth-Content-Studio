@@ -3,6 +3,7 @@ import { test } from "node:test";
 import { getVideoTiming } from "./timing";
 import { videoSpecSchema } from "../spec/schema";
 import {
+  blankPosts,
   charCount,
   checkPost,
   clampCoverScene,
@@ -12,6 +13,7 @@ import {
   fitPost,
   formatHashtag,
   formatHashtags,
+  hasWrittenPosts,
   parseHashtagInput,
   PLATFORM_RULES,
   PLATFORMS,
@@ -216,4 +218,14 @@ test("the cover frame is inside its scene, after it has settled", () => {
   }
   // A scene that no longer exists falls back to the last one.
   assert.equal(coverFrame(timing, 5), coverFrame(timing, 1));
+});
+
+test("blank posts opened to write by hand don't count as written", () => {
+  assert.equal(hasWrittenPosts(undefined), false);
+  const posts = blankPosts();
+  assert.equal(hasWrittenPosts(posts), false);
+  assert.equal(
+    hasWrittenPosts({ ...posts, reels: { ...posts.reels, text: "Hi" } }),
+    true,
+  );
 });

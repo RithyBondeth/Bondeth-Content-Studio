@@ -331,23 +331,23 @@ export const NewProjectForm = ({ hasAi }: { hasAi: boolean }) => {
 
       {!hasAi ? (
         <div className="mx-auto mt-2 flex w-full max-w-2xl flex-col items-center gap-3 rounded-2xl border border-dashed border-line-strong bg-surface/40 p-4 text-center sm:flex-row sm:text-left">
-          <p className="flex-1 text-sm text-muted">
-            Set up an AI provider in{" "}
-            <code className="rounded bg-raised px-1.5 py-0.5 font-mono text-[13px] text-text">
-              .env
-            </code>{" "}
-            (an{" "}
-            <code className="rounded bg-raised px-1.5 py-0.5 font-mono text-[13px] text-text">
-              ANTHROPIC_API_KEY
-            </code>
-            , or{" "}
-            <code className="rounded bg-raised px-1.5 py-0.5 font-mono text-[13px] text-text">
-              LLM_PROVIDER
-            </code>{" "}
-            with its key) and restart to have AI plan and write for you. Until
-            then, type a title above to write it yourself, or explore a
-            ready-made project.
-          </p>
+          <div className="flex flex-1 flex-col gap-1">
+            <p className="text-sm font-medium">
+              You write, the studio does the rest
+            </p>
+            <p className="text-sm text-muted">
+              Name your series above to plan and script it yourself, or look
+              around a finished example first. Want AI to write for you? Add an{" "}
+              <code className="rounded bg-raised px-1 py-0.5 font-mono text-[12px] text-text">
+                ANTHROPIC_API_KEY
+              </code>{" "}
+              (or another provider) to{" "}
+              <code className="rounded bg-raised px-1 py-0.5 font-mono text-[12px] text-text">
+                .env
+              </code>{" "}
+              and restart.
+            </p>
+          </div>
           <Button
             variant="secondary"
             loading={pending === "example"}

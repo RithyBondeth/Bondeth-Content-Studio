@@ -10,6 +10,7 @@ import {
   type VoiceSetting,
 } from "../../src/spec/schema";
 import { FORMAT_NAMES, type VideoFormat } from "../../src/lib/formats";
+import { hasWrittenPosts } from "../../src/lib/publish";
 import {
   MAX_MUSIC_UPLOAD_BYTES,
   MUSIC_UPLOAD_TYPES,
@@ -115,7 +116,7 @@ export const getVideoSummaries = async (
         status: statusOf(spec),
         scenes: spec?.scenes.length ?? 0,
         renders: await listRenders(plan, index),
-        hasPosts: Boolean((await loadPublishKit(plan, index))?.posts),
+        hasPosts: hasWrittenPosts((await loadPublishKit(plan, index))?.posts),
       };
     }),
   );
