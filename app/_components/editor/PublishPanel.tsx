@@ -6,12 +6,14 @@ import {
   Copy,
   Download,
   ImageIcon,
+  Package,
   Loader2,
   Megaphone,
   RefreshCw,
   Sparkles,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { BUNDLE_PIECE_LABELS, type BundlePiece } from "../../../src/lib/bundle";
 import { FORMAT_NAMES, type VideoFormat } from "../../../src/lib/formats";
 import {
   charCount,
@@ -29,6 +31,7 @@ import type { Scene } from "../../../src/spec/schema";
 import type { RenderFile } from "../../../studio/server/projects";
 import type { RenderJob } from "../../../studio/server/render-jobs";
 import {
+  bundleStatusAction,
   generatePublishKitAction,
   getRenderJobAction,
   listCoversAction,
@@ -245,6 +248,10 @@ export const PublishPanel = ({
   const [covers, setCovers] = useState(initialCovers);
   const [jobs, setJobs] = useState<Partial<Record<VideoFormat, RenderJob>>>({});
   const active = Object.values(jobs).filter(isActive);
+  const [bundleMissing, setBundleMissing] = useState<Partial<
+    Record<Platform, BundlePiece[]>
+  > | null>(null);
+  const [downloading, setDownloading] = useState(false);
   const coverScene = clampCoverScene(kit.coverScene, scenes.length);
 
   // --- Saving: edits are saved a moment after you stop typing. ---
@@ -306,6 +313,41 @@ export const PublishPanel = ({
     notify({ tone: "success", title: "Posts ready for every platform" });
   };
 
+  // --- Posting bundles: checked again when the tab, posts, or covers change, since renders finish elsewhere. ---
+  const hasPosts = !!kit.posts;
+  useEffect(() => {
+    let cancelled = false;
+    void bundleStatusAction(slug, index).then((result) => {
+      if (!cancelled && result.ok) setBundleMissing(result.data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [slug, index, tab, hasPosts, covers]);
+
+  const downloadBundle = async () => {
+    setDownloading(true);
+    try {
+      // Save pending edits first, so the zip has the latest script and posts.
+      if (!(await beforeGenerate())) return;
+      const saved = await savePublishKitAction(slug, index, kit);
+      if (!saved.ok) {
+        notify({
+          tone: "error",
+          title: "Couldn't save the publish kit",
+          description: saved.error,
+        });
+        return;
+      }
+      const link = document.createElement("a");
+      link.href = `/api/bundle/${encodeURIComponent(slug)}/${index + 1}/${tab}`;
+      link.download = "";
+      link.click();
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   // --- Covers: exported on this computer, like renders. ---
   useEffect(() => {
     if (!active.length) return;
@@ -352,6 +394,7 @@ export const PublishPanel = ({
   const cover = covers.find((file) => file.format === rules.format);
   const coverJob = jobs[rules.format];
   const post = kit.posts?.[tab];
+  const missing = bundleMissing?.[tab] ?? [];
 
   return (
     <section
@@ -529,6 +572,38 @@ export const PublishPanel = ({
               ) : null}
             </div>
           </div>
+        </div>
+
+        <div className="flex flex-col gap-2.5 border-t border-line pt-4">
+          <span className="flex flex-col gap-0.5">
+            <span className="text-[13px]">Download for posting</span>
+            <span className="text-[11px] leading-relaxed text-faint">
+              One zip for {rules.label}: the {rules.format} video, cover, post
+              text and captions (SRT and WebVTT).
+            </span>
+          </span>
+          {missing.length ? (
+            <p className="flex items-start gap-1.5 text-[11px] leading-relaxed text-warning">
+              <CircleAlert className="mt-px size-3.5 shrink-0" aria-hidden />
+              <span>
+                Not ready yet:{" "}
+                {missing
+                  .map((piece) => BUNDLE_PIECE_LABELS[piece].toLowerCase())
+                  .join(", ")}
+                . The zip leaves {missing.length === 1 ? "it" : "them"} out and
+                says how to make {missing.length === 1 ? "it" : "them"} in
+                README.txt.
+              </span>
+            </p>
+          ) : null}
+          <Button
+            size="sm"
+            loading={downloading}
+            icon={<Package className="size-4" aria-hidden />}
+            onClick={() => void downloadBundle()}
+          >
+            Download {rules.label} bundle
+          </Button>
         </div>
       </div>
     </section>

@@ -99,6 +99,19 @@ export const outputPath = (plan: PlanFile, index: number, format: string) =>
 export const coverPath = (plan: PlanFile, index: number, format: string) =>
   path.join(OUT_DIR, plan.slug, `${videoKey(plan, index)}-${format}-cover.png`);
 
+/** A caption file for one format of a video, next to its render. */
+export const captionPath = (
+  plan: PlanFile,
+  index: number,
+  format: string,
+  type: "srt" | "vtt",
+) =>
+  path.join(OUT_DIR, plan.slug, `${videoKey(plan, index)}-${format}.${type}`);
+
+/** The "download for posting" zip for one platform. */
+export const bundlePath = (plan: PlanFile, index: number, platform: string) =>
+  path.join(OUT_DIR, plan.slug, `${videoKey(plan, index)}-${platform}.zip`);
+
 const exists = async (file: string) =>
   fs.access(file).then(
     () => true,

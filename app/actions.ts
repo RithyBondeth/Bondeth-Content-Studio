@@ -3,7 +3,11 @@
 import { revalidatePath } from "next/cache";
 import type { VideoFormat } from "../src/lib/formats";
 import { FORMAT_NAMES } from "../src/lib/formats";
-import { publishKitSchema, type PublishKit } from "../src/lib/publish";
+import {
+  publishKitSchema,
+  type Platform,
+  type PublishKit,
+} from "../src/lib/publish";
 import {
   videoSpecSchema,
   type BrandKit,
@@ -15,6 +19,8 @@ import { createPlan } from "../pipeline/plan";
 import type { ContentPlan } from "../pipeline/schemas";
 import { createVideoSpec } from "../pipeline/script";
 import { createPublishKit } from "../pipeline/publish";
+import { bundleStatus } from "../pipeline/bundle";
+import type { BundlePiece } from "../src/lib/bundle";
 import {
   loadPlan,
   loadPublishKit,
@@ -300,3 +306,10 @@ export const listCoversAction = async (
   index: number,
 ): Promise<Result<RenderFile[]>> =>
   run(async () => listCovers(await loadPlan(slug), index));
+
+/** For each platform, the pieces its posting bundle is still missing. */
+export const bundleStatusAction = async (
+  slug: string,
+  index: number,
+): Promise<Result<Record<Platform, BundlePiece[]>>> =>
+  run(async () => bundleStatus(await loadPlan(slug), index));

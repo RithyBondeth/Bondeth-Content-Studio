@@ -58,7 +58,7 @@ The studio walks you through the whole process in your browser:
 3. **Editor:** a list of scenes, a form for the selected scene, and a live preview that updates as you type. Add, reorder, duplicate, and delete scenes, switch a scene's template, and edit narration, on-screen text, emoji, and timing, and pick the video's theme. Changes save automatically.
 4. **Voice:** pick a narrator for the project in its brand kit, or for one video in the editor's Voice setting, then record the narration with ElevenLabs. Only scenes whose narration, voice, or voice settings changed are re-recorded.
 5. **Export:** render vertical or landscape MP4s on your computer, with progress, then play or download them.
-6. **Publish:** Claude writes a title, post text, call to action, and hashtags for TikTok, YouTube Shorts, Instagram Reels, and YouTube in one go. Edit them with live character counters, copy them, and export a cover image from any scene. See [Publishing](#publishing).
+6. **Publish:** Claude writes a title, post text, call to action, and hashtags for TikTok, YouTube Shorts, Instagram Reels, and YouTube in one go. Edit them with live character counters, copy them, and export a cover image from any scene, then download one zip per platform with the video, cover, post text, and caption files. See [Publishing](#publishing).
 
 The studio runs locally and stores everything in this folder, the same files the command line uses.
 
@@ -98,24 +98,28 @@ npm run pipeline -- render personal-finance-basics --format both
 # 6. Write post text and hashtags for each platform, and export cover images.
 npm run pipeline -- publish personal-finance-basics --video 1
 
+# 7. Zip each platform's video, cover, post text, and captions, ready to post.
+npm run pipeline -- bundle personal-finance-basics --video 1
+
 # See plans, and the status of each video in a plan.
 npm run pipeline -- list
 npm run pipeline -- list personal-finance-basics
 ```
 
-| Option              | Used by                                                     | Description                                                 |
-| ------------------- | ----------------------------------------------------------- | ----------------------------------------------------------- |
-| `--videos <n>`      | `plan`, `make`                                              | Number of videos to plan (default 5)                        |
-| `--audience <text>` | `plan`, `make`                                              | Who the videos are for                                      |
-| `--tone <text>`     | `plan`, `make`                                              | Voice and style, e.g. "warm and playful"                    |
-| `--language <code>` | `plan`, `make`                                              | Narration language, e.g. `en`, `es`, `km` (default `en`)    |
-| `--seconds <n>`     | `script`, `make`                                            | Target length of each video (default 45)                    |
-| `--video <n\|all>`  | `script`, `images`, `voice`, `render`, `preview`, `publish` | Which video to work on (default all; preview defaults to 1) |
-| `--format <name>`   | `render`, `make`                                            | `vertical`, `landscape`, or `both` (default `vertical`)     |
-| `--no-voice`        | `make`                                                      | Skip the voice-over; captions are timed from the text       |
-| `--voice <id>`      | `voice`, `make`                                             | ElevenLabs voice to record with, saved as the video's voice |
-| `--cover <n>`       | `publish`                                                   | Scene to use as the cover image (default: the title scene)  |
-| `--force`           | `script`, `publish`                                         | Rewrite scripts or publish kits that already exist          |
+| Option              | Used by                                                               | Description                                                 |
+| ------------------- | --------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `--videos <n>`      | `plan`, `make`                                                        | Number of videos to plan (default 5)                        |
+| `--audience <text>` | `plan`, `make`                                                        | Who the videos are for                                      |
+| `--tone <text>`     | `plan`, `make`                                                        | Voice and style, e.g. "warm and playful"                    |
+| `--language <code>` | `plan`, `make`                                                        | Narration language, e.g. `en`, `es`, `km` (default `en`)    |
+| `--seconds <n>`     | `script`, `make`                                                      | Target length of each video (default 45)                    |
+| `--video <n\|all>`  | `script`, `images`, `voice`, `render`, `preview`, `publish`, `bundle` | Which video to work on (default all; preview defaults to 1) |
+| `--format <name>`   | `render`, `make`                                                      | `vertical`, `landscape`, or `both` (default `vertical`)     |
+| `--no-voice`        | `make`                                                                | Skip the voice-over; captions are timed from the text       |
+| `--voice <id>`      | `voice`, `make`                                                       | ElevenLabs voice to record with, saved as the video's voice |
+| `--platform <name>` | `bundle`                                                              | `tiktok`, `shorts`, `reels`, or `youtube` (default all)     |
+| `--cover <n>`       | `publish`                                                             | Scene to use as the cover image (default: the title scene)  |
+| `--force`           | `script`, `publish`                                                   | Rewrite scripts or publish kits that already exist          |
 
 ## Scene types
 
@@ -300,6 +304,24 @@ The cover is one frame of a scene, without captions, exported as a PNG for each 
 }
 ```
 
+### Caption files
+
+Captions are drawn on the video, but platforms also take caption files that viewers can switch on and search can read. Rendering a video, or downloading a bundle, writes them next to the render: `out/<plan>/<video>-<format>.srt` (SubRip, which YouTube takes) and `.vtt` (WebVTT, the web standard). They use the same pages of words, shown for the same time, as the captions on screen: 3 words at a time on vertical videos and 6 on landscape ones, with times counted from the start of the whole video. Scenes without a voice-over yet get the same estimated timings the on-screen captions use, so every scene is captioned. Re-render after changing the script so the files and the video still match.
+
+### Download for posting
+
+A bundle is one zip per platform with everything you need to post there:
+
+| File                            | What it is                                                                |
+| ------------------------------- | ------------------------------------------------------------------------- |
+| `<video>-<format>.mp4`          | The render: vertical for TikTok, Shorts, and Reels; landscape for YouTube |
+| `<video>-<format>-cover.png`    | The cover image                                                           |
+| `post.txt`                      | The title (YouTube and Shorts) and the full post, ready to paste          |
+| `<video>-<format>.srt` / `.vtt` | Caption files                                                             |
+| `README.txt`                    | What's inside, and how to make anything that's missing                    |
+
+Anything not made yet (say, the landscape render) is left out and listed in `README.txt` with the command or studio panel that makes it. Download a bundle from the Publish panel (each platform's tab has its own button, and warns you first about what's missing), or build them all with `npm run pipeline -- bundle <plan>`, which saves them to `out/<plan>/<video>-<platform>.zip`. Bundles need no API keys.
+
 ## Project structure
 
 ```
@@ -310,11 +332,13 @@ app/                      # The web studio (Next.js)
 └── _components/          # UI components, including the editor
 studio/server/            # Studio server code: projects, render jobs, key status
 pipeline/                 # The idea → video pipeline (runs in Node)
-├── cli.ts                # Commands: plan, script, preview, voice, voices, render, publish, make, list
+├── cli.ts                # Commands: plan, script, preview, voice, voices, render, publish, bundle, make, list
 ├── prompts.ts            # Instructions given to Claude
 ├── schemas.ts            # The plan and script formats Claude must return
 ├── plan.ts / script.ts   # Claude steps
 ├── publish.ts            # Publish kits: post text and hashtags per platform
+├── bundle.ts             # Caption files and zips for posting, one per platform
+├── zip.ts                # A small zip writer, so bundles need no dependency
 ├── voice.ts              # ElevenLabs voice-over and word timings
 ├── recording.ts          # Your own recordings: converted to MP3, trimmed, timed
 ├── voices.ts             # Lists the ElevenLabs account's voices
@@ -331,7 +355,7 @@ src/                      # The Remotion video app
 └── theme/                # Theme presets, fonts, and the useTheme() hook
 content/                  # Generated plans and specs (git-ignored)
 public/content/           # Generated voice-overs (git-ignored)
-out/                      # Rendered videos and cover images (git-ignored)
+out/                      # Renders, covers, caption files, and bundles (git-ignored)
 ```
 
 ## Scripts
@@ -353,7 +377,7 @@ out/                      # Rendered videos and cover images (git-ignored)
 | **1. Pipeline and local studio** (current) | Idea to finished video, in the browser or terminal | Content plans, scripts, 11 scene types with stock and AI images and diagrams, themes and brand kits, voice-over, captions, live editor, local export |
 | **2. Richer visuals**                      | Videos that look less templated                    | Stock and AI images, icons, charts, more transitions, background music library                                                                       |
 | **3. Hosted studio**                       | Anyone can use it without installing anything      | Accounts, cloud rendering, sharing                                                                                                                   |
-| **4. Publishing**                          | From plan to posted                                | Captions and hashtags per platform (done), scheduling, performance tracking                                                                          |
+| **4. Publishing**                          | From plan to posted                                | Captions and hashtags per platform (done), caption files and download-for-posting bundles (done), scheduling, performance tracking                   |
 
 ## Costs
 
