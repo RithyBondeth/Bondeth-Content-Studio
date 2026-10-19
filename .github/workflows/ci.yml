@@ -57,7 +57,7 @@ jobs:
       # The first two seconds of one bundled example, enough to catch a broken composition.
       - name: Render example
         run: npx remotion render src/index.ts why-is-the-sky-blue-landscape out/ci-render.mp4 --frames=0-59
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: ci-render
           path: out/ci-render.mp4
