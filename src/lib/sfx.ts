@@ -5,8 +5,11 @@ import {
   getComparisonStarts,
   getDiagramNodeStarts,
   getListItemStarts,
+  getProcessStepStarts,
   getStatCountStart,
+  getTimelineEventStarts,
 } from "./reveals";
+import { getSceneTransition } from "./scene-style";
 import type { VideoTiming } from "./timing";
 
 export type SoundName = "whoosh" | "rise" | "pop" | "tick";
@@ -22,13 +25,19 @@ export const SOUNDS: Record<
   tick: { src: "sfx/tick.wav", volume: 0.3, durationInFrames: 2 },
 };
 
-/** The sound that plays as each transition starts. Fades and cuts are silent. */
+/** The sound that plays as each transition starts. Fades, blurs and cuts are silent. */
 const TRANSITION_SOUNDS: Record<Transition, SoundName | undefined> = {
   fade: undefined,
   cut: undefined,
+  blur: undefined,
   slide: "whoosh",
+  push: "whoosh",
   wipe: "whoosh",
+  clock: "whoosh",
+  flip: "whoosh",
+  split: "whoosh",
   zoom: "rise",
+  iris: "rise",
 };
 
 export type ScheduledSound = {
@@ -52,6 +61,10 @@ const getRevealSounds = (
       return pops(getChartPointStarts(scene, durationInFrames, fps));
     case "diagram":
       return pops(getDiagramNodeStarts(scene, durationInFrames, fps));
+    case "timeline":
+      return pops(getTimelineEventStarts(scene, durationInFrames, fps));
+    case "steps":
+      return pops(getProcessStepStarts(scene, durationInFrames, fps));
     case "comparison":
       return pops(getComparisonStarts(scene, durationInFrames, fps));
     case "code":
@@ -66,7 +79,8 @@ const getRevealSounds = (
 
 /**
  * Which sound effect plays on which frame: a whoosh or rise as a transition
- * starts, a pop as a list item, chart bar, diagram node, comparison side or code step appears, and a
+ * starts, a pop as a list item, chart bar, diagram node, timeline event,
+ * process step, comparison side or code step appears, and a
  * tick as a stat starts counting. Reveal frames come from the same helpers
  * the scene templates animate with, so each sound lands with its visual.
  * Sorted by frame, with at most one sound per frame: when two land on the
@@ -83,7 +97,7 @@ export const getSoundSchedule = (
   const sounds: ScheduledSound[] = [];
   spec.scenes.forEach((scene, index) => {
     const start = timing.starts[index]!;
-    const transitionSound = TRANSITION_SOUNDS[scene.transition ?? "fade"];
+    const transitionSound = TRANSITION_SOUNDS[getSceneTransition(scene, index)];
     if (transitionSound && timing.transitions[index]! > 0) {
       sounds.push({ sound: transitionSound, frame: start });
     }

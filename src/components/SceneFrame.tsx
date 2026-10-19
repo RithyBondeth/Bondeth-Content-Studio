@@ -1,6 +1,8 @@
 import { createContext, useContext } from "react";
 import { AbsoluteFill, interpolate, useCurrentFrame } from "remotion";
+import { entranceStyle } from "../lib/animation";
 import { useLayout } from "../lib/use-layout";
+import type { Entrance } from "../spec/schema";
 
 type SceneFrameProps = {
   durationInFrames: number;
@@ -19,6 +21,22 @@ const FADE_OUT = 6;
  * one fade here.
  */
 export const SceneFadeContext = createContext({ fadeIn: true, fadeOut: true });
+
+/** How the current scene's text and items come in. */
+export const EntranceContext = createContext<Entrance>("rise");
+
+/** The current scene's entrance. */
+export const useEntrance = () => useContext(EntranceContext);
+
+/**
+ * A function that styles an element coming in with the scene's entrance,
+ * given how far in it is (0 → 1) and how far it travels.
+ */
+export const useReveal = () => {
+  const entrance = useContext(EntranceContext);
+  return (progress: number, distance: number) =>
+    entranceStyle(entrance, progress, distance);
+};
 
 /** Padded content area that fades in and out with its scene. */
 export const SceneFrame: React.FC<SceneFrameProps> = ({

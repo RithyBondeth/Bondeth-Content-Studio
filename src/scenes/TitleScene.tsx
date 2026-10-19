@@ -1,8 +1,8 @@
 import { useCurrentFrame } from "remotion";
 import { Emoji } from "../components/Emoji";
 import { KineticText } from "../components/KineticText";
-import { SceneFrame } from "../components/SceneFrame";
-import { progressBetween, riseIn, useEnter } from "../lib/animation";
+import { SceneFrame, useReveal } from "../components/SceneFrame";
+import { progressBetween, useEnter } from "../lib/animation";
 import { useLayout } from "../lib/use-layout";
 import { useTheme } from "../theme/context";
 import type { SceneProps } from "./types";
@@ -14,6 +14,7 @@ export const TitleScene: React.FC<SceneProps<"title">> = ({
 }) => {
   const theme = useTheme();
   const frame = useCurrentFrame();
+  const reveal = useReveal();
   const { unit, isVertical } = useLayout();
   const bar = useEnter(10);
   const headingWords = scene.heading.split(/\s+/).length;
@@ -45,7 +46,7 @@ export const TitleScene: React.FC<SceneProps<"title">> = ({
             lineHeight: 1.3,
             color: theme.colors.textMuted,
             maxWidth: 1400 * unit,
-            ...riseIn(
+            ...reveal(
               progressBetween(
                 frame,
                 8 + headingWords * 3,

@@ -1,5 +1,5 @@
 /**
- * Icons a diagram node can show, by name. A curated set of Lucide icons that
+ * Icons a diagram node or process step can show, by name. A curated set of Lucide icons that
  * covers common explainer topics; Claude picks from this list, so every name
  * in a spec is one the renderer knows. Components are in lib/icons.tsx.
  */
@@ -142,6 +142,71 @@ export const ICON_NAMES = [
   "repeat",
   "refresh-cw",
   "infinity",
+  // Classroom and study
+  "backpack",
+  "library",
+  "notebook-pen",
+  "presentation",
+  "clipboard-list",
+  "list-checks",
+  "languages",
+  "scroll",
+  "pen-tool",
+  "message-square-quote",
+  "award",
+  "badge-check",
+  "sparkles",
+  "brain-circuit",
+  // Maths
+  "sigma",
+  "pi",
+  "percent",
+  "divide",
+  "plus",
+  "minus",
+  "variable",
+  "shapes",
+  "chart-bar",
+  // More science and the body
+  "test-tube",
+  "beaker",
+  "orbit",
+  "virus",
+  "microchip",
+  "radar",
+  "syringe",
+  "bone",
+  "hand",
+  "ear",
+  "footprints",
+  // More nature
+  "tornado",
+  "rainbow",
+  "mountain-snow",
+  "thermometer-sun",
+  "egg",
+  "shell",
+  "turtle",
+  "rabbit",
+  "squirrel",
+  "worm",
+  // History and society
+  "crown",
+  "castle",
+  "swords",
+  "flag",
+  "vote",
+  "hospital",
+  "palette",
+  "brush",
+  "drama",
+  "bot",
+  // Progress
+  "calendar-days",
+  "milestone",
+  "route",
+  "signpost",
+  "goal",
 ] as const;
 
 export type IconName = (typeof ICON_NAMES)[number];

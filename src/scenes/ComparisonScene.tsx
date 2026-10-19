@@ -1,7 +1,7 @@
 import { useCurrentFrame, useVideoConfig } from "remotion";
 import { Emoji } from "../components/Emoji";
-import { SceneFrame } from "../components/SceneFrame";
-import { progressBetween, riseIn } from "../lib/animation";
+import { SceneFrame, useReveal } from "../components/SceneFrame";
+import { progressBetween } from "../lib/animation";
 import { getComparisonStarts } from "../lib/reveals";
 import { useLayout } from "../lib/use-layout";
 import { useTheme } from "../theme/context";
@@ -16,6 +16,7 @@ const SideCard: React.FC<{
 }> = ({ side, start, accent }) => {
   const theme = useTheme();
   const frame = useCurrentFrame();
+  const reveal = useReveal();
   const { unit, isVertical } = useLayout();
 
   return (
@@ -29,7 +30,7 @@ const SideCard: React.FC<{
         borderRadius: theme.radius.lg * unit,
         backgroundColor: theme.colors.surface,
         border: `${3 * unit}px solid ${accent ? theme.colors.accent : theme.colors.surfaceBorder}`,
-        ...riseIn(progressBetween(frame, start, start + 12), 30 * unit),
+        ...reveal(progressBetween(frame, start, start + 12), 30 * unit),
       }}
     >
       <div
@@ -74,6 +75,7 @@ export const ComparisonScene: React.FC<SceneProps<"comparison">> = ({
 }) => {
   const theme = useTheme();
   const frame = useCurrentFrame();
+  const reveal = useReveal();
   const { fps } = useVideoConfig();
   const { unit, isVertical } = useLayout();
   // Each side appears when the narration turns to it.
@@ -100,7 +102,7 @@ export const ComparisonScene: React.FC<SceneProps<"comparison">> = ({
             lineHeight: 1.1,
             letterSpacing: "-0.02em",
             color: theme.colors.text,
-            ...riseIn(progressBetween(frame, 0, 12), 20 * unit),
+            ...reveal(progressBetween(frame, 0, 12), 20 * unit),
           }}
         >
           {scene.emoji ? <Emoji emoji={scene.emoji} size={84} /> : null}

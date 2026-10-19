@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ICON_NAMES } from "../lib/icon-names";
 import { SUPPORTED_LANGUAGES } from "../lib/languages";
+import { BACKGROUND_STYLES } from "../lib/backgrounds";
 import { HEX_COLOR } from "../lib/color";
 import { DEFAULT_MUSIC_VOLUME } from "../lib/music";
 import { THEME_FONT_NAMES, THEME_PRESET_NAMES } from "../theme/presets";
@@ -31,7 +32,33 @@ export const sceneAudioSchema = z.object({
   selfRecorded: z.object({ narration: z.string() }).optional(),
 });
 
-export const TRANSITIONS = ["fade", "slide", "wipe", "zoom", "cut"] as const;
+export const TRANSITIONS = [
+  "fade",
+  "slide",
+  "push",
+  "wipe",
+  "zoom",
+  "iris",
+  "clock",
+  "flip",
+  "blur",
+  "split",
+  "cut",
+] as const;
+
+/**
+ * How a scene's text and items come in. "rise" fades them up into place,
+ * "slide" brings them in from the left, "pop" scales them up with a little
+ * bounce, "blur" brings them into focus, and "typewriter" types text out
+ * letter by letter (and wipes other items in).
+ */
+export const ENTRANCES = [
+  "rise",
+  "slide",
+  "pop",
+  "blur",
+  "typewriter",
+] as const;
 
 const sceneBase = {
   /** What the voice-over says during this scene. Also used for captions. */
@@ -40,8 +67,18 @@ const sceneBase = {
   emoji: z.string().optional(),
   /** Overrides the length worked out from the audio or narration. */
   durationInSeconds: z.number().positive().optional(),
-  /** How this scene replaces the previous one. Defaults to "fade"; ignored on the first scene. */
+  /**
+   * How this scene replaces the previous one. When left out, scenes take
+   * turns through a few calm transitions (src/lib/scene-style.ts), so
+   * neighbours never share one. Ignored on the first scene.
+   */
   transition: z.enum(TRANSITIONS).optional(),
+  /**
+   * How the scene's text and items come in. When left out, scenes of the
+   * same type take turns through rise, slide and pop, so they don't all look
+   * alike.
+   */
+  entrance: z.enum(ENTRANCES).optional(),
   /** Filled in by the voice step. */
   audio: sceneAudioSchema.optional(),
 };
@@ -205,6 +242,42 @@ export const diagramSceneSchema = z.object({
   ...sceneBase,
 });
 
+export const timelineEventSchema = z.object({
+  /** When it happened, as shown, e.g. "1969", "March 2020", or "Day 3". */
+  date: z.string(),
+  label: z.string(),
+  /** A short line under the label. */
+  detail: z.string().optional(),
+  /** Phrase from the narration where this event comes up; it appears there. */
+  cue: z.string().optional(),
+});
+
+/** Dated events along a line, appearing one by one. */
+export const timelineSceneSchema = z.object({
+  type: z.literal("timeline"),
+  heading: z.string().optional(),
+  events: z.array(timelineEventSchema).min(2).max(6),
+  ...sceneBase,
+});
+
+export const processStepSchema = z.object({
+  title: z.string(),
+  /** A short line under the title. */
+  detail: z.string().optional(),
+  /** Shown in the step's badge. Without one, the badge shows its number. */
+  icon: z.enum(ICON_NAMES).optional(),
+  /** Phrase from the narration where this step comes up; it appears there. */
+  cue: z.string().optional(),
+});
+
+/** Numbered steps of a process or how-to, the current one highlighted. */
+export const stepsSceneSchema = z.object({
+  type: z.literal("steps"),
+  heading: z.string().optional(),
+  steps: z.array(processStepSchema).min(2).max(5),
+  ...sceneBase,
+});
+
 export const ctaSceneSchema = z.object({
   type: z.literal("cta"),
   heading: z.string(),
@@ -224,6 +297,8 @@ export const sceneSchema = z.discriminatedUnion("type", [
   codeSceneSchema,
   imageSceneSchema,
   diagramSceneSchema,
+  timelineSceneSchema,
+  stepsSceneSchema,
   ctaSceneSchema,
 ]);
 
@@ -303,6 +378,12 @@ export const videoSpecSchema = z.object({
     .optional(),
   /** Defaults to the "midnight" preset. */
   theme: themeSettingSchema.optional(),
+  /**
+   * The moving pattern behind every scene, drawn in the theme's colors:
+   * "glow", "gradient", "shapes", "particles", "grid", "noise", or "plain".
+   * Defaults to "glow".
+   */
+  background: z.enum(BACKGROUND_STYLES).optional(),
   /** Defaults to the creator in src/brand.ts. */
   brand: brandSchema.optional(),
   /** Overrides the project's voice. Defaults to the brand kit's, then .env's. */
@@ -316,6 +397,7 @@ export type Scene = z.infer<typeof sceneSchema>;
 export type SceneType = Scene["type"];
 export type SceneOf<T extends SceneType> = Extract<Scene, { type: T }>;
 export type Transition = (typeof TRANSITIONS)[number];
+export type Entrance = (typeof ENTRANCES)[number];
 export type CodeStep = z.infer<typeof codeStepSchema>;
 export type ChartPoint = z.infer<typeof chartPointSchema>;
 export type ChartStyle = (typeof CHART_STYLES)[number];
@@ -323,6 +405,8 @@ export type ImageLayout = (typeof IMAGE_LAYOUTS)[number];
 export type ImageMotion = (typeof IMAGE_MOTIONS)[number];
 export type DiagramLayout = (typeof DIAGRAM_LAYOUTS)[number];
 export type DiagramNode = z.infer<typeof diagramNodeSchema>;
+export type TimelineEvent = z.infer<typeof timelineEventSchema>;
+export type ProcessStep = z.infer<typeof processStepSchema>;
 export type Brand = z.infer<typeof brandSchema>;
 export type BrandKit = z.infer<typeof brandKitSchema>;
 export type VoiceSettings = z.infer<typeof voiceSettingsSchema>;

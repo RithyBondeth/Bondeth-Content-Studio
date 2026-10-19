@@ -126,6 +126,16 @@ const getSceneCues = (
         path: `nodes.${index}.cue`,
         cue: node.cue,
       }));
+    case "timeline":
+      return scene.events.map((event, index) => ({
+        path: `events.${index}.cue`,
+        cue: event.cue,
+      }));
+    case "steps":
+      return scene.steps.map((step, index) => ({
+        path: `steps.${index}.cue`,
+        cue: step.cue,
+      }));
     case "stat":
       return [{ path: "cue", cue: scene.cue }];
     case "comparison":

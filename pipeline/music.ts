@@ -314,6 +314,142 @@ const beds: Record<MusicMood, () => Float32Array> = {
       add(start + 2.5 * beat, 1.5 * beat, bass(chord.root, 1.2 * beat), 0.25);
     });
   },
+
+  // 100 BPM, 16 bars in C major: C, G, Am, F, two bars each, played twice.
+  // Arpeggios climb through each chord, and a bell melody answers every
+  // other pair of bars.
+  inspiring: () => {
+    const chords: Chord[] = [
+      { root: 48, tones: [60, 64, 67, 72] },
+      { root: 43, tones: [59, 62, 67, 71] },
+      { root: 45, tones: [57, 60, 64, 69] },
+      { root: 41, tones: [57, 60, 65, 69] },
+    ];
+    const climb = [0, 1, 2, 3, 1, 2, 3, 2];
+    const melody: [number, number][] = [
+      [0, 79],
+      [2, 76],
+      [3, 77],
+      [6, 79],
+    ];
+    return bed(100, 16, (add, bar, beat, start) => {
+      const chord = chords[Math.floor(bar / 2) % chords.length]!;
+      if (bar % 2 === 0) {
+        const length = 8 * beat;
+        for (const tone of chord.tones.slice(0, 3)) {
+          add(start, length + 1.4, pad(tone, length + 1.4), 0.08);
+        }
+        if (bar % 4 === 2) {
+          for (const [at, note] of melody) {
+            add(start + at * beat, 3, bell(note), 0.18);
+          }
+        }
+      }
+      climb.forEach((index, step) => {
+        add(start + step * (beat / 2), 1, pluck(chord.tones[index]! + 12), 0.2);
+      });
+      add(start, 2 * beat, bass(chord.root, 1.8 * beat), 0.25);
+      add(start + 2 * beat, 2 * beat, bass(chord.root, 1.8 * beat), 0.2);
+      add(start, 0.6, kick(2000 + bar * 2), 0.3);
+      add(start + 2 * beat, 0.6, kick(2001 + bar * 2), 0.25);
+    });
+  },
+
+  // 112 BPM, 16 bars in F major: F, Bb, C, F, two bars each, played twice
+  // with the tune answered higher the second time. A skipping mallet tune
+  // over bouncing bass, with shakers on the offbeats.
+  playful: () => {
+    const chords: Chord[] = [
+      { root: 53, tones: [65, 69, 72] },
+      { root: 46, tones: [65, 70, 74] },
+      { root: 48, tones: [64, 67, 72] },
+      { root: 53, tones: [65, 69, 72] },
+    ];
+    // [eighth note in the bar, chord tone, octave up]: short hops up and down.
+    const hops: [number, number, number][] = [
+      [0, 0, 12],
+      [1, 1, 12],
+      [3, 2, 12],
+      [4, 1, 12],
+      [5, 2, 12],
+      [6, 0, 24],
+    ];
+    return bed(112, 16, (add, bar, beat, start) => {
+      const chord = chords[Math.floor(bar / 2) % chords.length]!;
+      const answer = bar >= 8 && bar % 2 === 1 ? 12 : 0;
+      for (const [eighth, index, octave] of hops) {
+        add(
+          start + eighth * (beat / 2),
+          1.2,
+          mallet(chord.tones[index]! + octave + answer),
+          0.3,
+        );
+      }
+      for (let b = 0; b < 4; b++) {
+        // Root on the beat, fifth on the "and", for a bounce.
+        add(start + b * beat, beat / 2, bass(chord.root, beat * 0.4), 0.22);
+        add(
+          start + (b + 0.5) * beat,
+          beat / 2,
+          bass(chord.root + 7, beat * 0.3),
+          0.14,
+        );
+        add(start + (b + 0.5) * beat, 0.15, shaker(3000 + bar * 4 + b), 0.1);
+        if (b === 0 || b === 2) {
+          add(start + b * beat, 0.6, kick(3100 + bar * 4 + b), 0.28);
+        }
+      }
+    });
+  },
+
+  // 80 BPM, 8 bars in E minor: Em9 and Cmaj7, two bars each. A steady,
+  // quiet pluck pattern with no drums, to sit under detailed explanations.
+  focused: () => {
+    const chords: Chord[] = [
+      { root: 40, tones: [59, 62, 66, 67] },
+      { root: 48, tones: [59, 60, 64, 67] },
+    ];
+    const pattern = [0, 2, 1, 3, 0, 2, 1, 2];
+    return bed(80, 8, (add, bar, beat, start) => {
+      const chord = chords[Math.floor(bar / 2) % chords.length]!;
+      if (bar % 2 === 0) {
+        const length = 8 * beat;
+        for (const tone of chord.tones) {
+          add(start, length + 1.4, pad(tone, length + 1.4), 0.07);
+        }
+        add(start, length + 0.15, bass(chord.root + 12, length + 0.15), 0.18);
+      }
+      pattern.forEach((index, step) => {
+        add(start + step * (beat / 2), 1, pluck(chord.tones[index]!), 0.24);
+      });
+    });
+  },
+
+  // 72 BPM, 8 bars in D minor: Dm, Bb, Gm, A, two bars each. Swelling pads,
+  // a bass that pulses on every beat, and a slow, low bell line.
+  dramatic: () => {
+    const chords: Chord[] = [
+      { root: 50, tones: [57, 62, 65, 69] },
+      { root: 46, tones: [58, 62, 65, 70] },
+      { root: 43, tones: [55, 58, 62, 67] },
+      { root: 45, tones: [57, 61, 64, 69] },
+    ];
+    const line = [74, 70, 67, 73];
+    return bed(72, 8, (add, bar, beat, start) => {
+      const chord = chords[Math.floor(bar / 2) % chords.length]!;
+      if (bar % 2 === 0) {
+        const length = 8 * beat;
+        for (const tone of chord.tones) {
+          add(start, length + 1.4, pad(tone, length + 1.4), 0.13);
+        }
+        add(start, 4, bell(line[Math.floor(bar / 2) % line.length]!), 0.3);
+      }
+      for (let b = 0; b < 4; b++) {
+        add(start + b * beat, beat, bass(chord.root, beat * 0.8), 0.24);
+      }
+      add(start, 0.6, kick(4000 + bar), 0.4);
+    });
+  },
 };
 
 const outDir = path.join(import.meta.dirname, "..", "public", "music");

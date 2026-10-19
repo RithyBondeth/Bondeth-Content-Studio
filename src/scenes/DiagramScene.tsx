@@ -1,7 +1,7 @@
 import { spring, useCurrentFrame, useVideoConfig } from "remotion";
 import { Emoji } from "../components/Emoji";
-import { SceneFrame } from "../components/SceneFrame";
-import { progressBetween, riseIn } from "../lib/animation";
+import { SceneFrame, useReveal } from "../components/SceneFrame";
+import { progressBetween } from "../lib/animation";
 import { fitFontSize } from "../lib/chart";
 import {
   arrivalAngle,
@@ -158,6 +158,7 @@ export const DiagramScene: React.FC<SceneProps<"diagram">> = ({
 }) => {
   const theme = useTheme();
   const frame = useCurrentFrame();
+  const reveal = useReveal();
   const { fps } = useVideoConfig();
   const { unit, isVertical, width, height, paddingX, paddingTop, captionZone } =
     useLayout();
@@ -218,7 +219,7 @@ export const DiagramScene: React.FC<SceneProps<"diagram">> = ({
             display: "flex",
             alignItems: "center",
             gap: 28 * unit,
-            ...riseIn(progressBetween(frame, 0, 12), 20 * unit),
+            ...reveal(progressBetween(frame, 0, 12), 20 * unit),
           }}
         >
           {scene.emoji ? <Emoji emoji={scene.emoji} size={96} /> : null}

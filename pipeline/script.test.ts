@@ -10,6 +10,7 @@ test("converts Claude's draft into a valid spec, dropping nulls", () => {
     {
       title: "Test",
       music: "curious",
+      background: "glow",
       scenes: [
         {
           type: "title",
@@ -18,6 +19,7 @@ test("converts Claude's draft into a valid spec, dropping nulls", () => {
           narration: "Hello there.",
           emoji: null,
           transition: "fade",
+          entrance: null,
         },
         {
           type: "list",
@@ -28,6 +30,7 @@ test("converts Claude's draft into a valid spec, dropping nulls", () => {
           narration: "Some tips.",
           emoji: "✅",
           transition: "slide",
+          entrance: null,
         },
         {
           type: "code",
@@ -40,6 +43,7 @@ test("converts Claude's draft into a valid spec, dropping nulls", () => {
           narration: "Print one.",
           emoji: null,
           transition: "fade",
+          entrance: null,
         },
         {
           type: "cta",
@@ -48,6 +52,7 @@ test("converts Claude's draft into a valid spec, dropping nulls", () => {
           narration: "Follow me.",
           emoji: null,
           transition: "fade",
+          entrance: null,
         },
       ],
     },
@@ -84,6 +89,7 @@ test("rejects drafts that can't become a valid spec", () => {
       {
         title: "Broken",
         music: "none",
+        background: "glow",
         scenes: [
           {
             type: "list",
@@ -94,6 +100,7 @@ test("rejects drafts that can't become a valid spec", () => {
             narration: "x",
             emoji: null,
             transition: "fade",
+            entrance: null,
           },
         ],
       },
@@ -107,6 +114,7 @@ test("leaves music off when the draft picks none", () => {
     {
       title: "Quiet",
       music: "none",
+      background: "glow",
       scenes: [
         {
           type: "title",
@@ -115,6 +123,7 @@ test("leaves music off when the draft picks none", () => {
           narration: "Hi.",
           emoji: null,
           transition: "fade",
+          entrance: null,
         },
       ],
     },
@@ -128,6 +137,7 @@ const chartDraft = (
 ) => ({
   title: "Chart",
   music: "none" as const,
+  background: "glow" as const,
   scenes: [
     {
       type: "chart" as const,
@@ -139,6 +149,7 @@ const chartDraft = (
       narration: "Red, then green, then blue.",
       emoji: null,
       transition: "fade" as const,
+      entrance: null,
     },
   ],
 });
@@ -190,6 +201,7 @@ test("image drafts become scenes that the image step can fill in", () => {
     {
       title: "Test",
       music: "none",
+      background: "glow",
       scenes: [
         {
           type: "image",
@@ -202,6 +214,7 @@ test("image drafts become scenes that the image step can fill in", () => {
           narration: "Light bounces around.",
           emoji: null,
           transition: "fade",
+          entrance: null,
         },
         {
           type: "image",
@@ -214,6 +227,7 @@ test("image drafts become scenes that the image step can fill in", () => {
           narration: "Look up on a clear day.",
           emoji: null,
           transition: "fade",
+          entrance: null,
         },
       ],
     },
@@ -232,6 +246,7 @@ test("image drafts become scenes that the image step can fill in", () => {
     narration: "Light bounces around.",
     emoji: undefined,
     transition: "fade",
+    entrance: undefined,
   });
   assert.equal(photo?.type === "image" && photo.prompt, undefined);
   assert.equal(photo?.type === "image" && photo.src, undefined);
@@ -242,6 +257,7 @@ test("diagram drafts keep at most 6 nodes and drop null icons and cues", () => {
     {
       title: "Test",
       music: "none",
+      background: "glow",
       scenes: [
         {
           type: "diagram",
@@ -255,6 +271,7 @@ test("diagram drafts keep at most 6 nodes and drop null icons and cues", () => {
           narration: "Water goes round and round.",
           emoji: null,
           transition: "fade",
+          entrance: null,
         },
       ],
     },
@@ -332,4 +349,67 @@ test("the script prompt names the project's creator when it has a brand kit", ()
 test("the script prompt falls back to the default handle", () => {
   const prompt = scriptPrompt(plan, 0, { seconds: 45, language: "en" });
   assert.match(prompt, /Creator handle: @bondeth/);
+});
+
+test("converts timeline and steps drafts, with the video's background", () => {
+  const spec = draftToSpec(
+    {
+      title: "Space",
+      music: "inspiring",
+      background: "particles",
+      scenes: [
+        {
+          type: "timeline",
+          heading: null,
+          events: [
+            { date: "1957", label: "Sputnik", detail: null, cue: "Sputnik" },
+            {
+              date: "1969",
+              label: "Moon landing",
+              detail: "Apollo 11",
+              cue: null,
+            },
+          ],
+          narration: "Sputnik flew first, and twelve years later we landed.",
+          emoji: null,
+          transition: null,
+          entrance: "typewriter",
+        },
+        {
+          type: "steps",
+          heading: "Launch a rocket",
+          steps: Array.from({ length: 7 }, (_, index) => ({
+            title: `Step ${index + 1}`,
+            detail: null,
+            icon: index === 0 ? ("rocket" as const) : null,
+            cue: null,
+          })),
+          narration: "Here is how.",
+          emoji: null,
+          transition: "iris",
+          entrance: null,
+        },
+      ],
+    },
+    "en",
+  );
+  assert.equal(spec.background, "particles");
+  assert.deepEqual(spec.music, { src: "music/inspiring.wav", volume: 0.15 });
+  const [timeline, steps] = spec.scenes;
+  assert.equal(timeline?.transition, undefined);
+  assert.equal(timeline?.entrance, "typewriter");
+  assert.deepEqual(timeline?.type === "timeline" && timeline.events, [
+    { date: "1957", label: "Sputnik", detail: undefined, cue: "Sputnik" },
+    {
+      date: "1969",
+      label: "Moon landing",
+      detail: "Apollo 11",
+      cue: undefined,
+    },
+  ]);
+  assert.equal(steps?.transition, "iris");
+  assert.equal(steps?.entrance, undefined);
+  // The template shows at most 5 steps.
+  assert.equal(steps?.type === "steps" && steps.steps.length, 5);
+  assert.equal(steps?.type === "steps" && steps.steps[0]!.icon, "rocket");
 });

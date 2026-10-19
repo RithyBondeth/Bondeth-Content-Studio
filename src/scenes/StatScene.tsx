@@ -1,7 +1,7 @@
 import { Easing, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import { Emoji } from "../components/Emoji";
-import { SceneFrame } from "../components/SceneFrame";
-import { progressBetween, riseIn, useEnter } from "../lib/animation";
+import { SceneFrame, useReveal } from "../components/SceneFrame";
+import { progressBetween, useEnter } from "../lib/animation";
 import { getStatCountStart } from "../lib/reveals";
 import { useLayout } from "../lib/use-layout";
 import { useTheme } from "../theme/context";
@@ -48,6 +48,7 @@ export const StatScene: React.FC<SceneProps<"stat">> = ({
 }) => {
   const theme = useTheme();
   const frame = useCurrentFrame();
+  const reveal = useReveal();
   const { fps } = useVideoConfig();
   const { unit, isVertical } = useLayout();
   // The count-up starts as the number is spoken.
@@ -94,7 +95,7 @@ export const StatScene: React.FC<SceneProps<"stat">> = ({
             lineHeight: 1.25,
             color: theme.colors.text,
             maxWidth: 1300 * unit,
-            ...riseIn(progressBetween(frame, 14, 26), 20 * unit),
+            ...reveal(progressBetween(frame, 14, 26), 20 * unit),
           }}
         >
           {scene.label}

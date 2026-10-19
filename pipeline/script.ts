@@ -28,7 +28,8 @@ const toScene = (draft: SceneDraft): Scene => {
   const base = {
     narration: draft.narration.trim(),
     emoji: orUndefined(draft.emoji),
-    transition: draft.transition,
+    transition: orUndefined(draft.transition),
+    entrance: orUndefined(draft.entrance),
   };
 
   switch (draft.type) {
@@ -133,6 +134,32 @@ const toScene = (draft: SceneDraft): Scene => {
           cue: orUndefined(node.cue),
         })),
       };
+    case "timeline":
+      // The template shows at most 6 events.
+      return {
+        ...base,
+        type: "timeline",
+        heading: orUndefined(draft.heading),
+        events: draft.events.slice(0, 6).map((event) => ({
+          date: event.date,
+          label: event.label,
+          detail: orUndefined(event.detail),
+          cue: orUndefined(event.cue),
+        })),
+      };
+    case "steps":
+      // The template shows at most 5 steps.
+      return {
+        ...base,
+        type: "steps",
+        heading: orUndefined(draft.heading),
+        steps: draft.steps.slice(0, 5).map((step) => ({
+          title: step.title,
+          detail: orUndefined(step.detail),
+          icon: orUndefined(step.icon),
+          cue: orUndefined(step.cue),
+        })),
+      };
     case "cta":
       return {
         ...base,
@@ -152,6 +179,7 @@ export const draftToSpec = (
     title: draft.title,
     language,
     captions: true,
+    background: draft.background,
     music:
       draft.music === "none"
         ? undefined

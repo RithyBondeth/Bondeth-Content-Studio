@@ -1,8 +1,8 @@
 import { ImageIcon } from "lucide-react";
 import { Img, interpolate, useCurrentFrame } from "remotion";
 import { Emoji } from "../components/Emoji";
-import { SceneFrame } from "../components/SceneFrame";
-import { progressBetween, riseIn } from "../lib/animation";
+import { SceneFrame, useReveal } from "../components/SceneFrame";
+import { progressBetween } from "../lib/animation";
 import { resolveMedia } from "../lib/media";
 import { useLayout } from "../lib/use-layout";
 import type { ImageMotion } from "../spec/schema";
@@ -110,6 +110,7 @@ const FullImage: React.FC<SceneProps<"image">> = ({
 }) => {
   const theme = useTheme();
   const frame = useCurrentFrame();
+  const reveal = useReveal();
   const { unit, isVertical, paddingX } = useLayout();
   // The background color, so text over the image reads in light and dark themes.
   const shade = withAlpha(theme.colors.background, 0.82);
@@ -137,7 +138,7 @@ const FullImage: React.FC<SceneProps<"image">> = ({
             display: "flex",
             alignItems: "center",
             gap: 24 * unit,
-            ...riseIn(progressBetween(frame, 6, 20), 24 * unit),
+            ...reveal(progressBetween(frame, 6, 20), 24 * unit),
           }}
         >
           {scene.emoji ? <Emoji emoji={scene.emoji} size={96} /> : null}
@@ -183,6 +184,7 @@ const FramedImage: React.FC<SceneProps<"image">> = ({
 }) => {
   const theme = useTheme();
   const frame = useCurrentFrame();
+  const reveal = useReveal();
   const { unit, isVertical, width, paddingX } = useLayout();
   const cardWidth = width - paddingX * 2;
   const cardHeight = isVertical ? cardWidth : 600 * unit;
@@ -198,7 +200,7 @@ const FramedImage: React.FC<SceneProps<"image">> = ({
             display: "flex",
             alignItems: "center",
             gap: 28 * unit,
-            ...riseIn(progressBetween(frame, 0, 12), 20 * unit),
+            ...reveal(progressBetween(frame, 0, 12), 20 * unit),
           }}
         >
           {scene.emoji ? <Emoji emoji={scene.emoji} size={96} /> : null}
@@ -223,7 +225,7 @@ const FramedImage: React.FC<SceneProps<"image">> = ({
           display: "flex",
           flexDirection: "column",
           gap: 16 * unit,
-          ...riseIn(progressBetween(frame, 4, 18), 30 * unit),
+          ...reveal(progressBetween(frame, 4, 18), 30 * unit),
         }}
       >
         <div
