@@ -268,6 +268,8 @@ No ElevenLabs key? Read the narration yourself. It's free, and it's your own voi
 3. A 3-second countdown gives you time to get ready, with a level meter so you can check the microphone picks you up. The narration is shown while you record.
 4. Click **Stop** when you're done. The recording is saved with the video, and **Play** lets you hear it back. **Re-record** replaces it; **Remove** deletes it from the scene.
 
+Already recorded it somewhere else, such as a phone voice memo or a podcast microphone? Click **Upload** instead and pick the file (MP3, WAV, M4A, AAC, OGG, FLAC, or WebM, up to 25 MB per scene). It goes through the same steps as a browser recording.
+
 Tips: record somewhere quiet, keep the microphone at the same distance, and leave a moment of silence before you start and after you finish. The studio trims that silence, evens out the volume, and saves an MP3 in the video's media folder (browsers record WebM, which is converted with the ffmpeg that comes with Remotion, so there's nothing else to install).
 
 Captions still work: without speech-to-text, the narration's words are spread over the part of the recording where you're speaking, with longer words getting more time and a short pause at each full stop or comma. They line up best when you read the narration as written, at an even pace.

@@ -1,6 +1,14 @@
 "use client";
 
-import { Mic, Pause, Play, RotateCcw, Square, Trash2 } from "lucide-react";
+import {
+  Mic,
+  Pause,
+  Play,
+  RotateCcw,
+  Square,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { isSelfRecorded } from "../../../src/lib/recording";
 import type { SceneAudio } from "../../../src/spec/schema";
@@ -29,9 +37,10 @@ type Phase =
 
 /**
  * Record / Stop / Play / Re-record for one scene's voice-over, using the
- * browser's microphone. The recording is uploaded, converted to MP3 and
- * stored as the scene's audio, marked as your own so Record voice
- * (ElevenLabs) leaves it alone.
+ * browser's microphone, or Upload for audio recorded elsewhere (a phone
+ * memo, a podcast mic). Either way it's converted to MP3 and stored as the
+ * scene's audio, marked as your own so Record voice (ElevenLabs) leaves it
+ * alone.
  */
 export const VoiceRecorder = ({
   slug,
@@ -62,6 +71,7 @@ export const VoiceRecorder = ({
   const player = useRef<HTMLAudioElement | null>(null);
   // Set when the form closes mid-recording, so nothing is uploaded.
   const cancelled = useRef(false);
+  const fileInput = useRef<HTMLInputElement>(null);
 
   const release = () => {
     timers.current.forEach(clearInterval);
@@ -112,7 +122,11 @@ export const VoiceRecorder = ({
     form.set("index", String(videoIndex));
     form.set("scene", String(sceneIndex));
     form.set("narration", narration);
-    form.set("file", blob, `scene-${sceneIndex + 1}`);
+    form.set(
+      "file",
+      blob,
+      blob instanceof File ? blob.name : `scene-${sceneIndex + 1}`,
+    );
     try {
       const response = await fetch("/api/recording", {
         method: "POST",
@@ -272,6 +286,39 @@ export const VoiceRecorder = ({
                 ? "Re-record"
                 : "Record my voice"}
           </Button>
+        )}
+        {busy ? null : (
+          <>
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={<Upload className="size-3.5" aria-hidden />}
+              title="Upload a voice-over you recorded elsewhere: MP3, WAV, M4A, and more"
+              onClick={() => {
+                if (!narration.trim()) {
+                  notify({ tone: "error", title: "Write the narration first" });
+                  return;
+                }
+                fileInput.current?.click();
+              }}
+            >
+              Upload
+            </Button>
+            <input
+              ref={fileInput}
+              type="file"
+              accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.webm,.flac"
+              className="hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.target.value = "";
+                if (file) {
+                  player.current?.pause();
+                  void upload(file);
+                }
+              }}
+            />
+          </>
         )}
         {audio ? (
           <Button
