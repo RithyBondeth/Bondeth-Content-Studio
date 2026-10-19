@@ -32,6 +32,7 @@ import {
 } from "../../actions";
 import { useConfirm } from "../../_components/ConfirmDialog";
 import { BrandKitCard } from "./BrandKitCard";
+import { NextStepCard } from "./NextStepCard";
 import { Header } from "../../_components/Header";
 import { KeyStatus } from "../../_components/KeyStatus";
 import { Menu } from "../../_components/Menu";
@@ -420,6 +421,14 @@ export const ProjectView = ({
             icon={<Check className="size-4" aria-hidden />}
           />
         </div>
+
+        <NextStepCard
+          slug={plan.slug}
+          videos={videos}
+          canWrite={keys.claude}
+          writing={writing}
+          onWrite={(index) => void writeScript(index)}
+        />
 
         {editing ? (
           <PlanEditor plan={plan} onDone={() => setEditing(false)} />

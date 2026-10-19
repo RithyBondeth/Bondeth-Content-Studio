@@ -14,10 +14,13 @@ export const dynamic = "force-dynamic";
 
 export default async function VideoPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string; video: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
   const { slug, video } = await params;
+  const { tab } = await searchParams;
   if (!(await listPlans()).includes(slug)) notFound();
   const plan = await loadPlan(slug);
   const index = Number(video) - 1;
@@ -41,6 +44,7 @@ export default async function VideoPage({
       keys={getKeyStatus()}
       brandTheme={plan.brand?.theme}
       projectVoice={plan.brand?.voice}
+      initialTab={tab === "video" || tab === "publish" ? tab : "scene"}
     />
   );
 }

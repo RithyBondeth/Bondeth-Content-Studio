@@ -40,6 +40,8 @@ import {
   saveSpecAction,
   scenesToRecordAction,
 } from "../../actions";
+import { AppearanceSwitch } from "../Appearance";
+import { useConfirm } from "../ConfirmDialog";
 import { useToast } from "../Toast";
 import { Alert, Button, Skeleton, cx } from "../ui";
 import {
@@ -52,7 +54,12 @@ import {
 import { MusicSetting } from "./MusicSetting";
 import { PublishPanel } from "./PublishPanel";
 import { RenderPanel } from "./RenderPanel";
-import { convertScene, SCENE_META, SCENE_SETTLE_FRAMES } from "./scene-meta";
+import {
+  convertScene,
+  droppedFields,
+  SCENE_META,
+  SCENE_SETTLE_FRAMES,
+} from "./scene-meta";
 import { SceneForm } from "./SceneForm";
 import { SceneList } from "./SceneList";
 import type { ThemeSetting as ThemeValue } from "../../../src/theme/resolve";
@@ -206,7 +213,7 @@ const SettingSwitch = ({
   </label>
 );
 
-type Tab = "scene" | "video" | "publish";
+export type Tab = "scene" | "video" | "publish";
 
 const TABS: { value: Tab; label: string; icon: LucideIcon }[] = [
   { value: "scene", label: "Scene", icon: Clapperboard },
@@ -261,6 +268,12 @@ const useModifierLabel = () => {
   return label;
 };
 
+/** "a", "a and b", "a, b and c". */
+const listNames = (names: string[]) =>
+  names.length < 2
+    ? (names[0] ?? "")
+    : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
+
 const isTyping = (target: EventTarget | null) =>
   target instanceof HTMLElement &&
   (target.isContentEditable ||
@@ -278,6 +291,7 @@ export const VideoEditor = ({
   keys,
   brandTheme,
   projectVoice,
+  initialTab = "scene",
 }: {
   slug: string;
   projectTitle: string;
@@ -293,9 +307,12 @@ export const VideoEditor = ({
   brandTheme?: ThemeValue;
   /** The project's brand kit voice, used when the video doesn't pick one. */
   projectVoice?: VoiceValue;
+  /** The tab to open on, e.g. Publish when coming from the project's next step. */
+  initialTab?: Tab;
 }) => {
   const notify = useToast();
   const modifier = useModifierLabel();
+  const { confirm, dialog } = useConfirm();
   const [history, setHistory] = useState(() => createHistory(initialSpec));
   const spec = history.present;
   const latestHistory = useRef(history);
@@ -319,7 +336,7 @@ export const VideoEditor = ({
     [],
   );
   const [selected, setSelected] = useState(0);
-  const [tab, setTab] = useState<Tab>("scene");
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [format, setFormat] = useState<VideoFormat>("vertical");
   const [saveState, setSaveState] = useState<SaveState>({ kind: "saved" });
   const [voicing, setVoicing] = useState(false);
@@ -473,14 +490,25 @@ export const VideoEditor = ({
       ownStep ? undefined : `scene-${sceneIndex}`,
     );
 
-  const changeTemplate = (sceneIndex: number, type: SceneType) => {
+  /** Switches a scene's template, asking first when that would throw content away. */
+  const changeTemplate = async (sceneIndex: number, type: SceneType) => {
     const previous = spec.scenes[sceneIndex] as Scene;
     if (previous.type === type) return;
+    const lost = droppedFields(previous, type);
+    if (
+      lost.length > 0 &&
+      !(await confirm({
+        title: `Switch to ${SCENE_META[type].label.toLowerCase()}?`,
+        description: `This scene's ${listNames(lost)} won't fit the new template and will be removed. You can undo it with ${modifier}+Z.`,
+        confirmLabel: "Switch template",
+      }))
+    ) {
+      return;
+    }
     updateScene(sceneIndex, convertScene(previous, type), { ownStep: true });
     notify({
       tone: "info",
       title: `Switched to ${SCENE_META[type].label.toLowerCase()}`,
-      description: `Fields that don't fit the new template are dropped. ${modifier}+Z undoes it.`,
       action: {
         label: "Undo",
         onClick: () => updateScene(sceneIndex, previous, { ownStep: true }),
@@ -554,6 +582,21 @@ export const VideoEditor = ({
         event.altKey
       )
         return;
+      // Space plays and pauses, unless it's pressing a button or the player
+      // itself, which handle it.
+      if (
+        event.key === " " &&
+        !(
+          event.target instanceof Element &&
+          event.target.closest(
+            "button, a, [role=radio], [role=tab], [role=menuitem], [data-player]",
+          )
+        )
+      ) {
+        event.preventDefault();
+        playerRef.current?.toggle();
+        return;
+      }
       if (event.key === "ArrowDown" || event.key === "ArrowUp") {
         event.preventDefault();
         const next = selected + (event.key === "ArrowDown" ? 1 : -1);
@@ -644,6 +687,7 @@ export const VideoEditor = ({
 
   return (
     <div className="flex min-h-screen flex-col lg:h-screen">
+      {dialog}
       <header className="z-20 flex min-h-16 shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-line bg-bg/80 px-3 py-2 backdrop-blur-xl sm:px-4">
         <Link
           href={`/projects/${slug}`}
@@ -691,6 +735,7 @@ export const VideoEditor = ({
             />
           </div>
           <SaveIndicator state={saveState} />
+          <AppearanceSwitch className="hidden md:flex" />
           <FormatToggle value={format} onChange={setFormat} />
           <Button
             variant={allVoiced ? "secondary" : "primary"}
@@ -770,7 +815,7 @@ export const VideoEditor = ({
                   hasPexels: keys.pexels,
                 }}
                 onChange={(next) => updateScene(selected, next)}
-                onChangeType={(type) => changeTemplate(selected, type)}
+                onChangeType={(type) => void changeTemplate(selected, type)}
               />
             ) : (
               <Alert tone="info">Add a scene to start editing.</Alert>
@@ -865,6 +910,7 @@ export const VideoEditor = ({
             aria-hidden
           />
           <div
+            data-player
             className="relative mx-auto w-full"
             style={{
               width:

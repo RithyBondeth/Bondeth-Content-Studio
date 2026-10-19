@@ -84,14 +84,14 @@ export const ProjectCard = ({ project }: { project: ProjectSummary }) => {
           background: `radial-gradient(120% 140% at 0% 0%, hsl(${hue} 85% 62% / 0.55), transparent 60%), radial-gradient(100% 120% at 100% 100%, hsl(${hue + 40} 80% 55% / 0.35), transparent 60%), var(--color-raised)`,
         }}
       >
-        <span className="absolute bottom-3 left-4 text-4xl font-bold tracking-tight text-white/90 drop-shadow">
+        <span className="absolute bottom-3 left-4 text-4xl font-bold tracking-tight text-text/90 drop-shadow">
           {project.title
             .replace(/^example:\s*/i, "")
             .slice(0, 1)
             .toUpperCase()}
         </span>
         <ArrowUpRight
-          className="absolute top-3 right-3 size-4 text-white/60 opacity-0 transition-opacity group-hover:opacity-100"
+          className="absolute top-3 right-3 size-4 text-text/60 opacity-0 transition-opacity group-hover:opacity-100"
           aria-hidden
         />
       </div>
