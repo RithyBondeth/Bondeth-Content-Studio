@@ -6,6 +6,7 @@
 
 An AI content studio for educators and explainers: Claude plans the series and writes the scripts, ElevenLabs records the voice-over, and Remotion renders animated, captioned videos for TikTok, YouTube Shorts, Reels, and YouTube.
 
+[![CI](https://github.com/RithyBondeth/Bondeth-Content-Studio/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/RithyBondeth/Bondeth-Content-Studio/actions/workflows/ci.yml)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
 ![React](https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=white)
 ![Remotion](https://img.shields.io/badge/Remotion-0B84F3?style=for-the-badge&logo=remotion&logoColor=white)
@@ -421,6 +422,15 @@ out/                      # Renders, covers, caption files, and bundles (git-ign
 | `npm test`                      | Run the unit tests                     |
 | `npm run check`                 | Type-check and lint                    |
 | `npm run format`                | Format the code with Prettier          |
+
+## Contributing / checks
+
+Work happens on feature branches that merge into `develop` by pull request; `develop` is released to `main` the same way. GitHub Actions ([`ci.yml`](.github/workflows/ci.yml)) runs on every pull request into, and every push to, `develop` and `main`:
+
+- **Typecheck, lint, tests:** `npm run typecheck`, `npm run lint`, and `npm test`. The tests need no API keys or network.
+- **Test render:** renders the first two seconds of the `why-is-the-sky-blue` example with Remotion and uploads the MP4 as the `ci-render` artifact on the run.
+
+Run `npm run check && npm test` before opening a pull request to catch most failures locally.
 
 ## Roadmap
 
