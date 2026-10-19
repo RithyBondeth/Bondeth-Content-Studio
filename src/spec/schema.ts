@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ICON_NAMES } from "../lib/icon-names";
 import { SUPPORTED_LANGUAGES } from "../lib/languages";
 import { DEFAULT_MUSIC_VOLUME } from "../lib/music";
 
@@ -141,6 +142,61 @@ export const codeSceneSchema = z.object({
   ...sceneBase,
 });
 
+export const IMAGE_LAYOUTS = ["full", "framed"] as const;
+export const IMAGE_MOTIONS = [
+  "zoom-in",
+  "zoom-out",
+  "pan-left",
+  "pan-right",
+  "none",
+] as const;
+
+export const imageSceneSchema = z.object({
+  type: z.literal("image"),
+  /**
+   * Path inside public/ or a full URL. Empty until an image is uploaded,
+   * picked from stock, or generated; a placeholder shows until then.
+   */
+  src: z.string().optional(),
+  /** What the image shows. Used as alt text and to find or generate an image. */
+  alt: z.string(),
+  /** Keywords for a stock photo search. Defaults to `alt`. */
+  search: z.string().optional(),
+  /** A prompt for an AI illustration. When set, the image step generates one if it can. */
+  prompt: z.string().optional(),
+  /** Short text shown with the image. */
+  caption: z.string().optional(),
+  /** Who made the image and its license, shown small in a corner. */
+  credit: z.string().optional(),
+  /** "full" fills the frame; "framed" shows it on a card. Defaults to "full". */
+  layout: z.enum(IMAGE_LAYOUTS).optional(),
+  /** Slow camera move over the image. Defaults to "zoom-in". */
+  motion: z.enum(IMAGE_MOTIONS).optional(),
+  ...sceneBase,
+});
+
+export const DIAGRAM_LAYOUTS = ["flow", "cycle", "hub"] as const;
+
+export const diagramNodeSchema = z.object({
+  label: z.string(),
+  icon: z.enum(ICON_NAMES).optional(),
+  /** Phrase from the narration where this node comes up; it appears there. */
+  cue: z.string().optional(),
+});
+
+export const diagramSceneSchema = z.object({
+  type: z.literal("diagram"),
+  heading: z.string().optional(),
+  /**
+   * "flow": steps joined by arrows. "cycle": steps around a loop that comes
+   * back to the start. "hub": the first node in the middle, joined to the
+   * rest around it. Defaults to "flow".
+   */
+  layout: z.enum(DIAGRAM_LAYOUTS).optional(),
+  nodes: z.array(diagramNodeSchema).min(2).max(6),
+  ...sceneBase,
+});
+
 export const ctaSceneSchema = z.object({
   type: z.literal("cta"),
   heading: z.string(),
@@ -158,6 +214,8 @@ export const sceneSchema = z.discriminatedUnion("type", [
   quoteSceneSchema,
   comparisonSceneSchema,
   codeSceneSchema,
+  imageSceneSchema,
+  diagramSceneSchema,
   ctaSceneSchema,
 ]);
 
@@ -189,6 +247,10 @@ export type Transition = (typeof TRANSITIONS)[number];
 export type CodeStep = z.infer<typeof codeStepSchema>;
 export type ChartPoint = z.infer<typeof chartPointSchema>;
 export type ChartStyle = (typeof CHART_STYLES)[number];
+export type ImageLayout = (typeof IMAGE_LAYOUTS)[number];
+export type ImageMotion = (typeof IMAGE_MOTIONS)[number];
+export type DiagramLayout = (typeof DIAGRAM_LAYOUTS)[number];
+export type DiagramNode = z.infer<typeof diagramNodeSchema>;
 export type VideoSpec = z.infer<typeof videoSpecSchema>;
 /** A spec as written by hand, before defaults are applied. */
 export type VideoSpecInput = z.input<typeof videoSpecSchema>;

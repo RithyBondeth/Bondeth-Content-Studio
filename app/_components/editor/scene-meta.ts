@@ -4,10 +4,12 @@ import {
   Columns2,
   Hash,
   Heading1,
+  Image,
   List,
   Megaphone,
   Quote,
   Type,
+  Workflow,
   type LucideIcon,
 } from "lucide-react";
 import type { Scene, SceneType } from "../../../src/spec/schema";
@@ -129,6 +131,35 @@ export const SCENE_META: Record<SceneType, SceneMeta> = {
       narration: "Walk through the code.",
     }),
   },
+  image: {
+    color: "#f472b6",
+    label: "Image",
+    description: "A photo or illustration with a slow camera move",
+    icon: Image,
+    create: () => ({
+      type: "image",
+      alt: "A clear blue sky over green hills",
+      layout: "full",
+      narration: "Describe what the picture shows.",
+    }),
+  },
+  diagram: {
+    color: "#2dd4bf",
+    label: "Diagram",
+    description: "Steps or parts joined by arrows",
+    icon: Workflow,
+    create: () => ({
+      type: "diagram",
+      heading: "How it works",
+      layout: "flow",
+      nodes: [
+        { label: "First step", icon: "lightbulb" },
+        { label: "Second step", icon: "settings" },
+        { label: "Result", icon: "trophy" },
+      ],
+      narration: "Walk through each step in order.",
+    }),
+  },
   cta: {
     color: "#fb923c",
     label: "Call to action",
@@ -150,6 +181,8 @@ export const SCENE_TYPE_ORDER: SceneType[] = [
   "stat",
   "chart",
   "comparison",
+  "diagram",
+  "image",
   "quote",
   "code",
   "cta",
@@ -173,6 +206,10 @@ export const sceneSummary = (scene: Scene): string => {
       return scene.heading ?? `${scene.left.label} vs. ${scene.right.label}`;
     case "code":
       return scene.fileName ?? `${scene.language} code`;
+    case "image":
+      return scene.caption ?? scene.alt;
+    case "diagram":
+      return scene.heading ?? scene.nodes.map((node) => node.label).join(" → ");
   }
 };
 
@@ -197,7 +234,10 @@ export const convertScene = (scene: Scene, type: SceneType): Scene => {
     case "quote":
       return { ...next, ...base, quote: text };
     case "comparison":
+    case "diagram":
       return { ...next, ...base, heading: text };
+    case "image":
+      return { ...next, ...base, caption: text };
     default:
       return { ...next, ...base };
   }

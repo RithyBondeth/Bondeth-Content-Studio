@@ -1,7 +1,14 @@
 import { z } from "zod";
+import { ICON_NAMES } from "../src/lib/icon-names";
 import { SUPPORTED_LANGUAGES } from "../src/lib/languages";
 import { MUSIC_MOODS } from "../src/lib/music";
-import { CHART_STYLES, TRANSITIONS } from "../src/spec/schema";
+import {
+  CHART_STYLES,
+  DIAGRAM_LAYOUTS,
+  IMAGE_LAYOUTS,
+  IMAGE_MOTIONS,
+  TRANSITIONS,
+} from "../src/spec/schema";
 
 /**
  * Shapes Claude must return. Structured outputs need every field to be
@@ -172,6 +179,58 @@ const codeDraft = z.object({
   ...sceneFields,
 });
 
+const imageDraft = z.object({
+  type: z.literal("image"),
+  kind: z
+    .enum(["photo", "illustration"])
+    .describe(
+      "photo: a real-world subject a stock photo library has; illustration: a concept or scene a photo can't show",
+    ),
+  description: z
+    .string()
+    .describe(
+      "What the image shows, concretely and visually, in one sentence of English. Used as alt text, and as the prompt for an illustration",
+    ),
+  searchTerms: z
+    .string()
+    .describe("2-4 plain English keywords to search stock photos with"),
+  caption: nullableString.describe(
+    "2-6 words shown with the image, in the video's language, or null",
+  ),
+  layout: z
+    .enum(IMAGE_LAYOUTS)
+    .describe("full: fills the screen; framed: on a card under the caption"),
+  motion: z.enum(IMAGE_MOTIONS).describe("Slow camera move over the image"),
+  ...sceneFields,
+});
+
+const diagramDraft = z.object({
+  type: z.literal("diagram"),
+  heading: nullableString,
+  layout: z
+    .enum(DIAGRAM_LAYOUTS)
+    .describe(
+      "flow: steps joined by arrows; cycle: steps that loop back to the start; hub: the first node in the middle, joined to the rest",
+    ),
+  nodes: z
+    .array(
+      z.object({
+        label: z.string().describe("1-4 words"),
+        icon: z
+          .enum(ICON_NAMES)
+          .nullable()
+          .describe(
+            "The icon that fits best, or null to show the step's number",
+          ),
+        cue: nullableString.describe(
+          "The first 1-4 words of the narration where this node comes up, copied exactly, or null",
+        ),
+      }),
+    )
+    .describe("2-6 nodes, in the order they appear"),
+  ...sceneFields,
+});
+
 const ctaDraft = z.object({
   type: z.literal("cta"),
   heading: z.string(),
@@ -188,6 +247,8 @@ export const sceneDraftSchema = z.discriminatedUnion("type", [
   quoteDraft,
   comparisonDraft,
   codeDraft,
+  imageDraft,
+  diagramDraft,
   ctaDraft,
 ]);
 

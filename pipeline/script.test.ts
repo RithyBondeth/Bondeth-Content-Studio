@@ -181,3 +181,93 @@ test("rejects charts with negative values or a single point", () => {
     draftToSpec(chartDraft([{ label: "a", value: 1, cue: null }]), "en"),
   );
 });
+
+test("image drafts become scenes that the image step can fill in", () => {
+  const spec = draftToSpec(
+    {
+      title: "Test",
+      music: "none",
+      scenes: [
+        {
+          type: "image",
+          kind: "illustration",
+          description: "Light scattering off air molecules",
+          searchTerms: "blue sky",
+          caption: null,
+          layout: "framed",
+          motion: "zoom-out",
+          narration: "Light bounces around.",
+          emoji: null,
+          transition: "fade",
+        },
+        {
+          type: "image",
+          kind: "photo",
+          description: "A clear blue sky over hills",
+          searchTerms: "blue sky hills",
+          caption: "Look up",
+          layout: "full",
+          motion: "pan-left",
+          narration: "Look up on a clear day.",
+          emoji: null,
+          transition: "fade",
+        },
+      ],
+    },
+    "en",
+  );
+  const [illustration, photo] = spec.scenes;
+  assert.deepEqual(illustration, {
+    type: "image",
+    alt: "Light scattering off air molecules",
+    search: "blue sky",
+    // Illustrations are generated from their description.
+    prompt: "Light scattering off air molecules",
+    caption: undefined,
+    layout: "framed",
+    motion: "zoom-out",
+    narration: "Light bounces around.",
+    emoji: undefined,
+    transition: "fade",
+  });
+  assert.equal(photo?.type === "image" && photo.prompt, undefined);
+  assert.equal(photo?.type === "image" && photo.src, undefined);
+});
+
+test("diagram drafts keep at most 6 nodes and drop null icons and cues", () => {
+  const spec = draftToSpec(
+    {
+      title: "Test",
+      music: "none",
+      scenes: [
+        {
+          type: "diagram",
+          heading: null,
+          layout: "cycle",
+          nodes: Array.from({ length: 7 }, (_, index) => ({
+            label: `Step ${index + 1}`,
+            icon: index === 0 ? "droplet" : null,
+            cue: index === 0 ? "water" : null,
+          })),
+          narration: "Water goes round and round.",
+          emoji: null,
+          transition: "fade",
+        },
+      ],
+    },
+    "en",
+  );
+  const [diagram] = spec.scenes;
+  assert.ok(diagram?.type === "diagram");
+  assert.equal(diagram.nodes.length, 6);
+  assert.deepEqual(diagram.nodes[0], {
+    label: "Step 1",
+    icon: "droplet",
+    cue: "water",
+  });
+  assert.deepEqual(diagram.nodes[1], {
+    label: "Step 2",
+    icon: undefined,
+    cue: undefined,
+  });
+});

@@ -231,6 +231,24 @@ export const updatePlanContent = async (slug: string, content: ContentPlan) => {
 };
 
 /**
+ * The media folder (relative to public/) of a video the studio was asked
+ * about. Only known plans and videos, so a slug can't point outside content/.
+ */
+export const videoMediaDir = async (
+  slug: string,
+  index: number,
+): Promise<string> => {
+  if (!(await listPlans()).includes(slug)) {
+    throw new Error("That project doesn't exist.");
+  }
+  const plan = await loadPlan(slug);
+  if (!Number.isInteger(index) || !plan.plan.videos[index]) {
+    throw new Error("That video doesn't exist.");
+  }
+  return mediaDir(plan, index);
+};
+
+/**
  * Stores an uploaded music track in the video's media folder, next to its
  * voice-overs, and returns its src for the spec. The same file uploaded twice
  * is stored once.
@@ -241,14 +259,7 @@ export const saveMusicUpload = async (
   fileName: string,
   bytes: Buffer,
 ): Promise<string> => {
-  // Only known plans, so the slug can't point outside content/.
-  if (!(await listPlans()).includes(slug)) {
-    throw new Error("That project doesn't exist.");
-  }
-  const plan = await loadPlan(slug);
-  if (!Number.isInteger(index) || !plan.plan.videos[index]) {
-    throw new Error("That video doesn't exist.");
-  }
+  const dir = await videoMediaDir(slug, index);
   if (bytes.length === 0) throw new Error("That file is empty.");
   if (bytes.length > MAX_MUSIC_UPLOAD_BYTES) {
     throw new Error(
@@ -263,7 +274,7 @@ export const saveMusicUpload = async (
       .join(", ");
     throw new Error(`Upload an audio file: ${formats}.`);
   }
-  const src = path.posix.join(mediaDir(plan, index), name);
+  const src = path.posix.join(dir, name);
   const file = publicPath(src);
   if (!(await exists(file))) {
     await fs.mkdir(path.dirname(file), { recursive: true });

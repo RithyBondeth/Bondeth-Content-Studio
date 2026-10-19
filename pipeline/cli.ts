@@ -1,7 +1,7 @@
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { FORMAT_NAMES, type VideoFormat } from "../src/lib/formats";
-import { videoSpecSchema } from "../src/spec/schema";
+import { videoSpecSchema, type VideoSpecInput } from "../src/spec/schema";
 import { getVideoTiming, FPS } from "../src/lib/timing";
 import { ROOT } from "./config";
 import { createPlan } from "./plan";
@@ -17,6 +17,7 @@ import {
   specPath,
   type PlanFile,
 } from "./store";
+import { addImages } from "./images";
 import { addVoiceOver } from "./voice";
 
 const HELP = `Content Studio pipeline: idea → content plan → script → voice-over → video
@@ -25,7 +26,8 @@ Usage: npm run pipeline -- <command> [options]
 
 Commands:
   plan "<idea>"         Create a content plan with Claude
-  script <plan>         Write scripts and scenes for the plan's videos
+  script <plan>         Write scripts and scenes for the plan's videos, and find their images
+  images <plan>         Find or generate images for image scenes that don't have one
   voice <plan>          Generate ElevenLabs voice-overs and caption timings
   render <plan>         Render videos to MP4
   preview <plan>        Open one video in Remotion Studio (--video, default 1)
@@ -38,7 +40,7 @@ Options:
   --tone <text>         Voice and style (plan, make)
   --language <code>     Narration language, e.g. en, es, km (plan, make; default en)
   --seconds <n>         Target length per video (script, make; default 45)
-  --video <n|all>       Which video(s) to work on (script, voice, render; default all)
+  --video <n|all>       Which video(s) to work on (script, images, voice, render; default all)
   --format <name>       vertical, landscape, or both (render, make; default vertical)
   --no-voice            Skip the voice-over; captions are timed from the text (make)
   --force               Rewrite scripts that already exist (script)
@@ -181,10 +183,48 @@ const script = async (planSlug: string) => {
     log(
       `  ${index + 1}. ${title}: ${spec.scenes.length} scenes, ${words} words, about ${formatSeconds(specSeconds(spec))}`,
     );
+    await findImages(file, index, spec);
   });
   log(`\nScripts are in content/${file.slug}/videos/. Edit them freely.`);
   log(`Preview: npm run pipeline -- preview ${file.slug} --video 1`);
   log(`Next:    npm run pipeline -- voice ${file.slug}`);
+};
+
+/** Fills in the video's missing images and saves them. Failures are reported, not thrown. */
+const findImages = async (
+  file: PlanFile,
+  index: number,
+  spec: VideoSpecInput,
+) => {
+  const title = file.plan.videos[index]!.title;
+  const result = await addImages(spec, mediaDir(file, index), (message) =>
+    log(`  ${index + 1}. ${message}`),
+  );
+  if (result.found) {
+    await saveSpec(file, index, result.spec);
+    log(`  ${index + 1}. ${title}: ${result.found} image(s) added`);
+  }
+  for (const failure of result.failures) {
+    console.warn(
+      `  ⚠ ${title}: ${failure}. Pick one in the studio, or run images again.`,
+    );
+  }
+};
+
+const images = async (planSlug: string) => {
+  const file = await loadPlan(planSlug);
+  const indexes = selectVideos(file);
+  step(`Finding images for "${file.plan.title}"`);
+  for (const index of indexes) {
+    const spec = await loadSpec(file, index);
+    if (!spec) {
+      log(
+        `  ${index + 1}. ${file.plan.videos[index]!.title}: no script yet, skipping`,
+      );
+      continue;
+    }
+    await findImages(file, index, spec);
+  }
 };
 
 const voice = async (planSlug: string) => {
@@ -318,6 +358,9 @@ const main = async () => {
       break;
     case "script":
       await script(requireArg(argument, "script <plan>"));
+      break;
+    case "images":
+      await images(requireArg(argument, "images <plan>"));
       break;
     case "voice":
       await voice(requireArg(argument, "voice <plan>"));

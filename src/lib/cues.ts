@@ -121,6 +121,11 @@ const getSceneCues = (
         path: `points.${index}.cue`,
         cue: point.cue,
       }));
+    case "diagram":
+      return scene.nodes.map((node, index) => ({
+        path: `nodes.${index}.cue`,
+        cue: node.cue,
+      }));
     case "stat":
       return [{ path: "cue", cue: scene.cue }];
     case "comparison":

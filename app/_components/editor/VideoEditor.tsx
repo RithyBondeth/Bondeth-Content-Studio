@@ -530,6 +530,12 @@ export const VideoEditor = ({
                 key={selected}
                 scene={scene}
                 index={selected}
+                imageContext={{
+                  slug,
+                  videoIndex: index,
+                  canGenerate: keys.openai,
+                  hasPexels: keys.pexels,
+                }}
                 onChange={(next) => updateScene(selected, next)}
                 onChangeType={(type) =>
                   updateScene(selected, convertScene(scene, type))
