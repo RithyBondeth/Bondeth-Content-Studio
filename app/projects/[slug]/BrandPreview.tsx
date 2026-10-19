@@ -78,7 +78,7 @@ export const BrandPreview = ({
         width: "100%",
         borderRadius: 14,
         overflow: "hidden",
-        boxShadow: "0 0 0 1px rgb(255 255 255 / 0.08)",
+        boxShadow: "0 0 0 1px var(--color-line-strong)",
       }}
     />
   );

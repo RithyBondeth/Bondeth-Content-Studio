@@ -24,6 +24,7 @@ import {
   exists,
   listPlans,
   loadPlan,
+  loadPublishKit,
   loadSpec,
   mediaDir,
   newVideoKey,
@@ -51,6 +52,8 @@ export type VideoSummary = {
   status: VideoStatus;
   scenes: number;
   renders: RenderFile[];
+  /** Whether Claude has written its posts in the publish kit. */
+  hasPosts: boolean;
 };
 
 export type ProjectSummary = {
@@ -111,6 +114,7 @@ export const getVideoSummaries = async (
         status: statusOf(spec),
         scenes: spec?.scenes.length ?? 0,
         renders: await listRenders(plan, index),
+        hasPosts: Boolean((await loadPublishKit(plan, index))?.posts),
       };
     }),
   );
