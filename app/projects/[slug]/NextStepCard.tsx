@@ -8,6 +8,7 @@ import {
   Mic,
   PartyPopper,
   Send,
+  PenLine,
   Wand2,
   type LucideIcon,
 } from "lucide-react";
@@ -54,6 +55,7 @@ export const NextStepCard = ({
   canWrite,
   writing,
   onWrite,
+  onWriteByHand,
 }: {
   slug: string;
   videos: VideoSummary[];
@@ -62,6 +64,8 @@ export const NextStepCard = ({
   /** Videos whose scripts are being written right now. */
   writing: Set<number>;
   onWrite: (index: number) => void;
+  /** Starts the script from a template, to write in the editor. */
+  onWriteByHand: (index: number) => void;
 }) => {
   const progress = videos.map((video) => ({
     status: video.status,
@@ -139,9 +143,15 @@ export const NextStepCard = ({
             Write script
           </Button>
         ) : (
-          <p className="max-w-60 text-xs text-faint">
-            Set up an AI provider in .env to write it.
-          </p>
+          <Button
+            variant="primary"
+            className="self-start sm:self-center"
+            loading={writing.has(step.index)}
+            onClick={() => onWriteByHand(step.index)}
+            icon={<PenLine className="size-4" aria-hidden />}
+          >
+            Write script
+          </Button>
         )
       ) : (
         <Link

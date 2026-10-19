@@ -92,6 +92,14 @@ export const platformPostSchema = z.object({
 
 export type PlatformPost = z.infer<typeof platformPostSchema>;
 
+/** Empty posts for every platform, to write by hand. */
+export const blankPosts = (): Record<Platform, PlatformPost> => ({
+  tiktok: { title: null, text: "", callToAction: "", hashtags: [] },
+  shorts: { title: "", text: "", callToAction: "", hashtags: [] },
+  reels: { title: null, text: "", callToAction: "", hashtags: [] },
+  youtube: { title: "", text: "", callToAction: "", hashtags: [] },
+});
+
 /** What publish.json holds, next to the video's spec.json. */
 export const publishKitSchema = z.object({
   version: z.literal(1),

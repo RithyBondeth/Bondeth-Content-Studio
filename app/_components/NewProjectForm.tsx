@@ -11,7 +11,11 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { createExampleProjectAction, createProjectAction } from "../actions";
+import {
+  createBlankProjectAction,
+  createExampleProjectAction,
+  createProjectAction,
+} from "../actions";
 import { useToast } from "./Toast";
 import { Button, Input, Kbd, cx } from "./ui";
 
@@ -150,26 +154,34 @@ export const NewProjectForm = ({ hasAi }: { hasAi: boolean }) => {
   const [audience, setAudience] = useState("");
   const [tone, setTone] = useState("");
   const [showMore, setShowMore] = useState(false);
-  const [pending, setPending] = useState<"plan" | "example" | null>(null);
+  const [pending, setPending] = useState<"plan" | "blank" | "example" | null>(
+    null,
+  );
 
-  const canPlan = hasAi && idea.trim().length > 0 && pending === null;
+  const canCreate = idea.trim().length > 0 && pending === null;
 
-  const createPlan = async () => {
-    if (!canPlan) return;
-    setPending("plan");
-    const result = await createProjectAction({
+  /** With AI, the idea becomes a full plan. Without, it's the project's title and you plan it yourself. */
+  const create = async (withAi: boolean) => {
+    if (!canCreate) return;
+    setPending(withAi ? "plan" : "blank");
+    const input = {
       idea,
       videos: Number(videos),
       language,
       audience,
       tone,
-    });
+    };
+    const result = withAi
+      ? await createProjectAction(input)
+      : await createBlankProjectAction(input);
     if (result.ok) {
       router.push(`/projects/${result.data}`);
     } else {
       notify({
         tone: "error",
-        title: "Couldn't create the plan",
+        title: withAi
+          ? "Couldn't create the plan"
+          : "Couldn't create the project",
         description: result.error,
       });
       setPending(null);
@@ -197,7 +209,7 @@ export const NewProjectForm = ({ hasAi }: { hasAi: boolean }) => {
       <form
         onSubmit={(event) => {
           event.preventDefault();
-          void createPlan();
+          void create(hasAi);
         }}
         className="group relative rounded-3xl bg-gradient-to-b from-line-strong to-line p-px shadow-2xl shadow-black/40 transition focus-within:from-accent/70 focus-within:to-pink/30"
       >
@@ -211,12 +223,16 @@ export const NewProjectForm = ({ hasAi }: { hasAi: boolean }) => {
             rows={3}
             value={idea}
             onChange={(event) => setIdea(event.target.value)}
-            placeholder="Describe your idea, e.g. personal finance basics for university students…"
+            placeholder={
+              hasAi
+                ? "Describe your idea, e.g. personal finance basics for university students…"
+                : "Name your series, e.g. Personal finance basics for students"
+            }
             disabled={pending !== null}
             onKeyDown={(event) => {
               if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
                 event.preventDefault();
-                void createPlan();
+                void create(hasAi);
               }
             }}
             className="block min-h-32 w-full resize-none rounded-t-3xl bg-transparent px-5 pt-5 pb-2 text-[17px] leading-relaxed placeholder:text-faint focus:outline-none"
@@ -279,12 +295,16 @@ export const NewProjectForm = ({ hasAi }: { hasAi: boolean }) => {
               <Button
                 type="submit"
                 variant="primary"
-                disabled={!canPlan}
-                loading={pending === "plan"}
+                disabled={!canCreate}
+                loading={pending === (hasAi ? "plan" : "blank")}
                 icon={<ArrowUp className="size-4" aria-hidden />}
-                title={hasAi ? undefined : "Set up an AI provider in .env"}
+                title={
+                  hasAi
+                    ? undefined
+                    : "Start a project you plan and write yourself"
+                }
               >
-                Create plan
+                {hasAi ? "Create plan" : "Create project"}
               </Button>
             </div>
           </div>
@@ -324,8 +344,9 @@ export const NewProjectForm = ({ hasAi }: { hasAi: boolean }) => {
             <code className="rounded bg-raised px-1.5 py-0.5 font-mono text-[13px] text-text">
               LLM_PROVIDER
             </code>{" "}
-            with its key) and restart to plan with AI. Until then, explore with
-            a ready-made project.
+            with its key) and restart to have AI plan and write for you. Until
+            then, type a title above to write it yourself, or explore a
+            ready-made project.
           </p>
           <Button
             variant="secondary"
@@ -340,14 +361,30 @@ export const NewProjectForm = ({ hasAi }: { hasAi: boolean }) => {
           </Button>
         </div>
       ) : (
-        <button
-          type="button"
-          onClick={() => void createExample()}
-          disabled={pending !== null}
-          className="mx-auto text-xs text-faint underline-offset-4 hover:text-muted hover:underline"
-        >
-          Or open an example project
-        </button>
+        <div className="mx-auto flex items-center gap-3 text-xs text-faint">
+          <button
+            type="button"
+            onClick={() => void create(false)}
+            disabled={!canCreate}
+            title={
+              idea.trim()
+                ? "Use your idea as the title and write the plan and scripts yourself"
+                : "Type a title above first"
+            }
+            className="underline-offset-4 enabled:hover:text-muted enabled:hover:underline disabled:opacity-60"
+          >
+            {pending === "blank" ? "Creating…" : "Start without AI"}
+          </button>
+          <span aria-hidden>·</span>
+          <button
+            type="button"
+            onClick={() => void createExample()}
+            disabled={pending !== null}
+            className="underline-offset-4 hover:text-muted hover:underline"
+          >
+            Open an example project
+          </button>
+        </div>
       )}
     </div>
   );

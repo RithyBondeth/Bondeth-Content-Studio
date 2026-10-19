@@ -47,7 +47,7 @@ Add your keys to `.env`, then open the studio:
 npm run studio
 ```
 
-Go to [http://localhost:3100](http://localhost:3100). No keys yet? Click **Try the example project** to explore the editor, preview, and export without them.
+Go to [http://localhost:3100](http://localhost:3100). No keys yet? Everything except the AI writing works without them: type a series name and choose **Create project** (or **Start without AI**) to plan and write the scripts and posts yourself, record your own voice, and render. Or open the example project to look around first.
 
 ## The web studio
 

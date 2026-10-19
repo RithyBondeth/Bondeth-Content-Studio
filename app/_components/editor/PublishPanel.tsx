@@ -9,6 +9,7 @@ import {
   Package,
   Loader2,
   Megaphone,
+  PenLine,
   RefreshCw,
   Sparkles,
 } from "lucide-react";
@@ -18,6 +19,7 @@ import { FORMAT_NAMES, type VideoFormat } from "../../../src/lib/formats";
 import {
   charCount,
   checkPost,
+  blankPosts,
   clampCoverScene,
   composePost,
   parseHashtagInput,
@@ -406,13 +408,11 @@ export const PublishPanel = ({
         <h3 id="publish-heading" className="text-sm font-medium">
           Publish
         </h3>
-        {kit.posts ? (
+        {kit.posts && canGenerate ? (
           <Button
             size="xs"
             variant="ghost"
             loading={generating}
-            disabled={!canGenerate}
-            title={canGenerate ? undefined : "Set up an AI provider in .env"}
             icon={<RefreshCw className="size-3.5" aria-hidden />}
             onClick={() => void generate()}
           >
@@ -475,23 +475,33 @@ export const PublishPanel = ({
             <Megaphone className="size-5 text-accent-bright" aria-hidden />
             <p className="text-[13px] leading-relaxed text-muted">
               Write the titles, captions, calls to action and hashtags for
-              TikTok, Shorts, Reels and YouTube in one go.
+              TikTok, Shorts, Reels and YouTube
+              {canGenerate ? " in one go." : "."}
             </p>
-            <Button
-              size="sm"
-              variant="primary"
-              loading={generating}
-              disabled={!canGenerate}
-              icon={<Sparkles className="size-4" aria-hidden />}
-              onClick={() => void generate()}
-            >
-              {generating ? "Writing posts…" : "Write posts"}
-            </Button>
-            {canGenerate ? null : (
-              <p className="text-[11px] text-faint">
-                Set up an AI provider in .env to write posts.
-              </p>
-            )}
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <Button
+                size="sm"
+                variant={canGenerate ? "ghost" : "primary"}
+                disabled={generating}
+                icon={<PenLine className="size-4" aria-hidden />}
+                onClick={() =>
+                  setKit((current) => ({ ...current, posts: blankPosts() }))
+                }
+              >
+                Write myself
+              </Button>
+              {canGenerate ? (
+                <Button
+                  size="sm"
+                  variant="primary"
+                  loading={generating}
+                  icon={<Sparkles className="size-4" aria-hidden />}
+                  onClick={() => void generate()}
+                >
+                  {generating ? "Writing posts…" : "Write posts"}
+                </Button>
+              ) : null}
+            </div>
           </div>
         )}
 

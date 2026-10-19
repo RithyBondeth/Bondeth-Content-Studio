@@ -16,6 +16,7 @@ import {
   Target,
   Users,
   Volume2,
+  PenLine,
   Wand2,
 } from "lucide-react";
 import Link from "next/link";
@@ -27,6 +28,7 @@ import type { KeyStatus as Keys } from "../../../studio/server/env";
 import type { VideoSummary } from "../../../studio/server/projects";
 import {
   addVideoAction,
+  startScriptAction,
   updatePlanAction,
   writeScriptAction,
 } from "../../actions";
@@ -331,6 +333,26 @@ export const ProjectView = ({
     });
   };
 
+  /** Starts the video from a starter script and opens it in the editor. */
+  const writeByHand = async (index: number) => {
+    setWriting((current) => new Set(current).add(index));
+    const result = await startScriptAction(plan.slug, index);
+    if (result.ok) {
+      router.push(`/projects/${plan.slug}/videos/${index + 1}`);
+      return;
+    }
+    setWriting((current) => {
+      const next = new Set(current);
+      next.delete(index);
+      return next;
+    });
+    notify({
+      tone: "error",
+      title: `Couldn't start “${videos[index]?.title}”`,
+      description: result.error,
+    });
+  };
+
   const rewrite = async (index: number) => {
     const ok = await confirm({
       title: "Rewrite this script?",
@@ -428,6 +450,7 @@ export const ProjectView = ({
           canWrite={keys.ai}
           writing={writing}
           onWrite={(index) => void writeScript(index)}
+          onWriteByHand={(index) => void writeByHand(index)}
         />
 
         {editing ? (
@@ -525,12 +548,11 @@ export const ProjectView = ({
                   </Select>
                 </label>
               ) : null}
-              {drafts.length > 0 ? (
+              {drafts.length > 0 && keys.ai ? (
                 <Button
                   variant="primary"
                   onClick={() => void writeAll()}
-                  disabled={!keys.ai || writing.size > 0}
-                  title={keys.ai ? undefined : "Set up an AI provider in .env"}
+                  disabled={writing.size > 0}
                   icon={<Wand2 className="size-4" aria-hidden />}
                 >
                   Write{" "}
@@ -627,19 +649,25 @@ export const ProjectView = ({
                           ) : null}
                         </>
                       ) : (
-                        <Button
-                          variant="primary"
-                          disabled={!keys.ai}
-                          title={
-                            keys.ai
-                              ? undefined
-                              : "Set up an AI provider in .env"
-                          }
-                          onClick={() => void writeScript(video.index)}
-                          icon={<Wand2 className="size-4" aria-hidden />}
-                        >
-                          Write script
-                        </Button>
+                        <>
+                          <Button
+                            variant={keys.ai ? "ghost" : "primary"}
+                            title="Start from a simple script and write it in the editor"
+                            onClick={() => void writeByHand(video.index)}
+                            icon={<PenLine className="size-4" aria-hidden />}
+                          >
+                            Write myself
+                          </Button>
+                          {keys.ai ? (
+                            <Button
+                              variant="primary"
+                              onClick={() => void writeScript(video.index)}
+                              icon={<Wand2 className="size-4" aria-hidden />}
+                            >
+                              Write script
+                            </Button>
+                          ) : null}
+                        </>
                       )}
                     </div>
                   </div>
