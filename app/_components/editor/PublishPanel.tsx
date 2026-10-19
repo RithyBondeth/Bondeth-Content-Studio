@@ -9,9 +9,7 @@ import {
   Package,
   Loader2,
   Megaphone,
-  PenLine,
   RefreshCw,
-  Sparkles,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BUNDLE_PIECE_LABELS, type BundlePiece } from "../../../src/lib/bundle";
@@ -41,6 +39,7 @@ import {
   startCoverAction,
 } from "../../actions";
 import { useConfirm } from "../ConfirmDialog";
+import { ChoiceCards, SETUP } from "../AiChoice";
 import { useToast } from "../Toast";
 import {
   Alert,
@@ -416,7 +415,7 @@ export const PublishPanel = ({
             icon={<RefreshCw className="size-3.5" aria-hidden />}
             onClick={() => void generate()}
           >
-            {generating ? "Writing…" : "Regenerate"}
+            {generating ? "Writing…" : "Rewrite with AI"}
           </Button>
         ) : null}
       </div>
@@ -471,37 +470,36 @@ export const PublishPanel = ({
             onChange={(next) => updatePost(tab, next)}
           />
         ) : (
-          <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-line px-4 py-5 text-center">
-            <Megaphone className="size-5 text-accent-bright" aria-hidden />
-            <p className="text-[13px] leading-relaxed text-muted">
-              Write the titles, captions, calls to action and hashtags for
-              TikTok, Shorts, Reels and YouTube
-              {canGenerate ? " in one go." : "."}
+          <div className="flex flex-col gap-3">
+            <p className="flex items-center gap-2 text-[13px] leading-relaxed text-muted">
+              <Megaphone
+                className="size-4 shrink-0 text-accent-bright"
+                aria-hidden
+              />
+              Titles, captions, calls to action and hashtags for TikTok, Shorts,
+              Reels and YouTube.
             </p>
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              <Button
-                size="sm"
-                variant={canGenerate ? "ghost" : "primary"}
-                disabled={generating}
-                icon={<PenLine className="size-4" aria-hidden />}
-                onClick={() =>
-                  setKit((current) => ({ ...current, posts: blankPosts() }))
-                }
-              >
-                Write myself
-              </Button>
-              {canGenerate ? (
-                <Button
-                  size="sm"
-                  variant="primary"
-                  loading={generating}
-                  icon={<Sparkles className="size-4" aria-hidden />}
-                  onClick={() => void generate()}
-                >
-                  {generating ? "Writing posts…" : "Write posts"}
-                </Button>
-              ) : null}
-            </div>
+            <ChoiceCards
+              stacked
+              manual={{
+                label: "Write myself",
+                description:
+                  "Start with empty posts for every platform, with character counters as you type.",
+                disabled: generating,
+                onSelect: () =>
+                  setKit((current) => ({ ...current, posts: blankPosts() })),
+              }}
+              ai={{
+                label: generating ? "Writing posts…" : "Write with AI",
+                description:
+                  "Drafts all four platforms in one go from the narration. Edit anything after.",
+                service: "AI writing",
+                available: canGenerate,
+                setup: SETUP.writing,
+                loading: generating,
+                onSelect: () => void generate(),
+              }}
+            />
           </div>
         )}
 

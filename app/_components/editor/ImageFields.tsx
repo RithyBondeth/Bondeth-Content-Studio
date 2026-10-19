@@ -13,6 +13,7 @@ import {
   pickStockImageAction,
   searchImagesAction,
 } from "../../actions";
+import { AiTag, SETUP } from "../AiChoice";
 import { useToast } from "../Toast";
 import { Button, cx, Field, Input, Select, Textarea } from "../ui";
 
@@ -47,8 +48,8 @@ type Source = "stock" | "generate" | "upload";
 
 const SOURCES: { value: Source; label: string; icon: typeof Search }[] = [
   { value: "stock", label: "Stock photo", icon: Search },
-  { value: "generate", label: "Generate", icon: Sparkles },
   { value: "upload", label: "Upload", icon: Upload },
+  { value: "generate", label: "AI image", icon: Sparkles },
 ];
 
 /** Where the browser can load a spec image from: public/ is served at the site root. */
@@ -218,22 +219,30 @@ const Generator = ({
     }
   };
 
+  if (!context.canGenerate) {
+    return (
+      <div className="flex flex-col gap-1.5 rounded-xl border border-dashed border-line p-4">
+        <p className="flex items-center gap-2 text-sm font-medium">
+          <AiTag /> AI images aren&apos;t set up yet
+        </p>
+        <p className="text-[13px] leading-relaxed text-muted">
+          {SETUP.images} Until then, pick a free stock photo or upload your own.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-3">
       <Field
         label="Prompt"
         htmlFor={id}
-        hint={
-          context.canGenerate
-            ? "Describe the picture. It's drawn as a flat illustration with no text. Takes about 20 seconds."
-            : "Add OPENAI_API_KEY to .env to generate illustrations."
-        }
+        hint="Describe the picture. It's drawn as a flat illustration with no text. Takes about 20 seconds."
       >
         <Textarea
           id={id}
           rows={3}
           value={prompt}
-          disabled={!context.canGenerate}
           onChange={(event) => setPrompt(event.target.value)}
         />
       </Field>
@@ -241,7 +250,7 @@ const Generator = ({
         variant="secondary"
         className="self-start"
         loading={generating}
-        disabled={!context.canGenerate || !prompt.trim()}
+        disabled={!prompt.trim()}
         icon={<Sparkles className="size-4" aria-hidden />}
         onClick={() => void generate()}
       >
@@ -367,8 +376,8 @@ export const ImageFields = ({
             {scene.src
               ? (scene.credit ?? "Your image.")
               : context.canGenerate
-                ? "Search stock photos, generate an illustration, or upload your own. A placeholder shows until then."
-                : "Search free stock photos or upload your own. A placeholder shows until then."}
+                ? "Pick a stock photo, upload your own, or have AI draw one. A placeholder shows until then."
+                : "Pick a free stock photo or upload your own. A placeholder shows until then."}
           </p>
           {scene.src ? (
             <Button
@@ -389,15 +398,9 @@ export const ImageFields = ({
       <div
         role="tablist"
         aria-label="Image source"
-        className={cx(
-          "grid gap-1 rounded-xl border border-line p-1",
-          context.canGenerate ? "grid-cols-3" : "grid-cols-2",
-        )}
+        className="grid grid-cols-3 gap-1 rounded-xl border border-line p-1"
       >
-        {/* Generate only appears when an OpenAI key is set. */}
-        {SOURCES.filter(
-          (option) => option.value !== "generate" || context.canGenerate,
-        ).map((option) => (
+        {SOURCES.map((option) => (
           <button
             key={option.value}
             type="button"
@@ -411,7 +414,13 @@ export const ImageFields = ({
                 : "text-faint hover:text-muted",
             )}
           >
-            <option.icon className="size-3.5" aria-hidden />
+            <option.icon
+              className={cx(
+                "size-3.5",
+                option.value === "generate" && "text-accent-bright",
+              )}
+              aria-hidden
+            />
             {option.label}
           </button>
         ))}

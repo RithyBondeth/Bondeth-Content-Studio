@@ -16,7 +16,6 @@ import {
   Target,
   Users,
   Volume2,
-  PenLine,
   Wand2,
 } from "lucide-react";
 import Link from "next/link";
@@ -32,6 +31,7 @@ import {
   updatePlanAction,
   writeScriptAction,
 } from "../../actions";
+import { ChoiceButtons, SETUP } from "../../_components/AiChoice";
 import { useConfirm } from "../../_components/ConfirmDialog";
 import { BrandKitCard } from "./BrandKitCard";
 import { NextStepCard } from "./NextStepCard";
@@ -718,25 +718,21 @@ export const ProjectView = ({
                           ) : null}
                         </>
                       ) : (
-                        <>
-                          <Button
-                            variant={keys.ai ? "ghost" : "secondary"}
-                            title="Start from a simple script and write it in the editor"
-                            onClick={() => void writeByHand(video.index)}
-                            icon={<PenLine className="size-4" aria-hidden />}
-                          >
-                            {keys.ai ? "Write myself" : "Write script"}
-                          </Button>
-                          {keys.ai ? (
-                            <Button
-                              variant="primary"
-                              onClick={() => void writeScript(video.index)}
-                              icon={<Wand2 className="size-4" aria-hidden />}
-                            >
-                              Write script
-                            </Button>
-                          ) : null}
-                        </>
+                        <ChoiceButtons
+                          quiet
+                          size="sm"
+                          manual={{
+                            label: "Write myself",
+                            onSelect: () => void writeByHand(video.index),
+                          }}
+                          ai={{
+                            label: "Write with AI",
+                            service: "AI writing",
+                            available: keys.ai,
+                            setup: SETUP.writing,
+                            onSelect: () => void writeScript(video.index),
+                          }}
+                        />
                       )}
                     </div>
                   </div>

@@ -8,13 +8,12 @@ import {
   Mic,
   PartyPopper,
   Send,
-  PenLine,
-  Wand2,
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 import type { VideoSummary } from "../../../studio/server/projects";
-import { Button, buttonClass, cx } from "../../_components/ui";
+import { ChoiceButtons, SETUP } from "../../_components/AiChoice";
+import { buttonClass, cx } from "../../_components/ui";
 import { nextStep, STAGES, stageOf, type Stage } from "./next-step";
 
 const STAGE_INFO: Record<
@@ -132,27 +131,22 @@ export const NextStepCard = ({
         </ol>
       </div>
       {step.stage === "script" ? (
-        canWrite ? (
-          <Button
-            variant="primary"
-            className="self-start sm:self-center"
-            loading={writing.has(step.index)}
-            onClick={() => onWrite(step.index)}
-            icon={<Wand2 className="size-4" aria-hidden />}
-          >
-            Write script
-          </Button>
-        ) : (
-          <Button
-            variant="primary"
-            className="self-start sm:self-center"
-            loading={writing.has(step.index)}
-            onClick={() => onWriteByHand(step.index)}
-            icon={<PenLine className="size-4" aria-hidden />}
-          >
-            Write script
-          </Button>
-        )
+        <ChoiceButtons
+          className="self-start sm:self-center"
+          manual={{
+            label: "Write myself",
+            onSelect: () => onWriteByHand(step.index),
+            disabled: writing.has(step.index),
+          }}
+          ai={{
+            label: "Write with AI",
+            service: "AI writing",
+            available: canWrite,
+            setup: SETUP.writing,
+            onSelect: () => onWrite(step.index),
+            loading: writing.has(step.index),
+          }}
+        />
       ) : (
         <Link
           href={href}

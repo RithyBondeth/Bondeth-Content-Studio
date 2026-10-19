@@ -358,7 +358,7 @@ export const VoiceRecorder = ({
               ? `● ${Math.floor(phase.seconds / 60)}:${String(phase.seconds % 60).padStart(2, "0")}`
               : audio
                 ? `${audio.durationInSeconds.toFixed(1)}s`
-                : "Free, no ElevenLabs key needed"}
+                : "Your own voice, free"}
         </span>
       </div>
 

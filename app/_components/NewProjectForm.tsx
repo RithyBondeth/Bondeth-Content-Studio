@@ -1,14 +1,6 @@
 "use client";
 
-import {
-  ArrowUp,
-  Check,
-  Globe,
-  Layers,
-  Loader2,
-  Sparkles,
-  Users,
-} from "lucide-react";
+import { Check, Globe, Layers, Loader2, Sparkles, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -16,8 +8,9 @@ import {
   createExampleProjectAction,
   createProjectAction,
 } from "../actions";
+import { ChoiceButtons, SETUP } from "./AiChoice";
 import { useToast } from "./Toast";
-import { Button, Input, Kbd, cx } from "./ui";
+import { Input, Kbd, cx } from "./ui";
 
 const LANGUAGES = [
   ["en", "English"],
@@ -223,11 +216,7 @@ export const NewProjectForm = ({ hasAi }: { hasAi: boolean }) => {
             rows={3}
             value={idea}
             onChange={(event) => setIdea(event.target.value)}
-            placeholder={
-              hasAi
-                ? "Describe your idea, e.g. personal finance basics for university students…"
-                : "Name your series, e.g. Personal finance basics for students"
-            }
+            placeholder="What do you want to teach? e.g. Personal finance basics for university students"
             disabled={pending !== null}
             onKeyDown={(event) => {
               if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
@@ -292,20 +281,23 @@ export const NewProjectForm = ({ hasAi }: { hasAi: boolean }) => {
               <span className="hidden items-center gap-1 text-xs text-faint md:flex">
                 <Kbd>⌘ Enter</Kbd>
               </span>
-              <Button
-                type="submit"
-                variant="primary"
-                disabled={!canCreate}
-                loading={pending === (hasAi ? "plan" : "blank")}
-                icon={<ArrowUp className="size-4" aria-hidden />}
-                title={
-                  hasAi
-                    ? undefined
-                    : "Start a project you plan and write yourself"
-                }
-              >
-                {hasAi ? "Create plan" : "Create project"}
-              </Button>
+              <ChoiceButtons
+                manual={{
+                  label: "Plan it myself",
+                  onSelect: () => void create(false),
+                  loading: pending === "blank",
+                  disabled: !canCreate,
+                }}
+                ai={{
+                  label: "Plan with AI",
+                  service: "AI writing",
+                  available: hasAi,
+                  setup: SETUP.writing,
+                  onSelect: () => void create(true),
+                  loading: pending === "plan",
+                  disabled: hasAi && !canCreate,
+                }}
+              />
             </div>
           </div>
         </div>
@@ -329,63 +321,21 @@ export const NewProjectForm = ({ hasAi }: { hasAi: boolean }) => {
         ))}
       </div>
 
-      {!hasAi ? (
-        <div className="mx-auto mt-2 flex w-full max-w-2xl flex-col items-center gap-3 rounded-2xl border border-dashed border-line-strong bg-surface/40 p-4 text-center sm:flex-row sm:text-left">
-          <div className="flex flex-1 flex-col gap-1">
-            <p className="text-sm font-medium">
-              You write, the studio does the rest
-            </p>
-            <p className="text-sm text-muted">
-              Name your series above to plan and script it yourself, or look
-              around a finished example first. Want AI to write for you? Add an{" "}
-              <code className="rounded bg-raised px-1 py-0.5 font-mono text-[12px] text-text">
-                ANTHROPIC_API_KEY
-              </code>{" "}
-              (or another provider) to{" "}
-              <code className="rounded bg-raised px-1 py-0.5 font-mono text-[12px] text-text">
-                .env
-              </code>{" "}
-              and restart.
-            </p>
-          </div>
-          <Button
-            variant="secondary"
-            loading={pending === "example"}
-            disabled={pending !== null}
-            onClick={() => void createExample()}
-            icon={
-              <Sparkles className="size-4 text-accent-bright" aria-hidden />
-            }
-          >
-            Open example project
-          </Button>
-        </div>
-      ) : (
-        <div className="mx-auto flex items-center gap-3 text-xs text-faint">
-          <button
-            type="button"
-            onClick={() => void create(false)}
-            disabled={!canCreate}
-            title={
-              idea.trim()
-                ? "Use your idea as the title and write the plan and scripts yourself"
-                : "Type a title above first"
-            }
-            className="underline-offset-4 enabled:hover:text-muted enabled:hover:underline disabled:opacity-60"
-          >
-            {pending === "blank" ? "Creating…" : "Start without AI"}
-          </button>
-          <span aria-hidden>·</span>
-          <button
-            type="button"
-            onClick={() => void createExample()}
-            disabled={pending !== null}
-            className="underline-offset-4 hover:text-muted hover:underline"
-          >
-            Open an example project
-          </button>
-        </div>
-      )}
+      <p className="mx-auto max-w-xl text-center text-xs leading-relaxed text-faint">
+        <span className="text-muted">Plan it myself</span> makes your text the
+        series title, with empty videos for you to fill in.{" "}
+        <span className="text-muted">Plan with AI</span> turns it into a full
+        plan with an audience, themes, and hooks. You can edit everything either
+        way.{" "}
+        <button
+          type="button"
+          onClick={() => void createExample()}
+          disabled={pending !== null}
+          className="underline underline-offset-4 hover:text-muted"
+        >
+          {pending === "example" ? "Opening…" : "Or open an example project"}
+        </button>
+      </p>
     </div>
   );
 };

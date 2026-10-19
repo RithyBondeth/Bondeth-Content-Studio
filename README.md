@@ -47,7 +47,7 @@ Add your keys to `.env`, then open the studio:
 npm run studio
 ```
 
-Go to [http://localhost:3100](http://localhost:3100). No keys yet? Everything except the AI writing works without them: type a series name and choose **Create project** (or **Start without AI**) to plan and write the scripts and posts yourself, record your own voice, and render. Or open the example project to look around first.
+Go to [http://localhost:3100](http://localhost:3100). No keys yet? Everything except the AI writing works without them: type what you want to teach and choose **Plan it myself**, then write the scripts and posts yourself, record your own voice, and render. Or open the example project to look around first.
 
 ## The web studio
 
@@ -63,6 +63,8 @@ The studio walks you through the whole process in your browser:
 The studio runs locally and stores everything in this folder, the same files the command line uses.
 
 ## AI providers
+
+Every step AI can do has a by-hand option right next to it: **Plan it myself** or **Plan with AI**, **Write myself** or **Write with AI** for scripts and posts, your own recording or **AI voice-over**, and stock or uploaded images or **AI image**. If a service isn't set up, its button says **Set up**, and clicking it explains what to add to `.env`.
 
 Claude writes plans, scripts, and posts by default: set `ANTHROPIC_API_KEY` and you're done. To use another model, set `LLM_PROVIDER` and `LLM_MODEL` in `.env`, plus the provider's key:
 
