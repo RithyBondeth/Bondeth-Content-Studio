@@ -18,6 +18,7 @@ import { prepareCodeSteps, type PreparedCodeStep } from "../lib/prepare-code";
 import { getSoundSchedule, SOUNDS } from "../lib/sfx";
 import { FPS, getVideoTiming } from "../lib/timing";
 import { renderTransition } from "../lib/transitions";
+import { ChartScene } from "../scenes/ChartScene";
 import { CodeScene } from "../scenes/CodeScene";
 import { ComparisonScene } from "../scenes/ComparisonScene";
 import { CtaScene } from "../scenes/CtaScene";
@@ -86,6 +87,8 @@ const SceneView: React.FC<SceneViewProps> = ({ scene, ...rest }) => {
       return <ListScene scene={scene} {...rest} />;
     case "stat":
       return <StatScene scene={scene} {...rest} />;
+    case "chart":
+      return <ChartScene scene={scene} {...rest} />;
     case "quote":
       return <QuoteScene scene={scene} {...rest} />;
     case "comparison":

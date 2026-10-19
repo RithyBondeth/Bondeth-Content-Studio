@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { SUPPORTED_LANGUAGES } from "../src/lib/languages";
 import { MUSIC_MOODS } from "../src/lib/music";
-import { TRANSITIONS } from "../src/spec/schema";
+import { CHART_STYLES, TRANSITIONS } from "../src/spec/schema";
 
 /**
  * Shapes Claude must return. Structured outputs need every field to be
@@ -107,6 +107,30 @@ const statDraft = z.object({
   ...sceneFields,
 });
 
+const chartDraft = z.object({
+  type: z.literal("chart"),
+  heading: z.string(),
+  style: z
+    .enum(CHART_STYLES)
+    .describe("bar to compare things; line for a change over time"),
+  points: z
+    .array(
+      z.object({
+        label: z.string().describe("Short label, e.g. '1990' or 'Blue'"),
+        value: z.number().describe("The real value, zero or more"),
+        cue: nullableString.describe(
+          "The first 1-4 words of the narration where this point comes up, copied exactly, or null",
+        ),
+      }),
+    )
+    .describe("2-6 data points, in the order they're shown"),
+  unit: nullableString.describe(
+    "Shown with every value, e.g. '%', 'x', 'km' or '$'; or null",
+  ),
+  source: z.string().describe("Where the numbers come from"),
+  ...sceneFields,
+});
+
 const quoteDraft = z.object({
   type: z.literal("quote"),
   quote: z.string(),
@@ -160,6 +184,7 @@ export const sceneDraftSchema = z.discriminatedUnion("type", [
   statementDraft,
   listDraft,
   statDraft,
+  chartDraft,
   quoteDraft,
   comparisonDraft,
   codeDraft,

@@ -116,6 +116,11 @@ const getSceneCues = (
         path: `cues.${index}`,
         cue: scene.cues?.[index],
       }));
+    case "chart":
+      return scene.points.map((point, index) => ({
+        path: `points.${index}.cue`,
+        cue: point.cue,
+      }));
     case "stat":
       return [{ path: "cue", cue: scene.cue }];
     case "comparison":
@@ -136,7 +141,7 @@ const getSceneCues = (
 
 /**
  * Paths of the scene's cues that aren't in its narration, such as "cues.2",
- * "cue", "left.cue", or "steps.1.cue". Cues are matched in order, like the
+ * "cue", "left.cue", "points.1.cue", or "steps.1.cue". Cues are matched in order, like the
  * scene templates do, so a cue only said before the previous cue is unmatched.
  * These cues fall back to fixed timing when the video renders.
  */

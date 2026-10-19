@@ -1,4 +1,5 @@
 import {
+  ChartColumn,
   Code2,
   Columns2,
   Hash,
@@ -72,6 +73,24 @@ export const SCENE_META: Record<SceneType, SceneMeta> = {
       narration: "Share the number and why it matters.",
     }),
   },
+  chart: {
+    color: "#a3e635",
+    label: "Chart",
+    description: "Bars that grow to their values",
+    icon: ChartColumn,
+    create: () => ({
+      type: "chart",
+      heading: "How they compare",
+      style: "bar",
+      points: [
+        { label: "First", value: 40 },
+        { label: "Second", value: 65 },
+        { label: "Third", value: 90 },
+      ],
+      unit: "%",
+      narration: "Walk through the numbers and where they come from.",
+    }),
+  },
   quote: {
     color: "#e879f9",
     label: "Quote",
@@ -129,6 +148,7 @@ export const SCENE_TYPE_ORDER: SceneType[] = [
   "statement",
   "list",
   "stat",
+  "chart",
   "comparison",
   "quote",
   "code",
@@ -140,6 +160,7 @@ export const sceneSummary = (scene: Scene): string => {
   switch (scene.type) {
     case "title":
     case "list":
+    case "chart":
     case "cta":
       return scene.heading;
     case "statement":
@@ -168,6 +189,7 @@ export const convertScene = (scene: Scene, type: SceneType): Scene => {
   switch (next.type) {
     case "title":
     case "list":
+    case "chart":
     case "cta":
       return { ...next, ...base, heading: text };
     case "statement":
