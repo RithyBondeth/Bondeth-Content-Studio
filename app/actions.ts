@@ -38,6 +38,7 @@ import {
 } from "../pipeline/images";
 import { addVoiceOver, scenesToRecord, voiceForVideo } from "../pipeline/voice";
 import { listVoices } from "../pipeline/voices";
+import { splitTake } from "../pipeline/recording";
 import {
   addBlankVideo,
   createBlankProject,
@@ -190,6 +191,22 @@ export const recordVoiceAction = async (slug: string, index: number) =>
     await saveSpec(plan, index, result.spec);
     return result;
   });
+
+/**
+ * Cuts a whole-video take (uploaded to /api/recording/video) into each
+ * scene's voice-over at `cuts` (seconds). Returns the scenes' audio, in
+ * order; the editor puts it into the spec.
+ */
+export const splitTakeAction = async (
+  slug: string,
+  index: number,
+  take: string,
+  cuts: number[],
+  narrations: string[],
+) =>
+  run(async () =>
+    splitTake(await videoMediaDir(slug, index), take, cuts, narrations),
+  );
 
 /** Saves one section of the Settings page. Takes effect on the next request. */
 export const saveSettingsAction = async (input: SettingsInput) =>

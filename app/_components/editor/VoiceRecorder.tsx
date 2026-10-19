@@ -14,26 +14,10 @@ import { isSelfRecorded } from "../../../src/lib/recording";
 import type { SceneAudio } from "../../../src/spec/schema";
 import { useToast } from "../Toast";
 import { Button } from "../ui";
+import { clock, mediaUrl, MicLevel, useMicRecorder } from "./mic";
 
-/** Seconds counted down before recording starts, so you can take a breath. */
-const COUNTDOWN_SECONDS = 3;
 /** Recording stops by itself after this long, in case Stop is forgotten. */
 const MAX_SECONDS = 180;
-
-/** WebM/Opus where the browser has it (Chrome, Firefox), MP4/AAC on Safari. */
-const pickMimeType = () =>
-  ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"].find((type) =>
-    MediaRecorder.isTypeSupported(type),
-  );
-
-/** Files in public/ are served from the site root. */
-const mediaUrl = (src: string) => (/^[a-z]+:/i.test(src) ? src : `/${src}`);
-
-type Phase =
-  | { kind: "idle" }
-  | { kind: "countdown"; left: number }
-  | { kind: "recording"; seconds: number }
-  | { kind: "saving" };
 
 /**
  * Record / Stop / Play / Re-record for one scene's voice-over, using the
@@ -58,65 +42,20 @@ export const VoiceRecorder = ({
   onChange: (audio: SceneAudio | undefined) => void;
 }) => {
   const notify = useToast();
-  const [phase, setPhase] = useState<Phase>({ kind: "idle" });
-  const [level, setLevel] = useState(0);
+  const [saving, setSaving] = useState(false);
   const [playing, setPlaying] = useState(false);
-
-  // Everything that has to be stopped when recording ends or the form closes.
-  const stream = useRef<MediaStream | null>(null);
-  const recorder = useRef<MediaRecorder | null>(null);
-  const audioContext = useRef<AudioContext | null>(null);
-  const timers = useRef<ReturnType<typeof setInterval>[]>([]);
-  const frame = useRef<number | null>(null);
   const player = useRef<HTMLAudioElement | null>(null);
-  // Set when the form closes mid-recording, so nothing is uploaded.
-  const cancelled = useRef(false);
   const fileInput = useRef<HTMLInputElement>(null);
+  const mic = useMicRecorder({
+    maxSeconds: MAX_SECONDS,
+    onRecorded: (blob) => void upload(blob),
+  });
+  const phase = saving ? ({ kind: "saving" } as const) : mic.phase;
 
-  const release = () => {
-    timers.current.forEach(clearInterval);
-    timers.current = [];
-    if (frame.current !== null) cancelAnimationFrame(frame.current);
-    frame.current = null;
-    stream.current?.getTracks().forEach((track) => track.stop());
-    stream.current = null;
-    void audioContext.current?.close();
-    audioContext.current = null;
-    setLevel(0);
-  };
-
-  useEffect(() => {
-    // Reset here too: React runs effects twice in development.
-    cancelled.current = false;
-    return () => {
-      cancelled.current = true;
-      if (recorder.current?.state === "recording") recorder.current.stop();
-      release();
-      player.current?.pause();
-    };
-  }, []);
-
-  /** Keeps the level meter moving with how loud the microphone is. */
-  const watchLevel = (source: MediaStream) => {
-    const context = new AudioContext();
-    audioContext.current = context;
-    const analyser = context.createAnalyser();
-    analyser.fftSize = 1024;
-    context.createMediaStreamSource(source).connect(analyser);
-    const samples = new Float32Array(analyser.fftSize);
-    const tick = () => {
-      analyser.getFloatTimeDomainData(samples);
-      let sum = 0;
-      for (const sample of samples) sum += sample * sample;
-      // Root mean square, scaled so normal speech fills most of the meter.
-      setLevel(Math.min(1, Math.sqrt(sum / samples.length) * 4));
-      frame.current = requestAnimationFrame(tick);
-    };
-    tick();
-  };
+  useEffect(() => () => player.current?.pause(), []);
 
   const upload = async (blob: Blob) => {
-    setPhase({ kind: "saving" });
+    setSaving(true);
     const form = new FormData();
     form.set("slug", slug);
     form.set("index", String(videoIndex));
@@ -151,36 +90,8 @@ export const VoiceRecorder = ({
         description: error instanceof Error ? error.message : String(error),
       });
     } finally {
-      setPhase({ kind: "idle" });
+      setSaving(false);
     }
-  };
-
-  const startRecording = (source: MediaStream) => {
-    const mimeType = pickMimeType();
-    const media = new MediaRecorder(
-      source,
-      mimeType ? { mimeType } : undefined,
-    );
-    recorder.current = media;
-    const chunks: Blob[] = [];
-    media.ondataavailable = (event) => {
-      if (event.data.size) chunks.push(event.data);
-    };
-    media.onstop = () => {
-      release();
-      if (cancelled.current) return;
-      void upload(new Blob(chunks, { type: media.mimeType }));
-    };
-    media.start();
-    setPhase({ kind: "recording", seconds: 0 });
-    const startedAt = Date.now();
-    timers.current.push(
-      setInterval(() => {
-        const seconds = Math.floor((Date.now() - startedAt) / 1000);
-        if (seconds >= MAX_SECONDS) media.stop();
-        else setPhase({ kind: "recording", seconds });
-      }, 250),
-    );
   };
 
   const record = async () => {
@@ -189,51 +100,7 @@ export const VoiceRecorder = ({
       return;
     }
     player.current?.pause();
-    let source: MediaStream;
-    try {
-      source = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true },
-      });
-    } catch (error) {
-      notify({
-        tone: "error",
-        title: "Couldn't use the microphone",
-        description:
-          error instanceof Error && error.name === "NotAllowedError"
-            ? "Allow microphone access for this site in your browser, then try again."
-            : error instanceof Error
-              ? error.message
-              : String(error),
-      });
-      return;
-    }
-    stream.current = source;
-    // The meter starts during the countdown, so you can check the mic works.
-    watchLevel(source);
-
-    let left = COUNTDOWN_SECONDS;
-    setPhase({ kind: "countdown", left });
-    const countdown = setInterval(() => {
-      left -= 1;
-      if (left > 0) {
-        setPhase({ kind: "countdown", left });
-        return;
-      }
-      clearInterval(countdown);
-      timers.current = timers.current.filter((timer) => timer !== countdown);
-      startRecording(source);
-    }, 1000);
-    timers.current.push(countdown);
-  };
-
-  const stop = () => {
-    if (recorder.current?.state === "recording") {
-      recorder.current.stop();
-    } else {
-      // Stopped during the countdown: nothing was recorded.
-      release();
-      setPhase({ kind: "idle" });
-    }
+    await mic.start();
   };
 
   const togglePlay = () => {
@@ -262,7 +129,7 @@ export const VoiceRecorder = ({
             variant="primary"
             size="sm"
             icon={<Square className="size-3.5 fill-current" aria-hidden />}
-            onClick={stop}
+            onClick={mic.stop}
           >
             {phase.kind === "countdown" ? "Cancel" : "Stop"}
           </Button>
@@ -355,7 +222,7 @@ export const VoiceRecorder = ({
           {phase.kind === "countdown"
             ? `Starting in ${phase.left}…`
             : phase.kind === "recording"
-              ? `● ${Math.floor(phase.seconds / 60)}:${String(phase.seconds % 60).padStart(2, "0")}`
+              ? `● ${clock(phase.seconds)}`
               : audio
                 ? `${audio.durationInSeconds.toFixed(1)}s`
                 : "Your own voice, free"}
@@ -363,31 +230,7 @@ export const VoiceRecorder = ({
       </div>
 
       {phase.kind === "countdown" || phase.kind === "recording" ? (
-        <div className="flex items-center gap-3">
-          {phase.kind === "countdown" ? (
-            <span
-              className="grid size-8 shrink-0 place-items-center rounded-full bg-accent/15 text-sm font-semibold text-accent-bright"
-              aria-live="assertive"
-            >
-              {phase.left}
-            </span>
-          ) : (
-            <span className="size-2.5 shrink-0 animate-pulse rounded-full bg-danger" />
-          )}
-          <div
-            role="meter"
-            aria-label="Microphone level"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={Math.round(level * 100)}
-            className="h-2 flex-1 overflow-hidden rounded-full bg-raised"
-          >
-            <div
-              className="h-full rounded-full bg-success transition-[width] duration-75"
-              style={{ width: `${Math.round(level * 100)}%` }}
-            />
-          </div>
-        </div>
+        <MicLevel phase={phase} level={mic.level} />
       ) : null}
 
       {phase.kind === "countdown" || phase.kind === "recording" ? (

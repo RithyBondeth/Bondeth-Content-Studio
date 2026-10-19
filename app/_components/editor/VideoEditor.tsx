@@ -10,6 +10,7 @@ import {
   CircleAlert,
   Loader2,
   Clapperboard,
+  Mic,
   Monitor,
   Redo2,
   Send,
@@ -66,6 +67,7 @@ import { SceneList } from "./SceneList";
 import type { ThemeSetting as ThemeValue } from "../../../src/theme/resolve";
 import { ThemeSetting } from "./ThemeSetting";
 import { VoiceSetting } from "./VoiceSetting";
+import { VoiceTake } from "./VoiceTake";
 
 type SaveState =
   | { kind: "saved" }
@@ -739,6 +741,23 @@ export const VideoEditor = ({
           <SettingsLink className="hidden md:inline-flex" />
           <AppearanceSwitch className="hidden md:flex" />
           <FormatToggle value={format} onChange={setFormat} />
+          {/* Your own voice: one take for the whole video, in the Video tab. */}
+          <Button
+            variant="ghost"
+            size="sm"
+            title="Record or upload one voice-over for the whole video"
+            icon={<Mic className="size-4" aria-hidden />}
+            onClick={() => {
+              setTab("video");
+              requestAnimationFrame(() =>
+                document
+                  .getElementById("voice-take")
+                  ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+              );
+            }}
+          >
+            <span className="sr-only sm:not-sr-only">Narrate</span>
+          </Button>
           {/* Your own voice is recorded per scene; this voices every other scene with AI. */}
           <AiButton
             lead={!allVoiced}
@@ -875,6 +894,19 @@ export const VideoEditor = ({
                     if (!voice) delete next.voice;
                     return next;
                   }, "voice")
+                }
+              />
+              <VoiceTake
+                slug={slug}
+                videoIndex={index}
+                narrations={spec.scenes.map((scene) => scene.narration)}
+                hasAudio={voicedCount > 0}
+                onSave={(audio) =>
+                  updateScenes((scenes) =>
+                    scenes.map((scene, i) =>
+                      audio[i] ? { ...scene, audio: audio[i] } : scene,
+                    ),
+                  )
                 }
               />
             </div>
