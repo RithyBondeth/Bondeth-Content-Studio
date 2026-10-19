@@ -284,6 +284,18 @@ No ElevenLabs key? Read the narration yourself. It's free, and it's your own voi
 
 Already recorded it somewhere else, such as a phone voice memo or a podcast microphone? Click **Upload** instead and pick the file (MP3, WAV, M4A, AAC, OGG, FLAC, or WebM, up to 25 MB per scene). It goes through the same steps as a browser recording.
 
+#### The whole video in one take
+
+Recording scene by scene can sound choppy. To read the whole script in one go instead, open the **Video** tab (or click **Narrate** in the editor's header) and use **Narrate the whole video**:
+
+1. Click **Record whole video**. After the countdown, the whole script is shown with the scene you're reading highlighted. Click **Next scene** as you move on to the next one, and pause for about a second between scenes.
+2. Click **Stop**, or use **Upload whole video** for a take recorded elsewhere (the same formats, up to 100 MB).
+3. The studio finds the pauses in your take and splits it into scenes. It picks the pause closest to where each scene should end, judging by when you clicked **Next scene**, or, for an upload, by how long each scene's narration is; longer pauses win over a quick breath.
+4. Check the result: **Play** any scene's piece, and use the arrows beside a cut to move it to the previous or next pause. **Reset cuts** goes back to the studio's choice.
+5. Click **Use for N scenes**. Each scene gets its own MP3 and captions, exactly as if you'd recorded it on its own, so you can still re-record a single scene afterwards.
+
+If the take can't be split, you'll be told why: usually there weren't enough pauses (one per change of scene), or the take was too short for the number of scenes. Record again with a clear pause between scenes.
+
 Tips: record somewhere quiet, keep the microphone at the same distance, and leave a moment of silence before you start and after you finish. The studio trims that silence, evens out the volume, and saves an MP3 in the video's media folder (browsers record WebM, which is converted with the ffmpeg that comes with Remotion, so there's nothing else to install).
 
 Captions still work: without speech-to-text, the narration's words are spread over the part of the recording where you're speaking, with longer words getting more time and a short pause at each full stop or comma. They line up best when you read the narration as written, at an even pace.

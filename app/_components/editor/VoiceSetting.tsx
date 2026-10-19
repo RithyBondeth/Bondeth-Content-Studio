@@ -61,8 +61,8 @@ export const VoiceSetting = ({
         <p className="text-[13px] leading-relaxed text-muted">
           You&apos;re the narrator. On each scene, use{" "}
           <span className="text-text">Record my voice</span> or{" "}
-          <span className="text-text">Upload</span>. To have a voice read the
-          script for you instead,{" "}
+          <span className="text-text">Upload</span>, or narrate the whole video
+          in one take below. To have a voice read the script for you instead,{" "}
           <SetupLink setup={SETUP.voice} service="AI voice">
             add an ElevenLabs key in Settings
           </SetupLink>

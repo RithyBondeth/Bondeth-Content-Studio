@@ -5,6 +5,27 @@ const PAUSE_WEIGHT = { sentence: 4, clause: 2 };
 const SENTENCE_END = /[.!?…]["')\]]*$/;
 const CLAUSE_END = /[,;:—–-]["')\]]*$/;
 
+/** How long each word, and the pause after it, takes to say, relatively. */
+const weigh = (narration: string) => {
+  const words = narration.split(/\s+/).filter(Boolean);
+  const speaking = words.map((word) => word.length + 1);
+  const pauses = words.map((word, index) => {
+    if (index === words.length - 1) return 0;
+    if (SENTENCE_END.test(word)) return PAUSE_WEIGHT.sentence;
+    if (CLAUSE_END.test(word)) return PAUSE_WEIGHT.clause;
+    return 0;
+  });
+  const total = [...speaking, ...pauses].reduce((sum, w) => sum + w, 0);
+  return { words, speaking, pauses, total };
+};
+
+/**
+ * Roughly how long a narration takes to read, relative to others: the same
+ * weights spreadWords uses. Used to guess where one scene ends in a take
+ * covering the whole video.
+ */
+export const narrationWeight = (narration: string) => weigh(narration).total;
+
 /**
  * Spreads a narration's words across the part of a recording where someone
  * is speaking, from `start` to `end` seconds. There's no speech-to-text, so
@@ -16,18 +37,9 @@ export const spreadWords = (
   start: number,
   end: number,
 ): WordTiming[] => {
-  const words = narration.split(/\s+/).filter(Boolean);
+  const { words, speaking, pauses, total } = weigh(narration);
   if (words.length === 0) return [];
   const span = Math.max(0, end - start);
-
-  const speaking = words.map((word) => word.length + 1);
-  const pauses = words.map((word, index) => {
-    if (index === words.length - 1) return 0;
-    if (SENTENCE_END.test(word)) return PAUSE_WEIGHT.sentence;
-    if (CLAUSE_END.test(word)) return PAUSE_WEIGHT.clause;
-    return 0;
-  });
-  const total = [...speaking, ...pauses].reduce((sum, w) => sum + w, 0);
   const secondsPer = span / total;
 
   // Milliseconds are plenty for captions and keep spec.json readable.
