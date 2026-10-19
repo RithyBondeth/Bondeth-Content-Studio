@@ -1,9 +1,13 @@
 import "server-only";
 // Importing config loads .env, the same way the CLI does.
 import "../../pipeline/config";
+import { resolveProvider } from "../../pipeline/providers";
 
 export type KeyStatus = {
-  claude: boolean;
+  /** The AI provider that writes plans, scripts, and posts is set up. */
+  ai: boolean;
+  /** Its display name, e.g. "Claude" or "OpenAI". */
+  aiName: string;
   elevenLabs: boolean;
   /** AI illustrations. */
   openai: boolean;
@@ -11,11 +15,13 @@ export type KeyStatus = {
   pexels: boolean;
 };
 
-export const getKeyStatus = (): KeyStatus => ({
-  claude: Boolean(
-    process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN,
-  ),
-  elevenLabs: Boolean(process.env.ELEVENLABS_API_KEY),
-  openai: Boolean(process.env.OPENAI_API_KEY),
-  pexels: Boolean(process.env.PEXELS_API_KEY),
-});
+export const getKeyStatus = (): KeyStatus => {
+  const provider = resolveProvider();
+  return {
+    ai: provider.ready,
+    aiName: provider.name,
+    elevenLabs: Boolean(process.env.ELEVENLABS_API_KEY),
+    openai: Boolean(process.env.OPENAI_API_KEY),
+    pexels: Boolean(process.env.PEXELS_API_KEY),
+  };
+};

@@ -20,16 +20,18 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ContentPlan } from "../../../pipeline/schemas";
 import type { PlanFile } from "../../../pipeline/store";
 import type { KeyStatus as Keys } from "../../../studio/server/env";
 import type { VideoSummary } from "../../../studio/server/projects";
 import {
   addVideoAction,
+  startScriptAction,
   updatePlanAction,
   writeScriptAction,
 } from "../../actions";
+import { ChoiceButtons, SETUP } from "../../_components/AiChoice";
 import { useConfirm } from "../../_components/ConfirmDialog";
 import { BrandKitCard } from "./BrandKitCard";
 import { NextStepCard } from "./NextStepCard";
@@ -142,7 +144,9 @@ const Detail = ({
     </span>
     <div className="min-w-0">
       <h3 className="text-xs text-faint">{label}</h3>
-      <p className="mt-0.5 text-sm leading-relaxed">{children}</p>
+      <p className="mt-0.5 text-sm leading-relaxed">
+        {children || <span className="text-faint">Not set yet</span>}
+      </p>
     </div>
   </div>
 );
@@ -161,17 +165,33 @@ const PlanEditor = ({
 
   const set = <K extends keyof ContentPlan>(key: K, value: ContentPlan[K]) =>
     setDraft((current) => ({ ...current, [key]: value }));
-  const setVideo = (index: number, key: "title" | "hook", value: string) =>
+  const setVideo = (
+    index: number,
+    change: Partial<ContentPlan["videos"][number]>,
+  ) =>
     setDraft((current) => ({
       ...current,
       videos: current.videos.map((video, i) =>
-        i === index ? { ...video, [key]: value } : video,
+        i === index ? { ...video, ...change } : video,
       ),
     }));
 
+  // Opens below the fold on smaller screens, so bring it into view.
+  const card = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    card.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
+
   const save = async () => {
     setSaving(true);
-    const result = await updatePlanAction(plan.slug, draft);
+    // Blank lines are left over from typing one key point per line.
+    const result = await updatePlanAction(plan.slug, {
+      ...draft,
+      videos: draft.videos.map((video) => ({
+        ...video,
+        keyPoints: video.keyPoints.map((point) => point.trim()).filter(Boolean),
+      })),
+    });
     setSaving(false);
     if (!result.ok) {
       notify({
@@ -187,84 +207,114 @@ const PlanEditor = ({
   };
 
   return (
-    <Card className="animate-rise-in flex flex-col gap-6 p-6">
-      <div className="flex items-center justify-between">
-        <h2 className="font-medium">Edit plan</h2>
-        <div className="flex gap-2">
-          <Button variant="ghost" onClick={onDone} disabled={saving}>
-            Cancel
-          </Button>
-          <Button
-            variant="primary"
-            loading={saving}
-            onClick={() => void save()}
-            icon={<Check className="size-4" aria-hidden />}
-          >
-            Save changes
-          </Button>
-        </div>
-      </div>
-      <Field label="Series title" htmlFor="plan-title">
-        <Input
-          id="plan-title"
-          value={draft.title}
-          onChange={(e) => set("title", e.target.value)}
-        />
-      </Field>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Audience" htmlFor="plan-audience">
-          <Textarea
-            id="plan-audience"
-            rows={2}
-            value={draft.audience}
-            onChange={(e) => set("audience", e.target.value)}
-          />
-        </Field>
-        <Field label="Tone" htmlFor="plan-tone">
-          <Textarea
-            id="plan-tone"
-            rows={2}
-            value={draft.tone}
-            onChange={(e) => set("tone", e.target.value)}
-          />
-        </Field>
-      </div>
-      <Field label="Goal" htmlFor="plan-goal">
-        <Textarea
-          id="plan-goal"
-          rows={2}
-          value={draft.goal}
-          onChange={(e) => set("goal", e.target.value)}
-        />
-      </Field>
-      <div className="flex flex-col gap-3">
-        <span className="text-[13px] font-medium text-muted">Videos</span>
-        {draft.videos.map((video, index) => (
-          <div
-            key={index}
-            className="flex gap-3 rounded-xl border border-line bg-bg/40 p-3"
-          >
-            <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-raised font-mono text-xs text-muted">
-              {index + 1}
-            </span>
-            <div className="flex flex-1 flex-col gap-2">
-              <Input
-                aria-label={`Video ${index + 1} title`}
-                value={video.title}
-                onChange={(e) => setVideo(index, "title", e.target.value)}
-              />
-              <Textarea
-                aria-label={`Video ${index + 1} hook`}
-                rows={2}
-                value={video.hook}
-                placeholder="Hook: the first sentence viewers hear"
-                onChange={(e) => setVideo(index, "hook", e.target.value)}
-              />
-            </div>
+    <div ref={card} className="scroll-mt-6">
+      <Card className="animate-rise-in flex flex-col gap-6 p-6">
+        <div className="flex items-center justify-between">
+          <h2 className="font-medium">Edit plan</h2>
+          <div className="flex gap-2">
+            <Button variant="ghost" onClick={onDone} disabled={saving}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              loading={saving}
+              onClick={() => void save()}
+              icon={<Check className="size-4" aria-hidden />}
+            >
+              Save changes
+            </Button>
           </div>
-        ))}
-      </div>
-    </Card>
+        </div>
+        <Field label="Series title" htmlFor="plan-title">
+          <Input
+            id="plan-title"
+            value={draft.title}
+            onChange={(e) => set("title", e.target.value)}
+          />
+        </Field>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Audience" htmlFor="plan-audience">
+            <Textarea
+              id="plan-audience"
+              rows={2}
+              value={draft.audience}
+              placeholder="Who it's for, e.g. first-year university students"
+              onChange={(e) => set("audience", e.target.value)}
+            />
+          </Field>
+          <Field label="Tone" htmlFor="plan-tone">
+            <Textarea
+              id="plan-tone"
+              rows={2}
+              value={draft.tone}
+              placeholder="How it sounds, e.g. friendly and practical"
+              onChange={(e) => set("tone", e.target.value)}
+            />
+          </Field>
+        </div>
+        <Field label="Goal" htmlFor="plan-goal">
+          <Textarea
+            id="plan-goal"
+            rows={2}
+            value={draft.goal}
+            placeholder="What viewers get from following the series"
+            onChange={(e) => set("goal", e.target.value)}
+          />
+        </Field>
+        <div className="flex flex-col gap-3">
+          <span className="text-[13px] font-medium text-muted">Videos</span>
+          {draft.videos.map((video, index) => (
+            <div
+              key={index}
+              className="flex gap-3 rounded-xl border border-line bg-bg/40 p-3"
+            >
+              <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-raised font-mono text-xs text-muted">
+                {index + 1}
+              </span>
+              <div className="flex flex-1 flex-col gap-2">
+                <Input
+                  aria-label={`Video ${index + 1} title`}
+                  value={video.title}
+                  placeholder="Title"
+                  onChange={(e) => setVideo(index, { title: e.target.value })}
+                />
+                <Textarea
+                  aria-label={`Video ${index + 1} hook`}
+                  rows={2}
+                  value={video.hook}
+                  placeholder="Hook: the first sentence viewers hear"
+                  onChange={(e) => setVideo(index, { hook: e.target.value })}
+                />
+                <Textarea
+                  aria-label={`Video ${index + 1} key points`}
+                  rows={3}
+                  value={video.keyPoints.join("\n")}
+                  placeholder="Key points, one per line. They become the script's list scene when you write it yourself."
+                  onChange={(e) =>
+                    setVideo(index, { keyPoints: e.target.value.split("\n") })
+                  }
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+        {draft.videos.length > 2 ? (
+          <div className="flex justify-end gap-2 border-t border-line pt-5">
+            <Button variant="ghost" onClick={onDone} disabled={saving}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              loading={saving}
+              onClick={() => void save()}
+              icon={<Check className="size-4" aria-hidden />}
+            >
+              Save changes
+            </Button>
+          </div>
+        ) : null}
+      </Card>
+    </div>
   );
 };
 
@@ -331,11 +381,31 @@ export const ProjectView = ({
     });
   };
 
+  /** Starts the video from a starter script and opens it in the editor. */
+  const writeByHand = async (index: number) => {
+    setWriting((current) => new Set(current).add(index));
+    const result = await startScriptAction(plan.slug, index);
+    if (result.ok) {
+      router.push(`/projects/${plan.slug}/videos/${index + 1}`);
+      return;
+    }
+    setWriting((current) => {
+      const next = new Set(current);
+      next.delete(index);
+      return next;
+    });
+    notify({
+      tone: "error",
+      title: `Couldn't start “${videos[index]?.title}”`,
+      description: result.error,
+    });
+  };
+
   const rewrite = async (index: number) => {
     const ok = await confirm({
       title: "Rewrite this script?",
       description:
-        "Claude writes a fresh script for this video. Any edits you made to it will be replaced.",
+        "AI writes a fresh script for this video. Any edits you made to it will be replaced.",
       confirmLabel: "Rewrite script",
     });
     if (ok) void writeScript(index);
@@ -379,10 +449,15 @@ export const ProjectView = ({
               <h1 className="text-3xl font-bold tracking-tight text-balance sm:text-4xl">
                 {content.title}
               </h1>
-              <p className="flex items-center gap-2 text-muted">
-                <Lightbulb className="size-4 shrink-0 text-faint" aria-hidden />
-                {plan.idea}
-              </p>
+              {plan.idea.trim() !== content.title.trim() ? (
+                <p className="flex items-center gap-2 text-muted">
+                  <Lightbulb
+                    className="size-4 shrink-0 text-faint"
+                    aria-hidden
+                  />
+                  {plan.idea}
+                </p>
+              ) : null}
             </div>
             {!editing ? (
               <Button
@@ -425,9 +500,10 @@ export const ProjectView = ({
         <NextStepCard
           slug={plan.slug}
           videos={videos}
-          canWrite={keys.claude}
+          canWrite={keys.ai}
           writing={writing}
           onWrite={(index) => void writeScript(index)}
+          onWriteByHand={(index) => void writeByHand(index)}
         />
 
         {editing ? (
@@ -455,6 +531,22 @@ export const ProjectView = ({
               >
                 {content.goal}
               </Detail>
+              {!content.audience && !content.tone && !content.goal ? (
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5">
+                  <p className="text-sm text-muted">
+                    Add who it&apos;s for, the tone, and video titles so every
+                    script stays on track.
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => setEditing(true)}
+                    icon={<Pencil className="size-3.5" aria-hidden />}
+                  >
+                    Fill in the plan
+                  </Button>
+                </div>
+              ) : null}
               {content.pillars.length ? (
                 <div className="flex flex-wrap gap-2 border-t border-line pt-5">
                   {content.pillars.map((pillar) => (
@@ -509,7 +601,7 @@ export const ProjectView = ({
               Videos
             </h2>
             <div className="flex flex-wrap items-center gap-2">
-              {keys.claude ? (
+              {keys.ai ? (
                 <label className="flex items-center gap-2 text-sm text-muted">
                   Length
                   <Select
@@ -525,14 +617,11 @@ export const ProjectView = ({
                   </Select>
                 </label>
               ) : null}
-              {drafts.length > 0 ? (
+              {drafts.length > 0 && keys.ai ? (
                 <Button
                   variant="primary"
                   onClick={() => void writeAll()}
-                  disabled={!keys.claude || writing.size > 0}
-                  title={
-                    keys.claude ? undefined : "Add ANTHROPIC_API_KEY to .env"
-                  }
+                  disabled={writing.size > 0}
                   icon={<Wand2 className="size-4" aria-hidden />}
                 >
                   Write{" "}
@@ -602,7 +691,7 @@ export const ProjectView = ({
                             className="size-4 animate-spin"
                             aria-hidden
                           />
-                          Claude is writing…
+                          Writing…
                         </span>
                       ) : scripted ? (
                         <>
@@ -613,7 +702,7 @@ export const ProjectView = ({
                             Open editor
                             <ArrowRight className="size-4" aria-hidden />
                           </Link>
-                          {keys.claude ? (
+                          {keys.ai ? (
                             <Menu
                               label={`Actions for ${video.title}`}
                               items={[
@@ -629,19 +718,21 @@ export const ProjectView = ({
                           ) : null}
                         </>
                       ) : (
-                        <Button
-                          variant="primary"
-                          disabled={!keys.claude}
-                          title={
-                            keys.claude
-                              ? undefined
-                              : "Add ANTHROPIC_API_KEY to .env"
-                          }
-                          onClick={() => void writeScript(video.index)}
-                          icon={<Wand2 className="size-4" aria-hidden />}
-                        >
-                          Write script
-                        </Button>
+                        <ChoiceButtons
+                          quiet
+                          size="sm"
+                          manual={{
+                            label: "Write myself",
+                            onSelect: () => void writeByHand(video.index),
+                          }}
+                          ai={{
+                            label: "Write with AI",
+                            service: "AI writing",
+                            available: keys.ai,
+                            setup: SETUP.writing,
+                            onSelect: () => void writeScript(video.index),
+                          }}
+                        />
                       )}
                     </div>
                   </div>

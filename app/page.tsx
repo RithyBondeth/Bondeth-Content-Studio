@@ -1,5 +1,5 @@
 import { Clapperboard, FileText, Lightbulb, Mic } from "lucide-react";
-import { getKeyStatus } from "../studio/server/env";
+import { getKeyStatus, type KeyStatus as Keys } from "../studio/server/env";
 import { listProjects } from "../studio/server/projects";
 import { Header } from "./_components/Header";
 import { KeyStatus } from "./_components/KeyStatus";
@@ -8,21 +8,28 @@ import { ProjectCard } from "./_components/ProjectCard";
 
 export const dynamic = "force-dynamic";
 
-const STEPS = [
+/** How it works, described for what's set up: AI does the steps it can, you do the rest. */
+const steps = (keys: Keys) => [
   {
     icon: Lightbulb,
     title: "Plan",
-    text: "Claude turns your idea into a series with an audience, themes, and hooks.",
+    text: keys.ai
+      ? "AI turns your idea into a series with an audience, themes, and hooks."
+      : "Name your series and plan its videos: titles, hooks, and key points.",
   },
   {
     icon: FileText,
     title: "Script",
-    text: "Every video is written scene by scene. Edit anything with a live preview.",
+    text: keys.ai
+      ? "AI writes every video scene by scene. Edit anything with a live preview."
+      : "Write each video scene by scene from a starter script, with a live preview.",
   },
   {
     icon: Mic,
     title: "Voice",
-    text: "ElevenLabs records natural narration, with captions synced word by word.",
+    text: keys.elevenLabs
+      ? "ElevenLabs records natural narration, or use your own voice. Captions sync word by word."
+      : "Record or upload your own narration. Captions sync word by word.",
   },
   {
     icon: Clapperboard,
@@ -53,18 +60,19 @@ export default async function HomePage() {
           <div className="flex flex-col items-center gap-5 text-center">
             <span className="animate-fade-in inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-xs text-accent-bright">
               <span className="size-1.5 rounded-full bg-accent-bright" />
-              AI studio for explainer videos
+              {keys.ai ? "AI studio" : "Studio"} for explainer videos
             </span>
             <h1 className="text-4xl leading-[1.08] font-bold tracking-tight text-balance sm:text-6xl">
               Turn what you know into{" "}
               <span className="text-gradient">videos people finish</span>
             </h1>
             <p className="max-w-xl text-base leading-relaxed text-pretty text-muted sm:text-lg">
-              Describe an idea. Get a content plan, scripts, voice-over, and
-              animated videos, and stay in control of every scene.
+              {keys.ai
+                ? "Describe an idea. Get a content plan, scripts, voice-over, and animated videos, and stay in control of every scene."
+                : "Plan a series, write the scripts, add your voice, and render animated videos, with every scene in your control."}
             </p>
           </div>
-          <NewProjectForm hasClaude={keys.claude} />
+          <NewProjectForm hasAi={keys.ai} />
         </section>
 
         <section aria-labelledby="how-it-works" className="flex flex-col gap-6">
@@ -72,7 +80,7 @@ export default async function HomePage() {
             How it works
           </h2>
           <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {STEPS.map((step, index) => (
+            {steps(keys).map((step, index) => (
               <li
                 key={step.title}
                 className="relative flex flex-col gap-3 rounded-2xl border border-line bg-surface/50 p-5"
@@ -110,7 +118,9 @@ export default async function HomePage() {
               <Clapperboard className="size-6 text-faint" aria-hidden />
               <p className="font-medium">No projects yet</p>
               <p className="max-w-sm text-sm text-muted">
-                Describe an idea above to plan your first series.
+                {keys.ai
+                  ? "Describe an idea above to plan your first series."
+                  : "Name a series above to start your first project."}
               </p>
             </div>
           ) : (

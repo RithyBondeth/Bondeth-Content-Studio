@@ -7,7 +7,7 @@ import {
   type PublishKit,
 } from "../src/lib/publish";
 import type { VideoSpecInput } from "../src/spec/schema";
-import { generateStructured } from "./claude";
+import { generateStructured } from "./llm";
 import { PUBLISH_SYSTEM, publishPrompt } from "./prompts";
 import { publishDraftSchema, type PublishDraft } from "./schemas";
 import { kitCreator } from "./script";

@@ -8,12 +8,12 @@ import {
   Mic,
   PartyPopper,
   Send,
-  Wand2,
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 import type { VideoSummary } from "../../../studio/server/projects";
-import { Button, buttonClass, cx } from "../../_components/ui";
+import { ChoiceButtons, SETUP } from "../../_components/AiChoice";
+import { buttonClass, cx } from "../../_components/ui";
 import { nextStep, STAGES, stageOf, type Stage } from "./next-step";
 
 const STAGE_INFO: Record<
@@ -54,14 +54,17 @@ export const NextStepCard = ({
   canWrite,
   writing,
   onWrite,
+  onWriteByHand,
 }: {
   slug: string;
   videos: VideoSummary[];
-  /** Whether Claude can write scripts (ANTHROPIC_API_KEY is set). */
+  /** Whether an AI provider is set up to write scripts. */
   canWrite: boolean;
   /** Videos whose scripts are being written right now. */
   writing: Set<number>;
   onWrite: (index: number) => void;
+  /** Starts the script from a template, to write in the editor. */
+  onWriteByHand: (index: number) => void;
 }) => {
   const progress = videos.map((video) => ({
     status: video.status,
@@ -128,21 +131,22 @@ export const NextStepCard = ({
         </ol>
       </div>
       {step.stage === "script" ? (
-        canWrite ? (
-          <Button
-            variant="primary"
-            className="self-start sm:self-center"
-            loading={writing.has(step.index)}
-            onClick={() => onWrite(step.index)}
-            icon={<Wand2 className="size-4" aria-hidden />}
-          >
-            Write script
-          </Button>
-        ) : (
-          <p className="max-w-60 text-xs text-faint">
-            Add ANTHROPIC_API_KEY to .env to write it with Claude.
-          </p>
-        )
+        <ChoiceButtons
+          className="self-start sm:self-center"
+          manual={{
+            label: "Write myself",
+            onSelect: () => onWriteByHand(step.index),
+            disabled: writing.has(step.index),
+          }}
+          ai={{
+            label: "Write with AI",
+            service: "AI writing",
+            available: canWrite,
+            setup: SETUP.writing,
+            onSelect: () => onWrite(step.index),
+            loading: writing.has(step.index),
+          }}
+        />
       ) : (
         <Link
           href={href}

@@ -43,16 +43,27 @@ export const VoiceSetting = ({
         <span>
           <span className="block text-sm font-medium">Voice</span>
           <span className="block text-xs text-faint">
-            Who narrates this video, and how they sound
+            {canList
+              ? "Who narrates this video, and how they sound"
+              : "Who narrates this video"}
           </span>
         </span>
       </div>
-      <VoicePicker
-        value={voice}
-        onChange={onChange}
-        fallback={fallback}
-        canList={canList}
-      />
+      {canList ? (
+        <VoicePicker
+          value={voice}
+          onChange={onChange}
+          fallback={fallback}
+          canList={canList}
+        />
+      ) : (
+        <p className="text-[13px] leading-relaxed text-muted">
+          You&apos;re the narrator. On each scene, use{" "}
+          <span className="text-text">Record my voice</span> or{" "}
+          <span className="text-text">Upload</span>. To have a voice read the
+          script for you instead, add an ElevenLabs key to .env.
+        </p>
+      )}
       {pending?.length ? (
         <Alert tone="info">
           {describeScenes(pending)} will be recorded when you click Record

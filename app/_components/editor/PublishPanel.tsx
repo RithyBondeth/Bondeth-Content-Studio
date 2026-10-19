@@ -10,7 +10,6 @@ import {
   Loader2,
   Megaphone,
   RefreshCw,
-  Sparkles,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BUNDLE_PIECE_LABELS, type BundlePiece } from "../../../src/lib/bundle";
@@ -18,6 +17,7 @@ import { FORMAT_NAMES, type VideoFormat } from "../../../src/lib/formats";
 import {
   charCount,
   checkPost,
+  blankPosts,
   clampCoverScene,
   composePost,
   parseHashtagInput,
@@ -39,6 +39,7 @@ import {
   startCoverAction,
 } from "../../actions";
 import { useConfirm } from "../ConfirmDialog";
+import { ChoiceCards, SETUP } from "../AiChoice";
 import { useToast } from "../Toast";
 import {
   Alert,
@@ -235,7 +236,7 @@ export const PublishPanel = ({
   /** A kit with no posts when publish.json doesn't exist yet. */
   initialKit: PublishKit;
   initialCovers: RenderFile[];
-  /** Whether a Claude API key is set. */
+  /** Whether an AI provider is set up. */
   canGenerate: boolean;
   /** Called before generating or exporting, e.g. to save pending edits. */
   beforeGenerate: () => Promise<boolean>;
@@ -290,7 +291,7 @@ export const PublishPanel = ({
       !(await confirm({
         title: "Write new posts?",
         description:
-          "Claude rewrites the titles, text and hashtags for every platform. Your edits here will be replaced.",
+          "AI rewrites the titles, text and hashtags for every platform. Your edits here will be replaced.",
         confirmLabel: "Regenerate",
       }))
     )
@@ -406,17 +407,15 @@ export const PublishPanel = ({
         <h3 id="publish-heading" className="text-sm font-medium">
           Publish
         </h3>
-        {kit.posts ? (
+        {kit.posts && canGenerate ? (
           <Button
             size="xs"
             variant="ghost"
             loading={generating}
-            disabled={!canGenerate}
-            title={canGenerate ? undefined : "Add ANTHROPIC_API_KEY to .env"}
             icon={<RefreshCw className="size-3.5" aria-hidden />}
             onClick={() => void generate()}
           >
-            {generating ? "Writing…" : "Regenerate"}
+            {generating ? "Writing…" : "Rewrite with AI"}
           </Button>
         ) : null}
       </div>
@@ -471,27 +470,36 @@ export const PublishPanel = ({
             onChange={(next) => updatePost(tab, next)}
           />
         ) : (
-          <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-line px-4 py-5 text-center">
-            <Megaphone className="size-5 text-accent-bright" aria-hidden />
-            <p className="text-[13px] leading-relaxed text-muted">
-              Write the titles, captions, calls to action and hashtags for
-              TikTok, Shorts, Reels and YouTube in one go.
+          <div className="flex flex-col gap-3">
+            <p className="flex items-center gap-2 text-[13px] leading-relaxed text-muted">
+              <Megaphone
+                className="size-4 shrink-0 text-accent-bright"
+                aria-hidden
+              />
+              Titles, captions, calls to action and hashtags for TikTok, Shorts,
+              Reels and YouTube.
             </p>
-            <Button
-              size="sm"
-              variant="primary"
-              loading={generating}
-              disabled={!canGenerate}
-              icon={<Sparkles className="size-4" aria-hidden />}
-              onClick={() => void generate()}
-            >
-              {generating ? "Writing posts…" : "Write posts"}
-            </Button>
-            {canGenerate ? null : (
-              <p className="text-[11px] text-faint">
-                Add ANTHROPIC_API_KEY to .env to write posts with Claude.
-              </p>
-            )}
+            <ChoiceCards
+              stacked
+              manual={{
+                label: "Write myself",
+                description:
+                  "Start with empty posts for every platform, with character counters as you type.",
+                disabled: generating,
+                onSelect: () =>
+                  setKit((current) => ({ ...current, posts: blankPosts() })),
+              }}
+              ai={{
+                label: generating ? "Writing posts…" : "Write with AI",
+                description:
+                  "Drafts all four platforms in one go from the narration. Edit anything after.",
+                service: "AI writing",
+                available: canGenerate,
+                setup: SETUP.writing,
+                loading: generating,
+                onSelect: () => void generate(),
+              }}
+            />
           </div>
         )}
 

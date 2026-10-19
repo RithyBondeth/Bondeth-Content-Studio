@@ -10,6 +10,7 @@ import {
   type VoiceSetting,
 } from "../../src/spec/schema";
 import { FORMAT_NAMES, type VideoFormat } from "../../src/lib/formats";
+import { hasWrittenPosts } from "../../src/lib/publish";
 import {
   MAX_MUSIC_UPLOAD_BYTES,
   MUSIC_UPLOAD_TYPES,
@@ -33,6 +34,7 @@ import {
   publicPath,
   savePlan,
   saveSpec,
+  slugify,
   uniquePlanSlug,
   type PlanFile,
 } from "../../pipeline/store";
@@ -52,7 +54,7 @@ export type VideoSummary = {
   status: VideoStatus;
   scenes: number;
   renders: RenderFile[];
-  /** Whether Claude has written its posts in the publish kit. */
+  /** Whether AI has written its posts in the publish kit. */
   hasPosts: boolean;
 };
 
@@ -114,7 +116,7 @@ export const getVideoSummaries = async (
         status: statusOf(spec),
         scenes: spec?.scenes.length ?? 0,
         renders: await listRenders(plan, index),
-        hasPosts: Boolean((await loadPublishKit(plan, index))?.posts),
+        hasPosts: hasWrittenPosts((await loadPublishKit(plan, index))?.posts),
       };
     }),
   );
@@ -188,26 +190,106 @@ export const createExampleProject = async (): Promise<string> => {
   return slug;
 };
 
-/** A starter spec for videos written by hand. */
-const starterSpec = (title: string): VideoSpecInput => ({
-  version: 1,
-  title,
-  language: "en",
-  captions: true,
-  scenes: [
-    {
-      type: "title",
-      heading: title,
-      narration: `Here's what you need to know about ${title}.`,
+type PlannedVideo = ContentPlan["videos"][number];
+
+/**
+ * A starter spec for videos written by hand, seeded from whatever the plan
+ * already says about the video: its hook, key points, and call to action.
+ */
+const starterSpec = (
+  video: Pick<PlannedVideo, "title"> & Partial<PlannedVideo>,
+  language = "en",
+): VideoSpecInput => {
+  const points = (video.keyPoints ?? []).filter(Boolean).slice(0, 6);
+  const action = video.callToAction?.trim() || "Follow for more";
+  return {
+    version: 1,
+    title: video.title,
+    language,
+    captions: true,
+    scenes: [
+      {
+        type: "title",
+        heading: video.title,
+        narration:
+          video.hook?.trim() ||
+          `Here's what you need to know about ${video.title}.`,
+      },
+      ...(points.length
+        ? [
+            {
+              type: "list" as const,
+              heading: "Key points",
+              items: points,
+              narration: points.join(". "),
+            },
+          ]
+        : []),
+      {
+        type: "cta",
+        heading: "Want more like this?",
+        action,
+        narration: `${action}.`.replace(/([.!?])\.$/, "$1"),
+      },
+    ],
+  };
+};
+
+/** A project with a title and empty video slots, planned and written by hand. */
+export const createBlankProject = async (input: {
+  title: string;
+  videos: number;
+  language: string;
+  audience?: string;
+  tone?: string;
+}): Promise<string> => {
+  const title = input.title.trim().split("\n")[0]!.slice(0, 80).trim();
+  if (!title) throw new Error("Give the project a title first.");
+  const count = Math.min(Math.max(Math.round(input.videos), 1), 20);
+  const slug = await uniquePlanSlug(slugify(title));
+  await savePlan({
+    version: 1,
+    slug,
+    idea: input.title.trim(),
+    createdAt: new Date().toISOString(),
+    options: {
+      videos: count,
+      language: input.language || "en",
+      audience: input.audience?.trim() || undefined,
+      tone: input.tone?.trim() || undefined,
     },
-    {
-      type: "cta",
-      heading: "Want more like this?",
-      action: "Follow for more",
-      narration: "Follow for more videos like this.",
+    plan: {
+      title,
+      audience: input.audience?.trim() ?? "",
+      goal: "",
+      tone: input.tone?.trim() ?? "",
+      pillars: [],
+      videos: Array.from({ length: count }, (_, i) => ({
+        title: `Video ${i + 1}`,
+        pillar: "",
+        hook: "",
+        angle: "",
+        keyPoints: [],
+        callToAction: "",
+      })),
+      schedule: { postsPerWeek: 3, notes: "" },
     },
-  ],
-});
+  });
+  return slug;
+};
+
+/** Gives a planned video a starter script to write by hand, instead of with AI. */
+export const startScriptByHand = async (slug: string, index: number) => {
+  const plan = await loadPlan(slug);
+  const video = plan.plan.videos[index];
+  if (!video) throw new Error("That video isn't in the plan.");
+  if (await loadSpec(plan, index)) return;
+  await saveSpec(
+    plan,
+    index,
+    applyBrandKit(starterSpec(video, plan.options.language), plan.brand),
+  );
+};
 
 /** Adds a video to a plan with a starter script, for writing by hand. */
 export const addBlankVideo = async (slug: string, title: string) => {
@@ -240,7 +322,10 @@ export const addBlankVideo = async (slug: string, title: string) => {
   await saveSpec(
     updated,
     index,
-    applyBrandKit(starterSpec(videoTitle), plan.brand),
+    applyBrandKit(
+      starterSpec({ title: videoTitle }, plan.options.language),
+      plan.brand,
+    ),
   );
   return index;
 };

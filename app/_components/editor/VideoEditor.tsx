@@ -10,7 +10,6 @@ import {
   CircleAlert,
   Loader2,
   Clapperboard,
-  Mic,
   Monitor,
   Redo2,
   Send,
@@ -42,6 +41,7 @@ import {
 } from "../../actions";
 import { AppearanceSwitch } from "../Appearance";
 import { useConfirm } from "../ConfirmDialog";
+import { AiButton, SETUP } from "../AiChoice";
 import { useToast } from "../Toast";
 import { Alert, Button, Skeleton, cx } from "../ui";
 import {
@@ -737,32 +737,29 @@ export const VideoEditor = ({
           <SaveIndicator state={saveState} />
           <AppearanceSwitch className="hidden md:flex" />
           <FormatToggle value={format} onChange={setFormat} />
-          <Button
-            variant={allVoiced ? "secondary" : "primary"}
-            loading={voicing}
-            disabled={!keys.elevenLabs}
-            title={
-              keys.elevenLabs
-                ? "Record the narration with ElevenLabs"
-                : "Add ELEVENLABS_API_KEY to .env"
-            }
-            onClick={() => void recordVoice()}
-            icon={
-              allVoiced ? (
+          {/* Your own voice is recorded per scene; this voices every other scene with AI. */}
+          <AiButton
+            lead={!allVoiced}
+            option={{
+              label: voicing
+                ? "Recording…"
+                : allVoiced
+                  ? "Voice ready"
+                  : voicedCount
+                    ? `AI voice-over (${toRecord} left)`
+                    : "AI voice-over",
+              description:
+                "Voice every scene you haven't recorded yourself with ElevenLabs",
+              service: "AI voice",
+              available: keys.elevenLabs,
+              setup: SETUP.voice,
+              loading: voicing,
+              icon: allVoiced ? (
                 <Check className="size-4 text-success" aria-hidden />
-              ) : (
-                <Mic className="size-4" aria-hidden />
-              )
-            }
-          >
-            {voicing
-              ? "Recording…"
-              : allVoiced
-                ? "Voice ready"
-                : voicedCount
-                  ? `Record voice (${toRecord} left)`
-                  : "Record voice"}
-          </Button>
+              ) : undefined,
+              onSelect: () => void recordVoice(),
+            }}
+          />
         </div>
       </header>
 
@@ -816,6 +813,11 @@ export const VideoEditor = ({
                 }}
                 onChange={(next) => updateScene(selected, next)}
                 onChangeType={(type) => void changeTemplate(selected, type)}
+                aiVoice={{
+                  available: keys.elevenLabs,
+                  loading: voicing,
+                  onSelect: () => void recordVoice(),
+                }}
               />
             ) : (
               <Alert tone="info">Add a scene to start editing.</Alert>
@@ -890,7 +892,7 @@ export const VideoEditor = ({
               scenes={spec.scenes}
               initialKit={initialPublishKit}
               initialCovers={initialCovers}
-              canGenerate={keys.claude}
+              canGenerate={keys.ai}
               beforeGenerate={flush}
             />
           </div>

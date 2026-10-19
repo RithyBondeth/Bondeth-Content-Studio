@@ -77,7 +77,8 @@ export const recordingFileName = (sceneIndex: number, bytes: Buffer) =>
     .slice(0, 10)}.mp3`;
 
 /**
- * Turns a browser recording (usually WebM/Opus) into an MP3 voice-over for
+ * Turns a browser recording (usually WebM/Opus) or an uploaded audio file
+ * (MP3, WAV, M4A, ...) into an MP3 voice-over for
  * one scene, saved in the video's media folder (relative to public/).
  *
  * Browsers record WebM, which Remotion's renderer can't reliably mix in, so
@@ -94,7 +95,9 @@ export const saveRecording = async (
 ): Promise<SceneAudio> => {
   if (bytes.length === 0) throw new Error("The recording is empty.");
   if (bytes.length > MAX_RECORDING_BYTES) {
-    throw new Error("That recording is too long. Keep each scene short.");
+    throw new Error(
+      "That recording is over 25 MB. Keep each scene short, or upload an MP3.",
+    );
   }
 
   const src = path.posix.join(mediaDir, recordingFileName(sceneIndex, bytes));
