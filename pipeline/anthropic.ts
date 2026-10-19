@@ -4,14 +4,23 @@ import type { z } from "zod";
 import type { GenerateOptions } from "./llm";
 import type { ProviderSettings } from "./providers";
 
-let client: Anthropic | null = null;
+let cached: { key: string; client: Anthropic } | null = null;
 
-const getClient = (settings: ProviderSettings) => {
-  client ??= new Anthropic({
-    apiKey: settings.apiKey,
-    ...(settings.baseUrl ? { baseURL: settings.baseUrl } : {}),
-  });
-  return client;
+/** One client per key and endpoint, rebuilt when either changes in Settings. */
+export const getClaudeClient = (
+  settings: Pick<ProviderSettings, "apiKey" | "baseUrl">,
+) => {
+  const key = `${settings.apiKey ?? ""}\n${settings.baseUrl ?? ""}`;
+  if (cached?.key !== key) {
+    cached = {
+      key,
+      client: new Anthropic({
+        apiKey: settings.apiKey,
+        ...(settings.baseUrl ? { baseURL: settings.baseUrl } : {}),
+      }),
+    };
+  }
+  return cached.client;
 };
 
 /** Asks Claude for JSON matching `schema` and returns the validated result. */
@@ -21,7 +30,7 @@ export const generateWithClaude = async <T extends z.ZodType>(
 ): Promise<z.infer<T>> => {
   let response;
   try {
-    response = await getClient(settings).beta.messages.parse({
+    response = await getClaudeClient(settings).beta.messages.parse({
       model: settings.model,
       max_tokens: 16000,
       // If the model declines for policy reasons, the API retries on its
@@ -38,7 +47,7 @@ export const generateWithClaude = async <T extends z.ZodType>(
   } catch (error) {
     if (error instanceof Anthropic.AuthenticationError) {
       throw new Error(
-        "Claude rejected the API key. Set ANTHROPIC_API_KEY in .env (see .env.example).",
+        "Claude rejected the API key. Check it in Settings (or ANTHROPIC_API_KEY in .env).",
       );
     }
     if (error instanceof Anthropic.RateLimitError) {
@@ -59,7 +68,7 @@ export const generateWithClaude = async <T extends z.ZodType>(
     if (error instanceof Anthropic.AnthropicError) {
       // Raised before any request is sent, e.g. when no credentials are configured.
       throw new Error(
-        `${error.message}\nSet ANTHROPIC_API_KEY in .env (see .env.example).`,
+        `${error.message}\nAdd your Claude API key in Settings (or set ANTHROPIC_API_KEY in .env).`,
       );
     }
     throw error;

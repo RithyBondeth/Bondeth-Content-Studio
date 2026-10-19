@@ -1,7 +1,7 @@
 import "server-only";
-// Importing config loads .env, the same way the CLI does.
-import "../../pipeline/config";
 import { resolveProvider } from "../../pipeline/providers";
+// Importing settings loads .env, the same way the CLI does.
+import { currentEnv } from "../../pipeline/settings";
 
 export type KeyStatus = {
   /** The AI provider that writes plans, scripts, and posts is set up. */
@@ -15,13 +15,15 @@ export type KeyStatus = {
   pexels: boolean;
 };
 
+/** What's set up, from .env and Settings as they are right now. */
 export const getKeyStatus = (): KeyStatus => {
-  const provider = resolveProvider();
+  const env = currentEnv();
+  const provider = resolveProvider(env);
   return {
     ai: provider.ready,
     aiName: provider.name,
-    elevenLabs: Boolean(process.env.ELEVENLABS_API_KEY),
-    openai: Boolean(process.env.OPENAI_API_KEY),
-    pexels: Boolean(process.env.PEXELS_API_KEY),
+    elevenLabs: Boolean(env.ELEVENLABS_API_KEY?.trim()),
+    openai: Boolean(env.OPENAI_API_KEY?.trim()),
+    pexels: Boolean(env.PEXELS_API_KEY?.trim()),
   };
 };

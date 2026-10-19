@@ -23,11 +23,3 @@ export const config = {
   /** OpenAI image model for AI illustrations. Only used when OPENAI_API_KEY is set. */
   imageModel: process.env.OPENAI_IMAGE_MODEL ?? "gpt-image-1",
 };
-
-export const requireEnv = (name: string, hint: string): string => {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`${name} is not set. ${hint}`);
-  }
-  return value;
-};
