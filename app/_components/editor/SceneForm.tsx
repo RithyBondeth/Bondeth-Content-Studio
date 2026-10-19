@@ -15,13 +15,15 @@ import { ICONS } from "../../../src/lib/icons";
 import { SUPPORTED_LANGUAGES } from "../../../src/lib/languages";
 import { isSelfRecorded, needsReRecord } from "../../../src/lib/recording";
 import { countWords, estimateNarrationSeconds } from "../../../src/lib/timing";
-import type {
-  ChartPoint,
-  DiagramLayout,
-  DiagramNode,
-  Scene,
-  SceneType,
-  Transition,
+import { getSceneTransition } from "../../../src/lib/scene-style";
+import {
+  TRANSITIONS,
+  type ChartPoint,
+  type DiagramLayout,
+  type DiagramNode,
+  type Scene,
+  type SceneType,
+  type Transition,
 } from "../../../src/spec/schema";
 import {
   Alert,
@@ -137,13 +139,19 @@ const TextField = ({
   );
 };
 
-const TRANSITION_OPTIONS: { value: Transition; label: string }[] = [
-  { value: "fade", label: "Fade" },
-  { value: "slide", label: "Slide" },
-  { value: "wipe", label: "Wipe" },
-  { value: "zoom", label: "Zoom" },
-  { value: "cut", label: "Cut" },
-];
+const TRANSITION_LABELS: Record<Transition, string> = {
+  fade: "Fade",
+  slide: "Slide",
+  push: "Push up",
+  wipe: "Wipe",
+  zoom: "Zoom",
+  iris: "Circle reveal",
+  clock: "Clock wipe",
+  flip: "Card flip",
+  blur: "Blur through",
+  split: "Split open",
+  cut: "Cut",
+};
 
 /** Empty optional strings are stored as "not set". */
 const optional = (value: string) => (value.trim() ? value : undefined);
@@ -1109,22 +1117,26 @@ export const SceneForm = ({
           <Field
             label="Transition in"
             htmlFor={transitionId}
-            hint="How this scene replaces the one before it."
+            hint="How this scene replaces the one before it. Auto takes turns through a few calm ones."
           >
             <Select
               id={transitionId}
-              className="w-40"
-              value={scene.transition ?? "fade"}
+              className="w-48"
+              value={scene.transition ?? ""}
               onChange={(event) =>
                 onChange({
                   ...scene,
-                  transition: event.target.value as Transition,
+                  transition: (event.target.value || undefined) as
+                    Transition | undefined,
                 })
               }
             >
-              {TRANSITION_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
+              <option value="">
+                Auto ({TRANSITION_LABELS[getSceneTransition({}, index)]})
+              </option>
+              {TRANSITIONS.map((transition) => (
+                <option key={transition} value={transition}>
+                  {TRANSITION_LABELS[transition]}
                 </option>
               ))}
             </Select>

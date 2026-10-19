@@ -31,7 +31,19 @@ export const sceneAudioSchema = z.object({
   selfRecorded: z.object({ narration: z.string() }).optional(),
 });
 
-export const TRANSITIONS = ["fade", "slide", "wipe", "zoom", "cut"] as const;
+export const TRANSITIONS = [
+  "fade",
+  "slide",
+  "push",
+  "wipe",
+  "zoom",
+  "iris",
+  "clock",
+  "flip",
+  "blur",
+  "split",
+  "cut",
+] as const;
 
 const sceneBase = {
   /** What the voice-over says during this scene. Also used for captions. */
@@ -40,7 +52,11 @@ const sceneBase = {
   emoji: z.string().optional(),
   /** Overrides the length worked out from the audio or narration. */
   durationInSeconds: z.number().positive().optional(),
-  /** How this scene replaces the previous one. Defaults to "fade"; ignored on the first scene. */
+  /**
+   * How this scene replaces the previous one. When left out, scenes take
+   * turns through a few calm transitions (src/lib/scene-style.ts), so
+   * neighbours never share one. Ignored on the first scene.
+   */
   transition: z.enum(TRANSITIONS).optional(),
   /** Filled in by the voice step. */
   audio: sceneAudioSchema.optional(),

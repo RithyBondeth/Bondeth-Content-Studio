@@ -18,6 +18,7 @@ import { getDuckFactor, getNarrationSpans, type Span } from "../lib/ducking";
 import { prepareCodeSteps, type PreparedCodeStep } from "../lib/prepare-code";
 import { getSoundSchedule, SOUNDS } from "../lib/sfx";
 import { FPS, getVideoTiming } from "../lib/timing";
+import { getSceneTransition } from "../lib/scene-style";
 import { renderTransition } from "../lib/transitions";
 import { ChartScene } from "../scenes/ChartScene";
 import { CodeScene } from "../scenes/CodeScene";
@@ -148,6 +149,8 @@ export const ExplainerVideo: React.FC<ExplainerVideoProps> = (props) => {
     [spec, timing],
   );
   const last = spec.scenes.length - 1;
+  const { width, height } = useVideoConfig();
+  const size = useMemo(() => ({ width, height }), [width, height]);
 
   return (
     <ThemeProvider theme={spec.theme} brand={spec.brand}>
@@ -175,7 +178,7 @@ export const ExplainerVideo: React.FC<ExplainerVideoProps> = (props) => {
         <TransitionSeries>
           {spec.scenes.map((scene, index) => {
             const transitionFrames = timing.transitions[index]!;
-            const transition = scene.transition ?? "fade";
+            const transition = getSceneTransition(scene, index);
             return (
               <Fragment key={index}>
                 {transitionFrames > 0 && transition !== "cut"
@@ -183,6 +186,7 @@ export const ExplainerVideo: React.FC<ExplainerVideoProps> = (props) => {
                       `transition-${index}`,
                       transition,
                       transitionFrames,
+                      size,
                     )
                   : null}
                 <TransitionSeries.Sequence

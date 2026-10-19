@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { whyIsTheSkyBlue } from "../examples/why-is-the-sky-blue";
-import { videoSpecSchema, type VideoSpecInput } from "../spec/schema";
+import {
+  videoSpecSchema,
+  type Transition,
+  type VideoSpecInput,
+} from "../spec/schema";
 import {
   getChartPointStarts,
   getCodeStepStarts,
@@ -27,9 +31,7 @@ const scheduleOf = (
   return { spec, timing, sounds: getSoundSchedule(spec, timing, FPS) };
 };
 
-const statement = (
-  transition?: "fade" | "slide" | "wipe" | "zoom" | "cut",
-) => ({
+const statement = (transition?: Transition) => ({
   type: "statement" as const,
   text: "x",
   narration: "x",
@@ -72,7 +74,7 @@ test("sfx is on by default", () => {
   assert.equal(sounds.length, 1);
 });
 
-test("fades and cuts are silent; slides and wipes whoosh; zooms rise", () => {
+test("fades, blurs and cuts are silent; moves whoosh; zooms and irises rise", () => {
   const { timing, sounds } = scheduleOf([
     statement(),
     statement("fade"),
@@ -80,12 +82,36 @@ test("fades and cuts are silent; slides and wipes whoosh; zooms rise", () => {
     statement("slide"),
     statement("wipe"),
     statement("zoom"),
-    statement(),
+    statement("blur"),
+    statement("push"),
+    statement("iris"),
+    statement("clock"),
+    statement("flip"),
+    statement("split"),
   ]);
   assert.deepEqual(sounds, [
     { sound: "whoosh", frame: timing.starts[3] },
     { sound: "whoosh", frame: timing.starts[4] },
     { sound: "rise", frame: timing.starts[5] },
+    { sound: "whoosh", frame: timing.starts[7] },
+    { sound: "rise", frame: timing.starts[8] },
+    { sound: "whoosh", frame: timing.starts[9] },
+    { sound: "whoosh", frame: timing.starts[10] },
+    { sound: "whoosh", frame: timing.starts[11] },
+  ]);
+});
+
+test("scenes without a transition use the default rotation's sound", () => {
+  const { timing, sounds } = scheduleOf([
+    statement(),
+    statement(),
+    statement(),
+    statement(),
+  ]);
+  // Fade (silent), then slide and zoom.
+  assert.deepEqual(sounds, [
+    { sound: "whoosh", frame: timing.starts[2] },
+    { sound: "rise", frame: timing.starts[3] },
   ]);
 });
 
@@ -207,14 +233,19 @@ test("one sound per cue in every cued scene type", () => {
   // 3 list items, 1 stat, 4 chart bars, 2 comparison sides, 4 diagram nodes.
   assert.equal(reveals.length, 14);
   // Plus the slide, zoom, wipe and slide into the list, stat, comparison and
-  // diagram scenes. The chart fades in, so it's silent.
+  // diagram scenes, and the default push, iris and slide into the chart, the
+  // second statement and the call to action. The first statement fades in,
+  // so it's silent.
   assert.deepEqual(
     sounds.filter(({ sound }) => sound === "whoosh" || sound === "rise"),
     [
       { sound: "whoosh", frame: timing.starts[2] },
       { sound: "rise", frame: timing.starts[3] },
+      { sound: "whoosh", frame: timing.starts[4] },
       { sound: "whoosh", frame: timing.starts[5] },
+      { sound: "rise", frame: timing.starts[6] },
       { sound: "whoosh", frame: timing.starts[7] },
+      { sound: "whoosh", frame: timing.starts[8] },
     ],
   );
 });

@@ -7,6 +7,7 @@ import {
   getListItemStarts,
   getStatCountStart,
 } from "./reveals";
+import { getSceneTransition } from "./scene-style";
 import type { VideoTiming } from "./timing";
 
 export type SoundName = "whoosh" | "rise" | "pop" | "tick";
@@ -22,13 +23,19 @@ export const SOUNDS: Record<
   tick: { src: "sfx/tick.wav", volume: 0.3, durationInFrames: 2 },
 };
 
-/** The sound that plays as each transition starts. Fades and cuts are silent. */
+/** The sound that plays as each transition starts. Fades, blurs and cuts are silent. */
 const TRANSITION_SOUNDS: Record<Transition, SoundName | undefined> = {
   fade: undefined,
   cut: undefined,
+  blur: undefined,
   slide: "whoosh",
+  push: "whoosh",
   wipe: "whoosh",
+  clock: "whoosh",
+  flip: "whoosh",
+  split: "whoosh",
   zoom: "rise",
+  iris: "rise",
 };
 
 export type ScheduledSound = {
@@ -83,7 +90,7 @@ export const getSoundSchedule = (
   const sounds: ScheduledSound[] = [];
   spec.scenes.forEach((scene, index) => {
     const start = timing.starts[index]!;
-    const transitionSound = TRANSITION_SOUNDS[scene.transition ?? "fade"];
+    const transitionSound = TRANSITION_SOUNDS[getSceneTransition(scene, index)];
     if (transitionSound && timing.transitions[index]! > 0) {
       sounds.push({ sound: transitionSound, frame: start });
     }
