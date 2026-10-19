@@ -1,5 +1,13 @@
 /** Moods of the bundled music beds. The script step picks one per video. */
-export const MUSIC_MOODS = ["calm", "upbeat", "curious"] as const;
+export const MUSIC_MOODS = [
+  "calm",
+  "upbeat",
+  "curious",
+  "inspiring",
+  "playful",
+  "focused",
+  "dramatic",
+] as const;
 export type MusicMood = (typeof MUSIC_MOODS)[number];
 
 export type MusicTrack = {
@@ -29,6 +37,30 @@ export const MUSIC_TRACKS: Record<MusicMood, MusicTrack> = {
     label: "Curious",
     description: "Mellow minor-key mallets",
     src: "music/curious.wav",
+  },
+  inspiring: {
+    mood: "inspiring",
+    label: "Inspiring",
+    description: "Rising arpeggios over a hopeful chord loop",
+    src: "music/inspiring.wav",
+  },
+  playful: {
+    mood: "playful",
+    label: "Playful",
+    description: "Bouncy mallets and a skipping beat",
+    src: "music/playful.wav",
+  },
+  focused: {
+    mood: "focused",
+    label: "Focused",
+    description: "Steady, quiet plucks that stay out of the way",
+    src: "music/focused.wav",
+  },
+  dramatic: {
+    mood: "dramatic",
+    label: "Dramatic",
+    description: "Swelling minor-key pads and a pulsing bass",
+    src: "music/dramatic.wav",
   },
 };
 
