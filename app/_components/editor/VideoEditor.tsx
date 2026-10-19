@@ -26,6 +26,7 @@ import {
   type VideoSpecInput,
   type VoiceSetting as VoiceValue,
 } from "../../../src/spec/schema";
+import type { PublishKit } from "../../../src/lib/publish";
 import type { KeyStatus as Keys } from "../../../studio/server/env";
 import type { RenderFile } from "../../../studio/server/projects";
 import {
@@ -36,6 +37,7 @@ import {
 import { useToast } from "../Toast";
 import { Alert, Button, Skeleton, cx } from "../ui";
 import { MusicSetting } from "./MusicSetting";
+import { PublishPanel } from "./PublishPanel";
 import { RenderPanel } from "./RenderPanel";
 import { convertScene, SCENE_META, SCENE_SETTLE_FRAMES } from "./scene-meta";
 import { SceneForm } from "./SceneForm";
@@ -203,6 +205,8 @@ export const VideoEditor = ({
   videoCount,
   initialSpec,
   initialRenders,
+  initialPublishKit,
+  initialCovers,
   keys,
   brandTheme,
   projectVoice,
@@ -213,6 +217,9 @@ export const VideoEditor = ({
   videoCount: number;
   initialSpec: VideoSpecInput;
   initialRenders: RenderFile[];
+  /** The saved publish kit, or a blank one with no posts yet. */
+  initialPublishKit: PublishKit;
+  initialCovers: RenderFile[];
   keys: Keys;
   /** The project's brand kit theme, offered in the theme picker. */
   brandTheme?: ThemeValue;
@@ -682,6 +689,17 @@ export const VideoEditor = ({
               index={index}
               initialRenders={initialRenders}
               beforeRender={flush}
+            />
+          </div>
+          <div className="relative">
+            <PublishPanel
+              slug={slug}
+              index={index}
+              scenes={spec.scenes}
+              initialKit={initialPublishKit}
+              initialCovers={initialCovers}
+              canGenerate={keys.claude}
+              beforeGenerate={flush}
             />
           </div>
         </aside>

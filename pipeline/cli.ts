@@ -5,14 +5,26 @@ import { videoSpecSchema, type VideoSpecInput } from "../src/spec/schema";
 import { getVideoTiming, FPS } from "../src/lib/timing";
 import { ROOT } from "./config";
 import { createPlan } from "./plan";
-import { openStudio, renderVideo } from "./render";
+import {
+  composePost,
+  clampCoverScene,
+  PLATFORM_RULES,
+  PLATFORMS,
+} from "../src/lib/publish";
+import { blankPublishKit, createPublishKit } from "./publish";
+import { openStudio, renderCover, renderVideo } from "./render";
 import { createVideoSpec } from "./script";
 import {
+  coverPath,
+  exists,
   listPlans,
   loadPlan,
+  loadPublishKit,
   loadSpec,
   mediaDir,
   outputPath,
+  publishPath,
+  savePublishKit,
   saveSpec,
   specPath,
   type PlanFile,
@@ -33,6 +45,7 @@ Commands:
   voice <plan>          Generate ElevenLabs voice-overs and caption timings
   render <plan>         Render videos to MP4
   preview <plan>        Open one video in Remotion Studio (--video, default 1)
+  publish <plan>        Write titles, captions and hashtags per platform, and export cover images
   make "<idea>"         Do all of the above in one go
   list [plan]           Show plans, or the videos in one plan and their status
   voices [search]       List the voices in your ElevenLabs account
@@ -47,7 +60,8 @@ Options:
   --format <name>       vertical, landscape, or both (render, make; default vertical)
   --no-voice            Skip the voice-over; captions are timed from the text (make)
   --voice <id>          ElevenLabs voice to record with; saved as each video's voice (voice, make)
-  --force               Rewrite scripts that already exist (script)
+  --cover <n>           Scene to use as the cover image (publish; default: the title scene)
+  --force               Rewrite scripts or publish kits that already exist (script, publish)
 
 Examples:
   npm run pipeline -- plan "Personal finance basics for university students" --videos 7
@@ -56,6 +70,7 @@ Examples:
   npm run pipeline -- voices british
   npm run pipeline -- voice personal-finance-basics --voice JBFqnCBsd6RMkjVDRZzb
   npm run pipeline -- render personal-finance-basics --video 1 --format both
+  npm run pipeline -- publish personal-finance-basics --video 1 --cover 3
   npm run pipeline -- make "Why history matters" --videos 3 --no-voice
 `;
 
@@ -71,6 +86,7 @@ const { values, positionals } = parseArgs({
     format: { type: "string" },
     "no-voice": { type: "boolean" },
     voice: { type: "string" },
+    cover: { type: "string" },
     force: { type: "boolean" },
     help: { type: "boolean", short: "h" },
   },
@@ -329,6 +345,74 @@ const preview = async (planSlug: string) => {
   await openStudio(spec);
 };
 
+/** Prints a publish kit, ready to copy from the terminal. */
+const printPublishKit = (
+  kit: NonNullable<Awaited<ReturnType<typeof loadPublishKit>>>,
+) => {
+  if (!kit.posts) return;
+  for (const platform of PLATFORMS) {
+    const post = kit.posts[platform];
+    const rules = PLATFORM_RULES[platform];
+    log(`\n  ── ${rules.label} ──`);
+    if (post.title !== null) log(`  Title: ${post.title}`);
+    log(
+      composePost(post)
+        .split("\n")
+        .map((line) => `  ${line}`)
+        .join("\n"),
+    );
+  }
+};
+
+const publish = async (planSlug: string) => {
+  const file = await loadPlan(planSlug);
+  const indexes = selectVideos(file);
+  const coverArg =
+    values.cover === undefined
+      ? undefined
+      : parsePositiveInt(values.cover, "cover", 1) - 1;
+  step(`Writing publish kits for "${file.plan.title}"`);
+
+  for (const index of indexes) {
+    const spec = await loadSpec(file, index);
+    const title = file.plan.videos[index]!.title;
+    if (!spec) {
+      log(`  ${index + 1}. ${title}: no script yet, skipping`);
+      continue;
+    }
+    if (coverArg !== undefined && coverArg >= spec.scenes.length) {
+      throw new Error(
+        `"${title}" has ${spec.scenes.length} scenes; there is no scene ${coverArg + 1}.`,
+      );
+    }
+    const previous = await loadPublishKit(file, index);
+    const base = previous ?? blankPublishKit(spec);
+    const withCover =
+      coverArg === undefined ? base : { ...base, coverScene: coverArg };
+
+    let kit = withCover;
+    if (values.force || !withCover.posts) {
+      log(`  ${index + 1}. ${title}: writing posts…`);
+      kit = await createPublishKit(file, index, spec, withCover);
+    } else {
+      log(
+        `  ${index + 1}. ${title}: posts already written (use --force to rewrite)`,
+      );
+    }
+    await savePublishKit(file, index, kit);
+    printPublishKit(kit);
+    log(`\n  Saved ${relative(publishPath(file, index))}. Edit it freely.`);
+
+    const scene = clampCoverScene(kit.coverScene, spec.scenes.length);
+    for (const format of FORMAT_NAMES) {
+      const output = coverPath(file, index, format);
+      log(`  ${index + 1}. Exporting ${format} cover (scene ${scene + 1})…`);
+      await renderCover(spec, format, scene, output);
+      log(`     ${relative(output)}`);
+    }
+  }
+};
+
 const make = async (idea: string) => {
   const file = await plan(idea);
   await script(file.slug);
@@ -367,6 +451,22 @@ const list = async (planSlug: string | undefined) => {
         : `scripted, about ${formatSeconds(specSeconds(spec))}`;
     log(`  ${index + 1}. ${video.title}  [${status}]`);
     if (spec) log(`     ${relative(specPath(file, index))}`);
+    const kit = await loadPublishKit(file, index);
+    if (kit?.posts) {
+      log(`     Publish kit: ${relative(publishPath(file, index))}`);
+      for (const platform of PLATFORMS) {
+        const post = kit.posts[platform];
+        const name = PLATFORM_RULES[platform].label.padEnd(17);
+        log(
+          `       ${name}${post.title ?? post.text.split("\n")[0]}  ${post.hashtags.join(" ")}`,
+        );
+      }
+    }
+    for (const format of FORMAT_NAMES) {
+      const cover = coverPath(file, index, format);
+      if (await exists(cover))
+        log(`     Cover (${format}): ${relative(cover)}`);
+    }
   }
 };
 
@@ -412,6 +512,9 @@ const main = async () => {
       break;
     case "preview":
       await preview(requireArg(argument, "preview <plan> --video <n>"));
+      break;
+    case "publish":
+      await publish(requireArg(argument, "publish <plan> [--video <n>]"));
       break;
     case "make":
       await make(requireArg(argument, 'make "<idea>"'));

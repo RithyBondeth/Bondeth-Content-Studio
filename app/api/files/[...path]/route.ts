@@ -4,14 +4,20 @@ import path from "node:path";
 import { Readable } from "node:stream";
 import { OUT_DIR } from "../../../../pipeline/config";
 
-/** Serves rendered videos from out/, with range support so videos can seek. */
+const CONTENT_TYPES: Record<string, string> = {
+  ".mp4": "video/mp4",
+  ".png": "image/png",
+};
+
+/** Serves rendered videos and cover images from out/, with range support so videos can seek. */
 export const GET = async (
   request: Request,
   { params }: { params: Promise<{ path: string[] }> },
 ) => {
   const { path: segments } = await params;
   const file = path.resolve(OUT_DIR, ...segments);
-  if (!file.startsWith(OUT_DIR + path.sep) || !file.endsWith(".mp4")) {
+  const contentType = CONTENT_TYPES[path.extname(file)];
+  if (!file.startsWith(OUT_DIR + path.sep) || !contentType) {
     return new Response("Not found", { status: 404 });
   }
 
@@ -22,7 +28,7 @@ export const GET = async (
 
   const download = new URL(request.url).searchParams.has("download");
   const headers: Record<string, string> = {
-    "Content-Type": "video/mp4",
+    "Content-Type": contentType,
     "Accept-Ranges": "bytes",
     "Cache-Control": "no-cache",
   };
