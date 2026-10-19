@@ -59,6 +59,19 @@ export const getChartPointStarts = (
     fps,
   );
 
+/** Each diagram node appears as the narrator says its cue. */
+export const getDiagramNodeStarts = (
+  scene: SceneOf<"diagram">,
+  durationInFrames: number,
+  fps: number,
+): number[] =>
+  getItemStarts(
+    scene,
+    scene.nodes.map((node) => node.cue),
+    durationInFrames,
+    fps,
+  );
+
 /**
  * Each comparison side appears when the narration turns to it. Without a
  * cue, the second side appears about a third of the way through.

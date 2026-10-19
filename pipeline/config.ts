@@ -21,6 +21,8 @@ export const config = {
     voiceId: process.env.ELEVENLABS_VOICE_ID ?? "JBFqnCBsd6RMkjVDRZzb",
     modelId: process.env.ELEVENLABS_MODEL_ID ?? "eleven_multilingual_v2",
   },
+  /** OpenAI image model for AI illustrations. Only used when OPENAI_API_KEY is set. */
+  imageModel: process.env.OPENAI_IMAGE_MODEL ?? "gpt-image-1",
 };
 
 export const requireEnv = (name: string, hint: string): string => {

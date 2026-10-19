@@ -3,20 +3,26 @@
 import { CircleAlert, Mic, Plus, Trash2 } from "lucide-react";
 import { useId, useMemo, useState } from "react";
 import { findUnmatchedCues, moveCuesWithItems } from "../../../src/lib/cues";
+import { ICON_NAMES, type IconName } from "../../../src/lib/icon-names";
+import { ICONS } from "../../../src/lib/icons";
 import { SUPPORTED_LANGUAGES } from "../../../src/lib/languages";
 import { countWords, estimateNarrationSeconds } from "../../../src/lib/timing";
 import type {
   ChartPoint,
+  DiagramLayout,
+  DiagramNode,
   Scene,
   SceneType,
   Transition,
 } from "../../../src/spec/schema";
 import { Badge, Button, Field, Input, Select, Textarea } from "../ui";
+import { ImageFields, type ImageContext } from "./ImageFields";
 import { SCENE_META, SCENE_TYPE_ORDER } from "./scene-meta";
 
 type SceneFormProps = {
   scene: Scene;
   index: number;
+  imageContext: ImageContext;
   onChange: (scene: Scene) => void;
   onChangeType: (type: SceneType) => void;
 };
@@ -331,11 +337,124 @@ const ChartPointsField = ({
   );
 };
 
+const MIN_DIAGRAM_NODES = 2;
+const MAX_DIAGRAM_NODES = 6;
+
+const DIAGRAM_LAYOUTS: { value: DiagramLayout; label: string }[] = [
+  { value: "flow", label: "Flow: steps joined by arrows" },
+  { value: "cycle", label: "Cycle: steps that loop back" },
+  { value: "hub", label: "Hub: the first node in the middle" },
+];
+
+/** "book-open" → "Book open". */
+const iconLabel = (name: IconName) =>
+  name.charAt(0).toUpperCase() + name.slice(1).replace(/-/g, " ");
+
+/** One row per diagram node: its icon, label, and cue. */
+const DiagramNodesField = ({
+  nodes,
+  unmatched,
+  onChange,
+}: {
+  nodes: DiagramNode[];
+  unmatched: Set<string>;
+  onChange: (nodes: DiagramNode[]) => void;
+}) => {
+  const update = (index: number, change: Partial<DiagramNode>) =>
+    onChange(
+      nodes.map((node, i) => (i === index ? { ...node, ...change } : node)),
+    );
+  return (
+    <Field
+      label="Nodes"
+      hint={`${MIN_DIAGRAM_NODES} to ${MAX_DIAGRAM_NODES}, in order. Each appears when the narrator says its cue, if it has one.`}
+    >
+      <div className="flex flex-col gap-2">
+        {nodes.map((node, index) => {
+          const Icon = node.icon ? ICONS[node.icon] : null;
+          return (
+            <div
+              key={index}
+              className="flex flex-col gap-1.5 rounded-xl border border-line p-2"
+            >
+              <div className="flex items-center gap-1.5">
+                <span
+                  className="grid size-10 shrink-0 place-items-center rounded-full border border-accent/60 text-accent-bright"
+                  aria-hidden
+                >
+                  {Icon ? (
+                    <Icon className="size-4" />
+                  ) : (
+                    <span className="text-xs font-semibold">{index + 1}</span>
+                  )}
+                </span>
+                <Select
+                  aria-label={`Node ${index + 1} icon`}
+                  className="w-36 shrink-0"
+                  value={node.icon ?? ""}
+                  onChange={(event) =>
+                    update(index, {
+                      icon: (event.target.value || undefined) as
+                        IconName | undefined,
+                    })
+                  }
+                >
+                  <option value="">Number</option>
+                  {ICON_NAMES.map((name) => (
+                    <option key={name} value={name}>
+                      {iconLabel(name)}
+                    </option>
+                  ))}
+                </Select>
+                <Input
+                  aria-label={`Node ${index + 1} label`}
+                  placeholder="Label"
+                  value={node.label}
+                  onChange={(event) =>
+                    update(index, { label: event.target.value })
+                  }
+                />
+                <Button
+                  size="sm"
+                  variant="danger"
+                  disabled={nodes.length <= MIN_DIAGRAM_NODES}
+                  aria-label={`Remove node ${index + 1}`}
+                  onClick={() => onChange(nodes.filter((_, i) => i !== index))}
+                  icon={<Trash2 className="size-3.5" aria-hidden />}
+                />
+              </div>
+              <CueInput
+                aria-label={`Cue for node ${index + 1}`}
+                placeholder={`Cue: ${CUE_PLACEHOLDER.toLowerCase()}`}
+                value={node.cue ?? ""}
+                unmatched={unmatched.has(`nodes.${index}.cue`)}
+                onChange={(event) =>
+                  update(index, { cue: optional(event.target.value) })
+                }
+              />
+            </div>
+          );
+        })}
+        <Button
+          size="sm"
+          disabled={nodes.length >= MAX_DIAGRAM_NODES}
+          onClick={() => onChange([...nodes, { label: "" }])}
+          icon={<Plus className="size-3.5" aria-hidden />}
+        >
+          Add node
+        </Button>
+      </div>
+    </Field>
+  );
+};
+
 const TypeFields = ({
   scene,
+  imageContext,
   onChange,
 }: {
   scene: Scene;
+  imageContext: ImageContext;
   onChange: (scene: Scene) => void;
 }) => {
   // Paths like "cues.1" or "left.cue" for cues that aren't in the narration.
@@ -694,6 +813,45 @@ const TypeFields = ({
           </div>
         </>
       );
+    case "image":
+      return (
+        <ImageFields scene={scene} context={imageContext} onChange={onChange} />
+      );
+    case "diagram":
+      return (
+        <>
+          <TextField
+            label="Heading"
+            value={scene.heading}
+            placeholder="Optional"
+            onChange={(value) =>
+              onChange({ ...scene, heading: optional(value) })
+            }
+          />
+          <Field label="Layout">
+            <Select
+              value={scene.layout ?? "flow"}
+              onChange={(event) =>
+                onChange({
+                  ...scene,
+                  layout: event.target.value as DiagramLayout,
+                })
+              }
+            >
+              {DIAGRAM_LAYOUTS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <DiagramNodesField
+            nodes={scene.nodes}
+            unmatched={unmatched}
+            onChange={(nodes) => onChange({ ...scene, nodes })}
+          />
+        </>
+      );
     case "cta":
       return (
         <>
@@ -747,7 +905,7 @@ const TemplatePicker = ({
   <div
     role="radiogroup"
     aria-label="Scene template"
-    className="grid grid-cols-5 gap-1.5 @xl:grid-cols-9"
+    className="grid grid-cols-4 gap-1.5 @md:grid-cols-6"
   >
     {SCENE_TYPE_ORDER.map((type) => {
       const meta = SCENE_META[type];
@@ -791,6 +949,7 @@ const TemplatePicker = ({
 export const SceneForm = ({
   scene,
   index,
+  imageContext,
   onChange,
   onChangeType,
 }: SceneFormProps) => {
@@ -857,7 +1016,11 @@ export const SceneForm = ({
         title="On screen"
         description="The text and visuals viewers see."
       >
-        <TypeFields scene={scene} onChange={onChange} />
+        <TypeFields
+          scene={scene}
+          imageContext={imageContext}
+          onChange={onChange}
+        />
       </Section>
 
       <Section title="Style & timing">

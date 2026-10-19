@@ -13,6 +13,7 @@ import { Background } from "../components/Background";
 import { Captions } from "../components/Captions";
 import { SceneFadeContext } from "../components/SceneFrame";
 import { getSceneWords } from "../lib/captions";
+import { resolveMedia } from "../lib/media";
 import { getDuckFactor, getNarrationSpans, type Span } from "../lib/ducking";
 import { prepareCodeSteps, type PreparedCodeStep } from "../lib/prepare-code";
 import { getSoundSchedule, SOUNDS } from "../lib/sfx";
@@ -22,6 +23,8 @@ import { ChartScene } from "../scenes/ChartScene";
 import { CodeScene } from "../scenes/CodeScene";
 import { ComparisonScene } from "../scenes/ComparisonScene";
 import { CtaScene } from "../scenes/CtaScene";
+import { DiagramScene } from "../scenes/DiagramScene";
+import { ImageScene } from "../scenes/ImageScene";
 import { ListScene } from "../scenes/ListScene";
 import { QuoteScene } from "../scenes/QuoteScene";
 import { StatementScene } from "../scenes/StatementScene";
@@ -66,10 +69,6 @@ export const calculateExplainerMetadata: CalculateMetadataFunction<
   };
 };
 
-/** Files in public/ are referenced by relative path; anything with a scheme is used as-is. */
-const resolveMedia = (src: string) =>
-  /^[a-z]+:/i.test(src) ? src : staticFile(src);
-
 type SceneViewProps = {
   scene: Scene;
   durationInFrames: number;
@@ -95,6 +94,10 @@ const SceneView: React.FC<SceneViewProps> = ({ scene, ...rest }) => {
       return <ComparisonScene scene={scene} {...rest} />;
     case "code":
       return <CodeScene scene={scene} {...rest} />;
+    case "image":
+      return <ImageScene scene={scene} {...rest} />;
+    case "diagram":
+      return <DiagramScene scene={scene} {...rest} />;
     case "cta":
       return <CtaScene scene={scene} {...rest} />;
   }
