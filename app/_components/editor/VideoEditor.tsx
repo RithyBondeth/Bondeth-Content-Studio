@@ -17,6 +17,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { VideoFormat } from "../../../src/lib/formats";
+import { isSelfRecorded } from "../../../src/lib/recording";
 import { FPS, getSceneSeconds, getVideoTiming } from "../../../src/lib/timing";
 import {
   videoSpecSchema,
@@ -359,8 +360,13 @@ export const VideoEditor = ({
     updateScenes((scenes) =>
       scenes.map((scene, i) => {
         if (i !== sceneIndex) return scene;
-        // New narration makes the recorded voice-over out of date.
-        if (scene.audio && next.narration !== scene.narration) {
+        // New narration makes an ElevenLabs voice-over out of date, so it's
+        // dropped. Your own recording is kept and flagged for a re-record.
+        if (
+          scene.audio &&
+          !isSelfRecorded(scene.audio) &&
+          next.narration !== scene.narration
+        ) {
           return { ...next, audio: undefined };
         }
         return next;

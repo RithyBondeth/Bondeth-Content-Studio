@@ -7,6 +7,7 @@ import type {
   VoiceSetting,
   VoiceSettings,
 } from "../src/spec/schema";
+import { isSelfRecorded } from "../src/lib/recording";
 import { resolveVoice, type ResolvedVoice } from "../src/lib/voice";
 import { alignmentToWords, type CharacterAlignment } from "./alignment";
 import { config, requireEnv } from "./config";
@@ -134,6 +135,8 @@ const sceneAudioSrc = (
 /**
  * The scenes (0-based) that recording would generate: ones with no
  * voice-over yet, or one made from different narration, voice, or settings.
+ * Scenes the creator recorded themselves are never included, even when their
+ * narration has changed since: re-recording those is up to the creator.
  */
 export const scenesToRecord = async (
   spec: VideoSpecInput,
@@ -142,6 +145,7 @@ export const scenesToRecord = async (
 ): Promise<number[]> => {
   const pending: number[] = [];
   for (const [index, scene] of spec.scenes.entries()) {
+    if (isSelfRecorded(scene.audio)) continue;
     const src = sceneAudioSrc(spec, index, mediaDir, voice);
     if (scene.audio?.src !== src || !(await exists(publicPath(src)))) {
       pending.push(index);
@@ -176,7 +180,11 @@ export const addVoiceOver = async (
     const src = sceneAudioSrc(spec, index, mediaDir, voice);
     const file = publicPath(src);
 
-    if (scene.audio?.src === src && (await exists(file))) {
+    // The creator's own recording is kept as it is.
+    if (
+      isSelfRecorded(scene.audio) ||
+      (scene.audio?.src === src && (await exists(file)))
+    ) {
       scenes.push(scene);
       reused++;
       continue;
