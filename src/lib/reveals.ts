@@ -72,6 +72,32 @@ export const getDiagramNodeStarts = (
     fps,
   );
 
+/** Each timeline event appears as the narrator says its cue. */
+export const getTimelineEventStarts = (
+  scene: SceneOf<"timeline">,
+  durationInFrames: number,
+  fps: number,
+): number[] =>
+  getItemStarts(
+    scene,
+    scene.events.map((event) => event.cue),
+    durationInFrames,
+    fps,
+  );
+
+/** Each process step appears as the narrator says its cue. */
+export const getProcessStepStarts = (
+  scene: SceneOf<"steps">,
+  durationInFrames: number,
+  fps: number,
+): number[] =>
+  getItemStarts(
+    scene,
+    scene.steps.map((step) => step.cue),
+    durationInFrames,
+    fps,
+  );
+
 /**
  * Each comparison side appears when the narration turns to it. Without a
  * cue, the second side appears about a third of the way through.

@@ -5,7 +5,9 @@ import {
   Hash,
   Heading1,
   Image,
+  History,
   List,
+  ListOrdered,
   Megaphone,
   Quote,
   Type,
@@ -160,6 +162,38 @@ export const SCENE_META: Record<SceneType, SceneMeta> = {
       narration: "Walk through each step in order.",
     }),
   },
+  timeline: {
+    color: "#818cf8",
+    label: "Timeline",
+    description: "Dated events along a line",
+    icon: History,
+    create: () => ({
+      type: "timeline",
+      heading: "How it happened",
+      events: [
+        { date: "1900", label: "First event" },
+        { date: "1950", label: "Second event" },
+        { date: "2000", label: "Third event" },
+      ],
+      narration: "Walk through what happened, in order.",
+    }),
+  },
+  steps: {
+    color: "#f59e0b",
+    label: "Steps",
+    description: "Numbered steps with icons, one at a time",
+    icon: ListOrdered,
+    create: () => ({
+      type: "steps",
+      heading: "How to do it",
+      steps: [
+        { title: "First step", icon: "lightbulb" },
+        { title: "Second step", icon: "pencil" },
+        { title: "Third step", icon: "circle-check" },
+      ],
+      narration: "Walk through each step in order.",
+    }),
+  },
   cta: {
     color: "#fb923c",
     label: "Call to action",
@@ -182,6 +216,8 @@ export const SCENE_TYPE_ORDER: SceneType[] = [
   "chart",
   "comparison",
   "diagram",
+  "steps",
+  "timeline",
   "image",
   "quote",
   "code",
@@ -210,6 +246,12 @@ export const sceneSummary = (scene: Scene): string => {
       return scene.caption ?? scene.alt;
     case "diagram":
       return scene.heading ?? scene.nodes.map((node) => node.label).join(" → ");
+    case "timeline":
+      return (
+        scene.heading ?? scene.events.map((event) => event.date).join(" → ")
+      );
+    case "steps":
+      return scene.heading ?? scene.steps.map((step) => step.title).join(" → ");
   }
 };
 
@@ -236,6 +278,8 @@ export const convertScene = (scene: Scene, type: SceneType): Scene => {
       return { ...next, ...base, quote: text };
     case "comparison":
     case "diagram":
+    case "timeline":
+    case "steps":
       return { ...next, ...base, heading: text };
     case "image":
       return { ...next, ...base, caption: text };
@@ -271,6 +315,7 @@ const FIELD_NAMES: Record<string, string> = {
   layout: "layout",
   motion: "camera move",
   nodes: "diagram nodes",
+  events: "timeline events",
   action: "button text",
 };
 
@@ -310,6 +355,11 @@ export const droppedFields = (scene: Scene, type: SceneType): string[] => {
       // Text carried into another field, like a heading becoming a statement.
       return !(typeof value === "string" && kept.has(value));
     })
-    .map(([key]) => FIELD_NAMES[key] ?? key);
+    .map(([key]) =>
+      // A steps scene's steps aren't code steps.
+      key === "steps" && scene.type === "steps"
+        ? "steps"
+        : (FIELD_NAMES[key] ?? key),
+    );
   return [...new Set(names)];
 };

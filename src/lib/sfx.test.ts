@@ -3,6 +3,7 @@ import { test } from "node:test";
 import { whyIsTheSkyBlue } from "../examples/why-is-the-sky-blue";
 import {
   videoSpecSchema,
+  type Scene,
   type Transition,
   type VideoSpecInput,
 } from "../spec/schema";
@@ -12,7 +13,9 @@ import {
   getComparisonStarts,
   getDiagramNodeStarts,
   getListItemStarts,
+  getProcessStepStarts,
   getStatCountStart,
+  getTimelineEventStarts,
 } from "./reveals";
 import { getSoundSchedule } from "./sfx";
 import { FPS, getVideoTiming } from "./timing";
@@ -305,4 +308,52 @@ test("every sound starts inside the video", () => {
   for (const { frame } of sounds) {
     assert.ok(frame >= 0 && frame < timing.total);
   }
+});
+
+test("timeline events and process steps pop as they appear", () => {
+  const { spec, timing, sounds } = scheduleOf([
+    statement(),
+    {
+      type: "timeline",
+      events: [
+        { date: "1", label: "One", cue: "one" },
+        { date: "2", label: "Two", cue: "two" },
+        { date: "3", label: "Three", cue: "three" },
+      ],
+      narration: list.narration,
+      audio: list.audio,
+      transition: "cut",
+    },
+    {
+      type: "steps",
+      steps: [
+        { title: "One", cue: "one" },
+        { title: "Two", cue: "two" },
+      ],
+      narration: list.narration,
+      audio: list.audio,
+      transition: "cut",
+    },
+  ]);
+  const timeline = spec.scenes[1] as Extract<Scene, { type: "timeline" }>;
+  const steps = spec.scenes[2] as Extract<Scene, { type: "steps" }>;
+  const timelineStarts = getTimelineEventStarts(
+    timeline,
+    timing.scenes[1]!,
+    FPS,
+  );
+  const stepStarts = getProcessStepStarts(steps, timing.scenes[2]!, FPS);
+  // Same cue words as the list: 1.5s, 2.5s and 3.5s into the scene.
+  assert.deepEqual(timelineStarts, [41, 71, 101]);
+  assert.deepEqual(stepStarts, [41, 71]);
+  assert.deepEqual(sounds, [
+    ...timelineStarts.map((frame) => ({
+      sound: "pop",
+      frame: timing.starts[1]! + frame,
+    })),
+    ...stepStarts.map((frame) => ({
+      sound: "pop",
+      frame: timing.starts[2]! + frame,
+    })),
+  ]);
 });

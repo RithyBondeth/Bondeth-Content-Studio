@@ -242,6 +242,42 @@ export const diagramSceneSchema = z.object({
   ...sceneBase,
 });
 
+export const timelineEventSchema = z.object({
+  /** When it happened, as shown, e.g. "1969", "March 2020", or "Day 3". */
+  date: z.string(),
+  label: z.string(),
+  /** A short line under the label. */
+  detail: z.string().optional(),
+  /** Phrase from the narration where this event comes up; it appears there. */
+  cue: z.string().optional(),
+});
+
+/** Dated events along a line, appearing one by one. */
+export const timelineSceneSchema = z.object({
+  type: z.literal("timeline"),
+  heading: z.string().optional(),
+  events: z.array(timelineEventSchema).min(2).max(6),
+  ...sceneBase,
+});
+
+export const processStepSchema = z.object({
+  title: z.string(),
+  /** A short line under the title. */
+  detail: z.string().optional(),
+  /** Shown in the step's badge. Without one, the badge shows its number. */
+  icon: z.enum(ICON_NAMES).optional(),
+  /** Phrase from the narration where this step comes up; it appears there. */
+  cue: z.string().optional(),
+});
+
+/** Numbered steps of a process or how-to, the current one highlighted. */
+export const stepsSceneSchema = z.object({
+  type: z.literal("steps"),
+  heading: z.string().optional(),
+  steps: z.array(processStepSchema).min(2).max(5),
+  ...sceneBase,
+});
+
 export const ctaSceneSchema = z.object({
   type: z.literal("cta"),
   heading: z.string(),
@@ -261,6 +297,8 @@ export const sceneSchema = z.discriminatedUnion("type", [
   codeSceneSchema,
   imageSceneSchema,
   diagramSceneSchema,
+  timelineSceneSchema,
+  stepsSceneSchema,
   ctaSceneSchema,
 ]);
 
@@ -367,6 +405,8 @@ export type ImageLayout = (typeof IMAGE_LAYOUTS)[number];
 export type ImageMotion = (typeof IMAGE_MOTIONS)[number];
 export type DiagramLayout = (typeof DIAGRAM_LAYOUTS)[number];
 export type DiagramNode = z.infer<typeof diagramNodeSchema>;
+export type TimelineEvent = z.infer<typeof timelineEventSchema>;
+export type ProcessStep = z.infer<typeof processStepSchema>;
 export type Brand = z.infer<typeof brandSchema>;
 export type BrandKit = z.infer<typeof brandKitSchema>;
 export type VoiceSettings = z.infer<typeof voiceSettingsSchema>;

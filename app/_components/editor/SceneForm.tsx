@@ -23,8 +23,10 @@ import {
   type DiagramLayout,
   type DiagramNode,
   type Entrance,
+  type ProcessStep,
   type Scene,
   type SceneType,
+  type TimelineEvent,
   type Transition,
 } from "../../../src/spec/schema";
 import {
@@ -391,6 +393,227 @@ const DIAGRAM_LAYOUTS: { value: DiagramLayout; label: string }[] = [
 const iconLabel = (name: IconName) =>
   name.charAt(0).toUpperCase() + name.slice(1).replace(/-/g, " ");
 
+/** Picks an icon by name, or none to show the item's number. */
+const IconSelect = ({
+  value,
+  onChange,
+  "aria-label": label,
+}: {
+  value: IconName | undefined;
+  onChange: (icon: IconName | undefined) => void;
+  "aria-label": string;
+}) => (
+  <Select
+    aria-label={label}
+    className="w-36 shrink-0"
+    value={value ?? ""}
+    onChange={(event) =>
+      onChange((event.target.value || undefined) as IconName | undefined)
+    }
+  >
+    <option value="">Number</option>
+    {ICON_NAMES.map((name) => (
+      <option key={name} value={name}>
+        {iconLabel(name)}
+      </option>
+    ))}
+  </Select>
+);
+
+/** A round preview of an item's icon, or its number. */
+const IconPreview = ({
+  icon,
+  number,
+}: {
+  icon: IconName | undefined;
+  number: number;
+}) => {
+  const Icon = icon ? ICONS[icon] : null;
+  return (
+    <span
+      className="grid size-10 shrink-0 place-items-center rounded-full border border-accent/60 text-accent-bright"
+      aria-hidden
+    >
+      {Icon ? (
+        <Icon className="size-4" />
+      ) : (
+        <span className="text-xs font-semibold">{number}</span>
+      )}
+    </span>
+  );
+};
+
+const MIN_TIMELINE_EVENTS = 2;
+const MAX_TIMELINE_EVENTS = 6;
+
+/** One row per timeline event: its date, label, detail, and cue. */
+const TimelineEventsField = ({
+  events,
+  unmatched,
+  onChange,
+}: {
+  events: TimelineEvent[];
+  unmatched: Set<string>;
+  onChange: (events: TimelineEvent[]) => void;
+}) => {
+  const update = (index: number, change: Partial<TimelineEvent>) =>
+    onChange(
+      events.map((event, i) => (i === index ? { ...event, ...change } : event)),
+    );
+  return (
+    <Field
+      label="Events"
+      hint={`${MIN_TIMELINE_EVENTS} to ${MAX_TIMELINE_EVENTS}, in order. Each appears when the narrator says its cue, if it has one.`}
+    >
+      <div className="flex flex-col gap-2">
+        {events.map((event, index) => (
+          <div
+            key={index}
+            className="flex flex-col gap-1.5 rounded-xl border border-line p-2"
+          >
+            <div className="flex items-center gap-1.5">
+              <Input
+                aria-label={`Event ${index + 1} date`}
+                placeholder="Date"
+                className="w-28 shrink-0 font-mono"
+                value={event.date}
+                onChange={(change) =>
+                  update(index, { date: change.target.value })
+                }
+              />
+              <Input
+                aria-label={`Event ${index + 1} label`}
+                placeholder="What happened"
+                value={event.label}
+                onChange={(change) =>
+                  update(index, { label: change.target.value })
+                }
+              />
+              <Button
+                size="sm"
+                variant="danger"
+                disabled={events.length <= MIN_TIMELINE_EVENTS}
+                aria-label={`Remove event ${index + 1}`}
+                onClick={() => onChange(events.filter((_, i) => i !== index))}
+                icon={<Trash2 className="size-3.5" aria-hidden />}
+              />
+            </div>
+            <Input
+              aria-label={`Event ${index + 1} detail`}
+              placeholder="Detail (optional)"
+              value={event.detail ?? ""}
+              onChange={(change) =>
+                update(index, { detail: optional(change.target.value) })
+              }
+            />
+            <CueInput
+              aria-label={`Cue for event ${index + 1}`}
+              placeholder={`Cue: ${CUE_PLACEHOLDER.toLowerCase()}`}
+              value={event.cue ?? ""}
+              unmatched={unmatched.has(`events.${index}.cue`)}
+              onChange={(change) =>
+                update(index, { cue: optional(change.target.value) })
+              }
+            />
+          </div>
+        ))}
+        <Button
+          size="sm"
+          disabled={events.length >= MAX_TIMELINE_EVENTS}
+          onClick={() => onChange([...events, { date: "", label: "" }])}
+          icon={<Plus className="size-3.5" aria-hidden />}
+        >
+          Add event
+        </Button>
+      </div>
+    </Field>
+  );
+};
+
+const MIN_PROCESS_STEPS = 2;
+const MAX_PROCESS_STEPS = 5;
+
+/** One row per process step: its icon, title, detail, and cue. */
+const ProcessStepsField = ({
+  steps,
+  unmatched,
+  onChange,
+}: {
+  steps: ProcessStep[];
+  unmatched: Set<string>;
+  onChange: (steps: ProcessStep[]) => void;
+}) => {
+  const update = (index: number, change: Partial<ProcessStep>) =>
+    onChange(
+      steps.map((step, i) => (i === index ? { ...step, ...change } : step)),
+    );
+  return (
+    <Field
+      label="Steps"
+      hint={`${MIN_PROCESS_STEPS} to ${MAX_PROCESS_STEPS}, in order. Each appears, and is highlighted, when the narrator says its cue.`}
+    >
+      <div className="flex flex-col gap-2">
+        {steps.map((step, index) => (
+          <div
+            key={index}
+            className="flex flex-col gap-1.5 rounded-xl border border-line p-2"
+          >
+            <div className="flex items-center gap-1.5">
+              <IconPreview icon={step.icon} number={index + 1} />
+              <IconSelect
+                aria-label={`Step ${index + 1} icon`}
+                value={step.icon}
+                onChange={(icon) => update(index, { icon })}
+              />
+              <Input
+                aria-label={`Step ${index + 1} title`}
+                placeholder="Title"
+                value={step.title}
+                onChange={(change) =>
+                  update(index, { title: change.target.value })
+                }
+              />
+              <Button
+                size="sm"
+                variant="danger"
+                disabled={steps.length <= MIN_PROCESS_STEPS}
+                aria-label={`Remove step ${index + 1}`}
+                onClick={() => onChange(steps.filter((_, i) => i !== index))}
+                icon={<Trash2 className="size-3.5" aria-hidden />}
+              />
+            </div>
+            <Input
+              aria-label={`Step ${index + 1} detail`}
+              placeholder="Detail (optional)"
+              value={step.detail ?? ""}
+              onChange={(change) =>
+                update(index, { detail: optional(change.target.value) })
+              }
+            />
+            <CueInput
+              aria-label={`Cue for step ${index + 1}`}
+              placeholder={`Cue: ${CUE_PLACEHOLDER.toLowerCase()}`}
+              value={step.cue ?? ""}
+              unmatched={unmatched.has(`steps.${index}.cue`)}
+              onChange={(change) =>
+                update(index, { cue: optional(change.target.value) })
+              }
+            />
+          </div>
+        ))}
+        <Button
+          size="sm"
+          disabled={steps.length >= MAX_PROCESS_STEPS}
+          onClick={() => onChange([...steps, { title: "" }])}
+          icon={<Plus className="size-3.5" aria-hidden />}
+        >
+          Add step
+        </Button>
+      </div>
+    </Field>
+  );
+};
+
 /** One row per diagram node: its icon, label, and cue. */
 const DiagramNodesField = ({
   nodes,
@@ -412,41 +635,18 @@ const DiagramNodesField = ({
     >
       <div className="flex flex-col gap-2">
         {nodes.map((node, index) => {
-          const Icon = node.icon ? ICONS[node.icon] : null;
           return (
             <div
               key={index}
               className="flex flex-col gap-1.5 rounded-xl border border-line p-2"
             >
               <div className="flex items-center gap-1.5">
-                <span
-                  className="grid size-10 shrink-0 place-items-center rounded-full border border-accent/60 text-accent-bright"
-                  aria-hidden
-                >
-                  {Icon ? (
-                    <Icon className="size-4" />
-                  ) : (
-                    <span className="text-xs font-semibold">{index + 1}</span>
-                  )}
-                </span>
-                <Select
+                <IconPreview icon={node.icon} number={index + 1} />
+                <IconSelect
                   aria-label={`Node ${index + 1} icon`}
-                  className="w-36 shrink-0"
-                  value={node.icon ?? ""}
-                  onChange={(event) =>
-                    update(index, {
-                      icon: (event.target.value || undefined) as
-                        IconName | undefined,
-                    })
-                  }
-                >
-                  <option value="">Number</option>
-                  {ICON_NAMES.map((name) => (
-                    <option key={name} value={name}>
-                      {iconLabel(name)}
-                    </option>
-                  ))}
-                </Select>
+                  value={node.icon}
+                  onChange={(icon) => update(index, { icon })}
+                />
                 <Input
                   aria-label={`Node ${index + 1} label`}
                   placeholder="Label"
@@ -890,6 +1090,42 @@ const TypeFields = ({
             nodes={scene.nodes}
             unmatched={unmatched}
             onChange={(nodes) => onChange({ ...scene, nodes })}
+          />
+        </>
+      );
+    case "timeline":
+      return (
+        <>
+          <TextField
+            label="Heading"
+            value={scene.heading}
+            placeholder="Optional"
+            onChange={(value) =>
+              onChange({ ...scene, heading: optional(value) })
+            }
+          />
+          <TimelineEventsField
+            events={scene.events}
+            unmatched={unmatched}
+            onChange={(events) => onChange({ ...scene, events })}
+          />
+        </>
+      );
+    case "steps":
+      return (
+        <>
+          <TextField
+            label="Heading"
+            value={scene.heading}
+            placeholder="Optional"
+            onChange={(value) =>
+              onChange({ ...scene, heading: optional(value) })
+            }
+          />
+          <ProcessStepsField
+            steps={scene.steps}
+            unmatched={unmatched}
+            onChange={(steps) => onChange({ ...scene, steps })}
           />
         </>
       );

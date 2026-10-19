@@ -30,6 +30,8 @@ import { ListScene } from "../scenes/ListScene";
 import { QuoteScene } from "../scenes/QuoteScene";
 import { StatementScene } from "../scenes/StatementScene";
 import { StatScene } from "../scenes/StatScene";
+import { StepsScene } from "../scenes/StepsScene";
+import { TimelineScene } from "../scenes/TimelineScene";
 import { TitleScene } from "../scenes/TitleScene";
 import { ThemeProvider } from "../theme/context";
 import { resolveTheme } from "../theme/resolve";
@@ -106,6 +108,10 @@ const SceneView: React.FC<SceneViewProps> = ({ scene, ...rest }) => {
       return <ImageScene scene={scene} {...rest} />;
     case "diagram":
       return <DiagramScene scene={scene} {...rest} />;
+    case "timeline":
+      return <TimelineScene scene={scene} {...rest} />;
+    case "steps":
+      return <StepsScene scene={scene} {...rest} />;
     case "cta":
       return <CtaScene scene={scene} {...rest} />;
   }

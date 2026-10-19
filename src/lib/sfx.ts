@@ -5,7 +5,9 @@ import {
   getComparisonStarts,
   getDiagramNodeStarts,
   getListItemStarts,
+  getProcessStepStarts,
   getStatCountStart,
+  getTimelineEventStarts,
 } from "./reveals";
 import { getSceneTransition } from "./scene-style";
 import type { VideoTiming } from "./timing";
@@ -59,6 +61,10 @@ const getRevealSounds = (
       return pops(getChartPointStarts(scene, durationInFrames, fps));
     case "diagram":
       return pops(getDiagramNodeStarts(scene, durationInFrames, fps));
+    case "timeline":
+      return pops(getTimelineEventStarts(scene, durationInFrames, fps));
+    case "steps":
+      return pops(getProcessStepStarts(scene, durationInFrames, fps));
     case "comparison":
       return pops(getComparisonStarts(scene, durationInFrames, fps));
     case "code":
@@ -73,7 +79,8 @@ const getRevealSounds = (
 
 /**
  * Which sound effect plays on which frame: a whoosh or rise as a transition
- * starts, a pop as a list item, chart bar, diagram node, comparison side or code step appears, and a
+ * starts, a pop as a list item, chart bar, diagram node, timeline event,
+ * process step, comparison side or code step appears, and a
  * tick as a stat starts counting. Reveal frames come from the same helpers
  * the scene templates animate with, so each sound lands with its visual.
  * Sorted by frame, with at most one sound per frame: when two land on the
