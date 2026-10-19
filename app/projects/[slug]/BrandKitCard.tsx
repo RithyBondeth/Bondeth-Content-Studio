@@ -3,16 +3,26 @@
 import { Check, Palette, Pencil } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { PlanFile } from "../../../pipeline/store";
 import { brand as defaultBrand } from "../../../src/brand";
+import { describeScenes } from "../../../src/lib/voice";
 import type { BrandKit } from "../../../src/spec/schema";
 import { THEME_PRESETS } from "../../../src/theme/presets";
 import { resolveTheme } from "../../../src/theme/resolve";
-import { updateBrandKitAction } from "../../actions";
+import { projectVoiceChangesAction, updateBrandKitAction } from "../../actions";
 import { ThemePicker } from "../../_components/ThemePicker";
 import { useToast } from "../../_components/Toast";
-import { Button, Card, Field, Input, Skeleton } from "../../_components/ui";
+import {
+  Alert,
+  Button,
+  Card,
+  Field,
+  Input,
+  Skeleton,
+} from "../../_components/ui";
+import { VoicePicker } from "../../_components/VoicePicker";
+import type { VoiceChange } from "../../../studio/server/projects";
 
 // The player only runs in the browser.
 const BrandPreview = dynamic(
@@ -42,7 +52,14 @@ const ThemeDots = ({ kit }: { kit: BrandKit | undefined }) => {
  * The project's identity: the creator's name, handle, and website, and the
  * theme new videos start with. Edited with a live sample video.
  */
-export const BrandKitCard = ({ plan }: { plan: PlanFile }) => {
+export const BrandKitCard = ({
+  plan,
+  canListVoices,
+}: {
+  plan: PlanFile;
+  /** False without an ElevenLabs key; the voice can still be pasted in. */
+  canListVoices: boolean;
+}) => {
   const router = useRouter();
   const notify = useToast();
   const [editing, setEditing] = useState(false);
@@ -63,6 +80,30 @@ export const BrandKitCard = ({ plan }: { plan: PlanFile }) => {
     return Object.keys(filled).length ? filled : undefined;
   }, [draft]);
 
+  // Recorded scenes the new voice would redo, worked out as it changes.
+  const [voiceChanges, setVoiceChanges] = useState<VoiceChange[]>([]);
+  const draftVoiceKey = JSON.stringify(draft.voice ?? null);
+  const savedVoiceKey = JSON.stringify(kit?.voice ?? null);
+  useEffect(() => {
+    if (!editing || draftVoiceKey === savedVoiceKey) {
+      setVoiceChanges([]);
+      return;
+    }
+    let current = true;
+    const timer = setTimeout(() => {
+      void projectVoiceChangesAction(
+        plan.slug,
+        JSON.parse(draftVoiceKey) ?? undefined,
+      ).then((result) => {
+        if (current) setVoiceChanges(result.ok ? result.data : []);
+      });
+    }, 300);
+    return () => {
+      current = false;
+      clearTimeout(timer);
+    };
+  }, [editing, draftVoiceKey, savedVoiceKey, plan.slug]);
+
   const save = async () => {
     setSaving(true);
     const result = await updateBrandKitAction(plan.slug, draft);
@@ -78,7 +119,9 @@ export const BrandKitCard = ({ plan }: { plan: PlanFile }) => {
     notify({
       tone: "success",
       title: "Brand kit saved",
-      description: "New videos will start with this theme.",
+      description: voiceChanges.length
+        ? "New videos will start with this theme. Record each video's voice again to use the new voice."
+        : "New videos will start with this theme.",
     });
     setEditing(false);
     router.refresh();
@@ -107,6 +150,9 @@ export const BrandKitCard = ({ plan }: { plan: PlanFile }) => {
                     ? " (customized)"
                     : ""}
                   {who.length ? ` · ${who.join(" · ")}` : ""}
+                  {kit.voice
+                    ? ` · Voice: ${kit.voice.name ?? kit.voice.voiceId}`
+                    : ""}
                 </>
               ) : (
                 `Not set up yet: videos use the default look and ${defaultBrand.handle}.`
@@ -204,6 +250,39 @@ export const BrandKitCard = ({ plan }: { plan: PlanFile }) => {
             Existing videos keep their own theme; change it from each
             video&apos;s Theme setting.
           </p>
+          <Field
+            label="Voice"
+            hint="Play a sample to hear each voice. The sliders change the recording, not the sample."
+          >
+            <VoicePicker
+              value={draft.voice}
+              onChange={(voice) =>
+                setDraft((current) => {
+                  const next = { ...current, voice };
+                  if (!voice) delete next.voice;
+                  return next;
+                })
+              }
+              fallback={{
+                title: "Default voice",
+                detail: "ELEVENLABS_VOICE_ID from .env, or George",
+              }}
+              canList={canListVoices}
+            />
+          </Field>
+          {voiceChanges.length ? (
+            <Alert tone="info">
+              <p>With this voice, recording again will redo:</p>
+              <ul className="mt-1 list-disc pl-5">
+                {voiceChanges.map((change) => (
+                  <li key={change.index}>
+                    Video {change.index + 1}, {change.title}:{" "}
+                    {describeScenes(change.scenes).toLowerCase()}
+                  </li>
+                ))}
+              </ul>
+            </Alert>
+          ) : null}
         </div>
       </div>
     </Card>
