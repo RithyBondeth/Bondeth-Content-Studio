@@ -2,6 +2,7 @@
 
 import { ArrowDown, ArrowUp, Copy, Mic, Plus, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { needsReRecord } from "../../../src/lib/recording";
 import type { SceneType, VideoSpecInput } from "../../../src/spec/schema";
 import { Kbd, cx } from "../ui";
 import { SCENE_META, SCENE_TYPE_ORDER, sceneSummary } from "./scene-meta";
@@ -215,7 +216,12 @@ export const SceneList = ({
                     >
                       {meta.label}
                     </span>
-                    {scene.audio ? (
+                    {needsReRecord(scene) ? (
+                      <Mic
+                        className="size-3 text-warning"
+                        aria-label="Re-record needed: the narration changed"
+                      />
+                    ) : scene.audio ? (
                       <Mic
                         className="size-3 text-success"
                         aria-label="Voice recorded"

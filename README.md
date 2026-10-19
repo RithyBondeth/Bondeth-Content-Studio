@@ -32,7 +32,7 @@ Educators, teachers, coaches, and anyone who explains things: science, history, 
 
 ## Getting started
 
-**Requirements:** Node.js 20 or newer, an [Anthropic API key](https://platform.claude.com/settings/keys), and an [ElevenLabs API key](https://elevenlabs.io/app/settings/api-keys) for voice-over. Optional: an [OpenAI API key](https://platform.openai.com/api-keys) for AI illustrations.
+**Requirements:** Node.js 20 or newer, an [Anthropic API key](https://platform.claude.com/settings/keys), and an [ElevenLabs API key](https://elevenlabs.io/app/settings/api-keys) for voice-over (or [record your own voice](#recording-your-own-voice) for free). Optional: an [OpenAI API key](https://platform.openai.com/api-keys) for AI illustrations.
 
 ```bash
 git clone https://github.com/RithyBondeth/Bondeth-Content-Studio.git
@@ -234,6 +234,21 @@ A video's voice is used whole: it doesn't borrow the project's settings. In a sp
 
 The voice and its settings are part of each scene's recording, so changing them re-records those scenes the next time you click Record voice or run `voice`; projects without a voice keep their existing recordings. Without an ElevenLabs key the voice list can't load, but you can still paste a voice ID from the [voice library](https://elevenlabs.io/app/voice-library).
 
+### Recording your own voice
+
+No ElevenLabs key? Read the narration yourself. It's free, and it's your own voice.
+
+1. Open a video in the editor and pick a scene.
+2. Under **Voice-over**, click **Record my voice** and allow the microphone when the browser asks.
+3. A 3-second countdown gives you time to get ready, with a level meter so you can check the microphone picks you up. The narration is shown while you record.
+4. Click **Stop** when you're done. The recording is saved with the video, and **Play** lets you hear it back. **Re-record** replaces it; **Remove** deletes it from the scene.
+
+Tips: record somewhere quiet, keep the microphone at the same distance, and leave a moment of silence before you start and after you finish. The studio trims that silence, evens out the volume, and saves an MP3 in the video's media folder (browsers record WebM, which is converted with the ffmpeg that comes with Remotion, so there's nothing else to install).
+
+Captions still work: without speech-to-text, the narration's words are spread over the part of the recording where you're speaking, with longer words getting more time and a short pause at each full stop or comma. They line up best when you read the narration as written, at an even pace.
+
+Your recordings are never replaced by **Record voice**: it only records the scenes that don't have your voice, so you can mix your voice and ElevenLabs in one video. If you change a scene's narration after recording it, the scene is marked **Re-record needed** (in the scene list too) so the voice-over and captions match again. Remove the recording to let ElevenLabs voice that scene instead.
+
 ## Publishing
 
 A video's publish kit is everything you need to post it: for each platform, a title (where the platform has one), the post text, a call to action, and hashtags, plus a cover image. Claude writes all four platforms in one call, in the plan's tone and language, from the video's narration and the plan's audience, pillar, hook, and call to action. It's saved as `publish.json` next to the video's `spec.json`, so you can edit it in the studio or by hand, and regenerate it whenever you like.
@@ -301,6 +316,7 @@ pipeline/                 # The idea → video pipeline (runs in Node)
 ├── plan.ts / script.ts   # Claude steps
 ├── publish.ts            # Publish kits: post text and hashtags per platform
 ├── voice.ts              # ElevenLabs voice-over and word timings
+├── recording.ts          # Your own recordings: converted to MP3, trimmed, timed
 ├── voices.ts             # Lists the ElevenLabs account's voices
 ├── render.ts             # Renders with Remotion, reporting progress
 ├── render-worker.ts      # Runs one render in its own process, for the studio
@@ -341,7 +357,7 @@ out/                      # Rendered videos and cover images (git-ignored)
 
 ## Costs
 
-Each video calls the Claude API once to write the script and once for its publish kit, plus once per plan, and ElevenLabs once per scene. Check current [Claude](https://platform.claude.com/docs/en/about-claude/pricing) and [ElevenLabs](https://elevenlabs.io/pricing) pricing. Rendering runs on your machine and is free.
+Each video calls the Claude API once to write the script and once for its publish kit, plus once per plan, and ElevenLabs once per scene (none for scenes you record yourself). Check current [Claude](https://platform.claude.com/docs/en/about-claude/pricing) and [ElevenLabs](https://elevenlabs.io/pricing) pricing. Rendering runs on your machine and is free.
 
 ## Author
 

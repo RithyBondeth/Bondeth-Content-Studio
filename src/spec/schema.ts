@@ -23,6 +23,12 @@ export const sceneAudioSchema = z.object({
   durationInSeconds: z.number().positive(),
   /** Word timings, used for animated captions. */
   words: z.array(wordTimingSchema),
+  /**
+   * Set when the creator recorded this voice-over themselves. Record voice
+   * (ElevenLabs) never replaces these. `narration` is the text as it was
+   * when recorded, so the editor can tell when it needs a re-record.
+   */
+  selfRecorded: z.object({ narration: z.string() }).optional(),
 });
 
 export const TRANSITIONS = ["fade", "slide", "wipe", "zoom", "cut"] as const;

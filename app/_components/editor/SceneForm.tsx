@@ -6,6 +6,7 @@ import { findUnmatchedCues, moveCuesWithItems } from "../../../src/lib/cues";
 import { ICON_NAMES, type IconName } from "../../../src/lib/icon-names";
 import { ICONS } from "../../../src/lib/icons";
 import { SUPPORTED_LANGUAGES } from "../../../src/lib/languages";
+import { isSelfRecorded, needsReRecord } from "../../../src/lib/recording";
 import { countWords, estimateNarrationSeconds } from "../../../src/lib/timing";
 import type {
   ChartPoint,
@@ -15,9 +16,10 @@ import type {
   SceneType,
   Transition,
 } from "../../../src/spec/schema";
-import { Badge, Button, Field, Input, Select, Textarea } from "../ui";
+import { Alert, Badge, Button, Field, Input, Select, Textarea } from "../ui";
 import { ImageFields, type ImageContext } from "./ImageFields";
 import { SCENE_META, SCENE_TYPE_ORDER } from "./scene-meta";
+import { VoiceRecorder } from "./VoiceRecorder";
 
 type SceneFormProps = {
   scene: Scene;
@@ -980,7 +982,17 @@ export const SceneForm = ({
         title="Voice-over"
         description="What the narrator says. Captions follow it word by word."
         aside={
-          scene.audio ? (
+          needsReRecord(scene) ? (
+            <Badge tone="warning">
+              <Mic className="size-3" aria-hidden />
+              Re-record needed
+            </Badge>
+          ) : isSelfRecorded(scene.audio) ? (
+            <Badge tone="success">
+              <Mic className="size-3" aria-hidden />
+              Your voice
+            </Badge>
+          ) : scene.audio ? (
             <Badge tone="success">
               <Mic className="size-3" aria-hidden />
               Recorded
@@ -1010,6 +1022,25 @@ export const SceneForm = ({
             }
           />
         </Field>
+        {needsReRecord(scene) ? (
+          <Alert tone="warning">
+            The narration changed after you recorded it, so your recording and
+            captions no longer match. Re-record this scene, or remove the
+            recording to use an ElevenLabs voice.
+          </Alert>
+        ) : null}
+        <VoiceRecorder
+          slug={imageContext.slug}
+          videoIndex={imageContext.videoIndex}
+          sceneIndex={index}
+          narration={scene.narration}
+          audio={scene.audio}
+          onChange={(audio) => {
+            const next = { ...scene, audio };
+            if (!audio) delete next.audio;
+            onChange(next);
+          }}
+        />
       </Section>
 
       <Section
