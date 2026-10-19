@@ -7,6 +7,7 @@ import type { VideoSpecInput } from "../src/spec/schema";
 import { config, MEDIA_SUBDIR } from "./config";
 import { publicPath } from "./store";
 import {
+  addVoiceOver,
   audioFileName,
   scenesToRecord,
   toElevenLabsSettings,
@@ -130,5 +131,43 @@ test("scenesToRecord finds scenes recorded with another voice or settings", asyn
   assert.deepEqual(
     await scenesToRecord(recorded, dir, { ...voice, settings: { speed: 0.9 } }),
     [0, 1],
+  );
+});
+
+const selfRecorded = (narration: string) => ({
+  src: path.posix.join(dir, "scene-01-own-abc.mp3"),
+  durationInSeconds: 2,
+  words: [],
+  selfRecorded: { narration },
+});
+
+test("scenesToRecord leaves out scenes the creator recorded, even out-of-date ones", async () => {
+  const video = spec();
+  const voice = voiceForVideo(video);
+  const recorded = {
+    ...video,
+    scenes: [
+      // Narration changed since recording, and the file is missing too.
+      { ...video.scenes[0]!, audio: selfRecorded("Something else.") },
+      video.scenes[1]!,
+    ],
+  } as VideoSpecInput;
+  assert.deepEqual(await scenesToRecord(recorded, dir, voice), [1]);
+});
+
+test("Record voice keeps self-recorded scenes as they are", async () => {
+  const video = spec();
+  const audio = selfRecorded("One.");
+  const recorded = {
+    ...video,
+    scenes: video.scenes.map((scene) => ({ ...scene, audio })),
+  } as VideoSpecInput;
+  // Nothing to generate, so ElevenLabs is never called (no key needed).
+  const result = await addVoiceOver(recorded, dir);
+  assert.equal(result.generated, 0);
+  assert.equal(result.reused, 2);
+  assert.deepEqual(
+    result.spec.scenes.map((scene) => scene.audio),
+    [audio, audio],
   );
 });
