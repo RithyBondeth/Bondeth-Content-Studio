@@ -11,14 +11,14 @@ import {
 } from "remotion";
 import { Background } from "../components/Background";
 import { Captions } from "../components/Captions";
-import { SceneFadeContext } from "../components/SceneFrame";
+import { EntranceContext, SceneFadeContext } from "../components/SceneFrame";
 import { getSceneWords } from "../lib/captions";
 import { resolveMedia } from "../lib/media";
 import { getDuckFactor, getNarrationSpans, type Span } from "../lib/ducking";
 import { prepareCodeSteps, type PreparedCodeStep } from "../lib/prepare-code";
 import { getSoundSchedule, SOUNDS } from "../lib/sfx";
 import { FPS, getVideoTiming } from "../lib/timing";
-import { getSceneTransition } from "../lib/scene-style";
+import { getSceneEntrance, getSceneTransition } from "../lib/scene-style";
 import { renderTransition } from "../lib/transitions";
 import { ChartScene } from "../scenes/ChartScene";
 import { CodeScene } from "../scenes/CodeScene";
@@ -202,12 +202,16 @@ export const ExplainerVideo: React.FC<ExplainerVideoProps> = (props) => {
                   <SceneFadeContext.Provider
                     value={{ fadeIn: index === 0, fadeOut: index === last }}
                   >
-                    <SceneView
-                      scene={scene}
-                      durationInFrames={timing.scenes[index]!}
-                      reserveCaptions={spec.captions}
-                      codeSteps={props.codeSteps?.[index]}
-                    />
+                    <EntranceContext.Provider
+                      value={getSceneEntrance(spec.scenes, index)}
+                    >
+                      <SceneView
+                        scene={scene}
+                        durationInFrames={timing.scenes[index]!}
+                        reserveCaptions={spec.captions}
+                        codeSteps={props.codeSteps?.[index]}
+                      />
+                    </EntranceContext.Provider>
                   </SceneFadeContext.Provider>
                 </TransitionSeries.Sequence>
               </Fragment>

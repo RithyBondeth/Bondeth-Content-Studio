@@ -17,10 +17,12 @@ import { isSelfRecorded, needsReRecord } from "../../../src/lib/recording";
 import { countWords, estimateNarrationSeconds } from "../../../src/lib/timing";
 import { getSceneTransition } from "../../../src/lib/scene-style";
 import {
+  ENTRANCES,
   TRANSITIONS,
   type ChartPoint,
   type DiagramLayout,
   type DiagramNode,
+  type Entrance,
   type Scene,
   type SceneType,
   type Transition,
@@ -151,6 +153,14 @@ const TRANSITION_LABELS: Record<Transition, string> = {
   blur: "Blur through",
   split: "Split open",
   cut: "Cut",
+};
+
+const ENTRANCE_LABELS: Record<Entrance, string> = {
+  rise: "Rise",
+  slide: "Slide in",
+  pop: "Pop",
+  blur: "Blur in",
+  typewriter: "Typewriter",
 };
 
 /** Empty optional strings are stored as "not set". */
@@ -937,6 +947,7 @@ export const SceneForm = ({
   const narrationId = useId();
   const emojiId = useId();
   const transitionId = useId();
+  const entranceId = useId();
   const words = countWords(scene.narration);
   const meta = SCENE_META[scene.type];
 
@@ -1142,6 +1153,32 @@ export const SceneForm = ({
             </Select>
           </Field>
         ) : null}
+
+        <Field
+          label="Entrance"
+          htmlFor={entranceId}
+          hint="How the text and items come in. Auto takes turns through rise, slide, and pop, so scenes of the same kind look different."
+        >
+          <Select
+            id={entranceId}
+            className="w-48"
+            value={scene.entrance ?? ""}
+            onChange={(event) =>
+              onChange({
+                ...scene,
+                entrance: (event.target.value || undefined) as
+                  Entrance | undefined,
+              })
+            }
+          >
+            <option value="">Auto</option>
+            {ENTRANCES.map((entrance) => (
+              <option key={entrance} value={entrance}>
+                {ENTRANCE_LABELS[entrance]}
+              </option>
+            ))}
+          </Select>
+        </Field>
 
         <Field
           label="Length"

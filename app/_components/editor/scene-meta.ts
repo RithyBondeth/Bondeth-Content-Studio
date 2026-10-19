@@ -213,7 +213,7 @@ export const sceneSummary = (scene: Scene): string => {
   }
 };
 
-/** Switches a scene to another template, keeping its narration, emoji, transition, and main text. */
+/** Switches a scene to another template, keeping its narration, emoji, transition, entrance, and main text. */
 export const convertScene = (scene: Scene, type: SceneType): Scene => {
   if (scene.type === type) return scene;
   const next = SCENE_META[type].create();
@@ -222,6 +222,7 @@ export const convertScene = (scene: Scene, type: SceneType): Scene => {
     narration: scene.narration,
     emoji: scene.emoji,
     transition: scene.transition,
+    entrance: scene.entrance,
   };
   switch (next.type) {
     case "title":
@@ -279,6 +280,7 @@ const KEPT = new Set([
   "narration",
   "emoji",
   "transition",
+  "entrance",
   "durationInSeconds",
   "audio",
 ]);

@@ -1,7 +1,7 @@
 import { useCurrentFrame } from "remotion";
 import { KineticText } from "../components/KineticText";
-import { SceneFrame } from "../components/SceneFrame";
-import { progressBetween, riseIn, useEnter } from "../lib/animation";
+import { SceneFrame, useReveal } from "../components/SceneFrame";
+import { progressBetween, useEnter } from "../lib/animation";
 import { useLayout } from "../lib/use-layout";
 import { useTheme } from "../theme/context";
 import type { SceneProps } from "./types";
@@ -13,6 +13,7 @@ export const QuoteScene: React.FC<SceneProps<"quote">> = ({
 }) => {
   const theme = useTheme();
   const frame = useCurrentFrame();
+  const reveal = useReveal();
   const { unit, isVertical } = useLayout();
   const mark = useEnter(0, 14);
   const words = scene.quote.split(/\s+/).length;
@@ -53,7 +54,7 @@ export const QuoteScene: React.FC<SceneProps<"quote">> = ({
             fontFamily: theme.fonts.sans,
             fontSize: 40 * unit,
             color: theme.colors.textMuted,
-            ...riseIn(
+            ...reveal(
               progressBetween(frame, 10 + words * 1.5, 22 + words * 1.5),
               16 * unit,
             ),

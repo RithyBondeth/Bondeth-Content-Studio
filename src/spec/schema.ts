@@ -46,6 +46,20 @@ export const TRANSITIONS = [
   "cut",
 ] as const;
 
+/**
+ * How a scene's text and items come in. "rise" fades them up into place,
+ * "slide" brings them in from the left, "pop" scales them up with a little
+ * bounce, "blur" brings them into focus, and "typewriter" types text out
+ * letter by letter (and wipes other items in).
+ */
+export const ENTRANCES = [
+  "rise",
+  "slide",
+  "pop",
+  "blur",
+  "typewriter",
+] as const;
+
 const sceneBase = {
   /** What the voice-over says during this scene. Also used for captions. */
   narration: z.string(),
@@ -59,6 +73,12 @@ const sceneBase = {
    * neighbours never share one. Ignored on the first scene.
    */
   transition: z.enum(TRANSITIONS).optional(),
+  /**
+   * How the scene's text and items come in. When left out, scenes of the
+   * same type take turns through rise, slide and pop, so they don't all look
+   * alike.
+   */
+  entrance: z.enum(ENTRANCES).optional(),
   /** Filled in by the voice step. */
   audio: sceneAudioSchema.optional(),
 };
@@ -339,6 +359,7 @@ export type Scene = z.infer<typeof sceneSchema>;
 export type SceneType = Scene["type"];
 export type SceneOf<T extends SceneType> = Extract<Scene, { type: T }>;
 export type Transition = (typeof TRANSITIONS)[number];
+export type Entrance = (typeof ENTRANCES)[number];
 export type CodeStep = z.infer<typeof codeStepSchema>;
 export type ChartPoint = z.infer<typeof chartPointSchema>;
 export type ChartStyle = (typeof CHART_STYLES)[number];

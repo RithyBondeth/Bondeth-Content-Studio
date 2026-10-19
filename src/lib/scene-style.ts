@@ -1,4 +1,4 @@
-import type { Scene, Transition } from "../spec/schema";
+import type { Entrance, Scene, Transition } from "../spec/schema";
 
 /**
  * Transitions used when a scene doesn't pick one, in turn. Calm ones only,
@@ -21,3 +21,26 @@ export const getSceneTransition = (
 ): Transition =>
   scene.transition ??
   DEFAULT_TRANSITIONS[Math.max(0, index - 1) % DEFAULT_TRANSITIONS.length]!;
+
+/**
+ * Entrances used when a scene doesn't pick one. All three keep text easy to
+ * read; typewriter and blur are left for scenes that ask for them.
+ */
+export const DEFAULT_ENTRANCES: readonly Entrance[] = ["rise", "slide", "pop"];
+
+/**
+ * How a scene's text and items come in: its own entrance, or the next one in
+ * turn among scenes of its type. The first list rises, the second slides,
+ * the third pops, so repeated templates don't look identical.
+ */
+export const getSceneEntrance = (
+  scenes: readonly Pick<Scene, "type" | "entrance">[],
+  index: number,
+): Entrance => {
+  const scene = scenes[index]!;
+  if (scene.entrance) return scene.entrance;
+  const before = scenes
+    .slice(0, index)
+    .filter((other) => other.type === scene.type).length;
+  return DEFAULT_ENTRANCES[before % DEFAULT_ENTRANCES.length]!;
+};
