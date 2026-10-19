@@ -471,11 +471,11 @@ const TimelineEventsField = ({
             key={index}
             className="flex flex-col gap-1.5 rounded-xl border border-line p-2"
           >
-            <div className="flex items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
               <Input
                 aria-label={`Event ${index + 1} date`}
                 placeholder="Date"
-                className="w-28 shrink-0 font-mono"
+                className="w-24 shrink-0 font-mono"
                 value={event.date}
                 onChange={(change) =>
                   update(index, { date: change.target.value })
@@ -484,6 +484,8 @@ const TimelineEventsField = ({
               <Input
                 aria-label={`Event ${index + 1} label`}
                 placeholder="What happened"
+                // Wraps under the date on narrow screens.
+                className="w-auto min-w-32 flex-1"
                 value={event.label}
                 onChange={(change) =>
                   update(index, { label: change.target.value })
@@ -558,7 +560,7 @@ const ProcessStepsField = ({
             key={index}
             className="flex flex-col gap-1.5 rounded-xl border border-line p-2"
           >
-            <div className="flex items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
               <IconPreview icon={step.icon} number={index + 1} />
               <IconSelect
                 aria-label={`Step ${index + 1} icon`}
@@ -568,6 +570,8 @@ const ProcessStepsField = ({
               <Input
                 aria-label={`Step ${index + 1} title`}
                 placeholder="Title"
+                // Wraps under the icon on narrow screens.
+                className="w-auto min-w-40 flex-1"
                 value={step.title}
                 onChange={(change) =>
                   update(index, { title: change.target.value })
@@ -640,7 +644,7 @@ const DiagramNodesField = ({
               key={index}
               className="flex flex-col gap-1.5 rounded-xl border border-line p-2"
             >
-              <div className="flex items-center gap-1.5">
+              <div className="flex flex-wrap items-center gap-1.5">
                 <IconPreview icon={node.icon} number={index + 1} />
                 <IconSelect
                   aria-label={`Node ${index + 1} icon`}
@@ -650,6 +654,8 @@ const DiagramNodesField = ({
                 <Input
                   aria-label={`Node ${index + 1} label`}
                   placeholder="Label"
+                  // Wraps under the icon on narrow screens.
+                  className="w-auto min-w-40 flex-1"
                   value={node.label}
                   onChange={(event) =>
                     update(index, { label: event.target.value })

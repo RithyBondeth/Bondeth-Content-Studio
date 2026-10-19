@@ -1,7 +1,13 @@
 "use client";
 
 import { Check } from "lucide-react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import type { SceneType } from "../../../src/spec/schema";
 import { cx } from "../ui";
 import { SCENE_META, SCENE_TYPE_ORDER } from "./scene-meta";
@@ -27,7 +33,30 @@ export const TemplateMenu = ({
   onPick: (type: SceneType) => void;
 }) => {
   const [open, setOpen] = useState(false);
+  // Where the menu actually opens: the preferred side, unless the other has
+  // more room, and how tall it can get there before it scrolls.
+  const [fit, setFit] = useState<{ side: "above" | "below"; room: number }>({
+    side: placement,
+    room: 0,
+  });
   const ref = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    if (!open || !ref.current) return;
+    const rect = ref.current.getBoundingClientRect();
+    const margin = 16;
+    const above = rect.top - margin;
+    const below = window.innerHeight - rect.bottom - margin;
+    const preferred = placement === "above" ? above : below;
+    const other = placement === "above" ? below : above;
+    const side =
+      preferred >= 420 || preferred >= other
+        ? placement
+        : placement === "above"
+          ? "below"
+          : "above";
+    setFit({ side, room: Math.max(240, side === "above" ? above : below) });
+  }, [open, placement]);
 
   useEffect(() => {
     if (!open) return;
@@ -59,11 +88,11 @@ export const TemplateMenu = ({
         <div
           role="menu"
           aria-label={label}
+          style={fit.room ? { maxHeight: fit.room } : undefined}
           className={cx(
-            "animate-rise-in absolute z-30 grid w-full min-w-72 grid-cols-2 gap-1 rounded-2xl border border-line-strong bg-raised p-1.5 shadow-2xl shadow-black/60",
-            placement === "above"
-              ? "inset-x-0 bottom-full mb-2"
-              : "top-full right-0 mt-2 sm:w-[28rem]",
+            "animate-rise-in absolute z-30 grid w-full min-w-72 grid-cols-2 gap-1 overflow-y-auto rounded-2xl border border-line-strong bg-raised p-1.5 shadow-2xl shadow-black/60",
+            fit.side === "above" ? "bottom-full mb-2" : "top-full mt-2",
+            placement === "above" ? "inset-x-0" : "right-0 sm:w-[28rem]",
           )}
         >
           {SCENE_TYPE_ORDER.map((type) => {

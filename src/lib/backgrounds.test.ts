@@ -2,11 +2,11 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { videoSpecSchema } from "../spec/schema";
 import {
-  BACKGROUND_STYLES,
   getFloatingShapes,
   getParticles,
   particleAt,
-} from "./backgrounds";
+} from "./background-motion";
+import { BACKGROUND_STYLES } from "./backgrounds";
 
 test("the same seed always gives the same shapes and particles", () => {
   assert.deepEqual(getFloatingShapes("a"), getFloatingShapes("a"));

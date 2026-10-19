@@ -1,13 +1,12 @@
 import { useMemo } from "react";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
 import {
-  DEFAULT_BACKGROUND,
   getFloatingShapes,
   getParticles,
   particleAt,
-  type BackgroundStyle,
   type FloatingShape,
-} from "../lib/backgrounds";
+} from "../lib/background-motion";
+import { DEFAULT_BACKGROUND, type BackgroundStyle } from "../lib/backgrounds";
 import { withAlpha } from "../lib/color";
 import { useTheme, type Theme } from "../theme/context";
 
