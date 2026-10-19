@@ -20,7 +20,7 @@ An AI content studio for educators and explainers: Claude plans the series and w
 Most people who want to teach online get stuck in the same places: deciding what to post, writing the script, and editing the video. Bondeth Content Studio handles all three, while leaving you in control of every step.
 
 1. **Plan:** describe your idea, and Claude turns it into a content series with an audience, themes, a posting schedule, and a list of videos with hooks.
-2. **Script:** Claude writes each video as a sequence of scenes (title, list, statistic, comparison, code, and more), with narration and on-screen text.
+2. **Script:** Claude writes each video as a sequence of scenes (title, list, statistic, chart, comparison, code, and more), with narration and on-screen text.
 3. **Voice:** ElevenLabs records the narration and returns word timings for the captions.
 4. **Render:** Remotion turns everything into an animated MP4 with word-by-word captions, in vertical (9:16) and landscape (16:9).
 
@@ -108,16 +108,17 @@ npm run pipeline -- list personal-finance-basics
 
 A video is a list of scenes. Each scene has `narration` (what the voice says), an optional `emoji`, and fields for its template.
 
-| Type         | Shows                                               | Fields                                                         |
-| ------------ | --------------------------------------------------- | -------------------------------------------------------------- |
-| `title`      | The opening hook                                    | `heading`, `subheading?`                                       |
-| `statement`  | One big idea, revealed word by word                 | `text`, `highlight?` (words to color)                          |
-| `list`       | A heading and items that appear one by one          | `heading`, `items`, `style?` (`bullets`, `numbered`, `checks`) |
-| `stat`       | A number that counts up                             | `value` (e.g. `"73%"`), `label`, `source?`                     |
-| `quote`      | A quote with its author                             | `quote`, `author?`                                             |
-| `comparison` | Two sides, such as myth vs. fact                    | `heading?`, `left`, `right` (each `label` + `points`)          |
-| `code`       | Syntax-highlighted code that builds up step by step | `language`, `fileName?`, `steps` (`code`, `highlight?`)        |
-| `cta`        | The closing call to action                          | `heading`, `action`                                            |
+| Type         | Shows                                               | Fields                                                               |
+| ------------ | --------------------------------------------------- | -------------------------------------------------------------------- |
+| `title`      | The opening hook                                    | `heading`, `subheading?`                                             |
+| `statement`  | One big idea, revealed word by word                 | `text`, `highlight?` (words to color)                                |
+| `list`       | A heading and items that appear one by one          | `heading`, `items`, `style?` (`bullets`, `numbered`, `checks`)       |
+| `stat`       | A number that counts up                             | `value` (e.g. `"73%"`), `label`, `source?`                           |
+| `chart`      | Bars or a line that grow in as each value is said   | `heading`, `points` (`label`, `value`), `unit?`, `style?`, `source?` |
+| `quote`      | A quote with its author                             | `quote`, `author?`                                                   |
+| `comparison` | Two sides, such as myth vs. fact                    | `heading?`, `left`, `right` (each `label` + `points`)                |
+| `code`       | Syntax-highlighted code that builds up step by step | `language`, `fileName?`, `steps` (`code`, `highlight?`)              |
+| `cta`        | The closing call to action                          | `heading`, `action`                                                  |
 
 Every scene also accepts `durationInSeconds` to override its length. Otherwise the length comes from the voice-over, or from the narration's word count before there is one.
 
@@ -208,7 +209,7 @@ out/                      # Rendered videos (git-ignored)
 
 | Stage                                      | Goal                                               | Highlights                                                                             |
 | ------------------------------------------ | -------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| **1. Pipeline and local studio** (current) | Idea to finished video, in the browser or terminal | Content plans, scripts, 8 scene types, voice-over, captions, live editor, local export |
+| **1. Pipeline and local studio** (current) | Idea to finished video, in the browser or terminal | Content plans, scripts, 9 scene types, voice-over, captions, live editor, local export |
 | **2. Richer visuals**                      | Videos that look less templated                    | Stock and AI images, icons, charts, more transitions, background music library         |
 | **3. Hosted studio**                       | Anyone can use it without installing anything      | Accounts, brand kits, cloud rendering, sharing                                         |
 | **4. Publishing**                          | From plan to posted                                | Captions and hashtags per platform, scheduling, performance tracking                   |

@@ -3,6 +3,7 @@ import { test } from "node:test";
 import { whyIsTheSkyBlue } from "../examples/why-is-the-sky-blue";
 import { videoSpecSchema, type VideoSpecInput } from "../spec/schema";
 import {
+  getChartPointStarts,
   getCodeStepStarts,
   getComparisonStarts,
   getListItemStarts,
@@ -109,6 +110,61 @@ test("one pop per list item, on the frame it appears", () => {
   assert.deepEqual(starts, [41, 71, 101]);
 });
 
+test("one pop per chart point, as its bar starts to grow", () => {
+  const { spec, timing, sounds } = scheduleOf([
+    statement(),
+    {
+      type: "chart",
+      heading: "Counts",
+      points: [
+        { label: "First", value: 1, cue: "one" },
+        { label: "Second", value: 2, cue: "two" },
+        { label: "Third", value: 3, cue: "three" },
+      ],
+      narration: list.narration,
+      audio: list.audio,
+    },
+  ]);
+  const scene = spec.scenes[1]!;
+  assert.equal(scene.type, "chart");
+  const starts = getChartPointStarts(
+    scene as typeof scene & { type: "chart" },
+    timing.scenes[1]!,
+    FPS,
+  );
+  // Same cue words as the list: 1.5s, 2.5s and 3.5s into the scene.
+  assert.deepEqual(starts, [41, 71, 101]);
+  assert.deepEqual(
+    sounds,
+    starts.map((frame) => ({ sound: "pop", frame: timing.starts[1]! + frame })),
+  );
+});
+
+test("uncued chart points are spread across the scene, after the heading", () => {
+  const { spec, timing } = scheduleOf([
+    {
+      type: "chart",
+      heading: "Counts",
+      points: [
+        { label: "A", value: 1 },
+        { label: "B", value: 2 },
+        { label: "C", value: 3 },
+        { label: "D", value: 4 },
+      ],
+      narration: "x",
+      durationInSeconds: 4,
+    },
+  ]);
+  const scene = spec.scenes[0] as (typeof spec.scenes)[0] & { type: "chart" };
+  const starts = getChartPointStarts(scene, timing.scenes[0]!, FPS);
+  assert.equal(starts.length, 4);
+  assert.equal(starts[0], 12);
+  for (let index = 1; index < starts.length; index++) {
+    assert.ok(starts[index]! > starts[index - 1]!);
+  }
+  assert.ok(starts.at(-1)! < timing.scenes[0]! * 0.7);
+});
+
 test("one sound per cue in every cued scene type", () => {
   const { spec, timing, sounds } = scheduleOf(whyIsTheSkyBlue.scenes);
   const expected = spec.scenes.flatMap((scene, index) => {
@@ -117,6 +173,11 @@ test("one sound per cue in every cued scene type", () => {
     switch (scene.type) {
       case "list":
         return getListItemStarts(scene, length, FPS).map((frame) => ({
+          sound: "pop",
+          frame: start + frame,
+        }));
+      case "chart":
+        return getChartPointStarts(scene, length, FPS).map((frame) => ({
           sound: "pop",
           frame: start + frame,
         }));
@@ -137,15 +198,16 @@ test("one sound per cue in every cued scene type", () => {
     ({ sound }) => sound === "pop" || sound === "tick",
   );
   assert.deepEqual(reveals, expected);
-  // 3 list items, 1 stat, 2 comparison sides.
-  assert.equal(reveals.length, 6);
+  // 3 list items, 1 stat, 4 chart bars, 2 comparison sides.
+  assert.equal(reveals.length, 10);
   // Plus the slide, zoom and wipe into the list, stat and comparison scenes.
+  // The chart fades in, so it's silent.
   assert.deepEqual(
     sounds.filter(({ sound }) => sound === "whoosh" || sound === "rise"),
     [
       { sound: "whoosh", frame: timing.starts[2] },
       { sound: "rise", frame: timing.starts[3] },
-      { sound: "whoosh", frame: timing.starts[4] },
+      { sound: "whoosh", frame: timing.starts[5] },
     ],
   );
 });

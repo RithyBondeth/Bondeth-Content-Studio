@@ -77,6 +77,31 @@ export const statSceneSchema = z.object({
   ...sceneBase,
 });
 
+export const CHART_STYLES = ["bar", "line"] as const;
+
+export const chartPointSchema = z.object({
+  label: z.string(),
+  /** Bars and lines start from zero, so values can't be negative. */
+  value: z.number().min(0),
+  /** Phrase from the narration where this point comes up; its bar grows from there. */
+  cue: z.string().optional(),
+});
+
+export const chartSceneSchema = z.object({
+  type: z.literal("chart"),
+  heading: z.string(),
+  points: z.array(chartPointSchema).min(2).max(6),
+  /**
+   * Shown with every value, e.g. "%", "x", "km", or "$". Currency symbols go
+   * before the number; anything else goes after it.
+   */
+  unit: z.string().optional(),
+  /** Defaults to "bar". */
+  style: z.enum(CHART_STYLES).optional(),
+  source: z.string().optional(),
+  ...sceneBase,
+});
+
 export const quoteSceneSchema = z.object({
   type: z.literal("quote"),
   quote: z.string(),
@@ -129,6 +154,7 @@ export const sceneSchema = z.discriminatedUnion("type", [
   statementSceneSchema,
   listSceneSchema,
   statSceneSchema,
+  chartSceneSchema,
   quoteSceneSchema,
   comparisonSceneSchema,
   codeSceneSchema,
@@ -161,6 +187,8 @@ export type SceneType = Scene["type"];
 export type SceneOf<T extends SceneType> = Extract<Scene, { type: T }>;
 export type Transition = (typeof TRANSITIONS)[number];
 export type CodeStep = z.infer<typeof codeStepSchema>;
+export type ChartPoint = z.infer<typeof chartPointSchema>;
+export type ChartStyle = (typeof CHART_STYLES)[number];
 export type VideoSpec = z.infer<typeof videoSpecSchema>;
 /** A spec as written by hand, before defaults are applied. */
 export type VideoSpecInput = z.input<typeof videoSpecSchema>;

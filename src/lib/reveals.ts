@@ -1,4 +1,4 @@
-import type { SceneOf } from "../spec/schema";
+import type { Scene, SceneOf } from "../spec/schema";
 import { getSceneWords } from "./captions";
 import { getCueFrame, getCueFrames } from "./cues";
 
@@ -6,30 +6,58 @@ import { getCueFrame, getCueFrames } from "./cues";
 // scene templates animate from these frames and the sound effects play on
 // them, so a sound always lands as its visual appears.
 
-/** Frames before a list's first item can appear, while its heading comes in. */
-const LIST_HEADING_FRAMES = 12;
+/** Frames before a list's or chart's first item can appear, while its heading comes in. */
+const HEADING_FRAMES = 12;
 
 /**
- * Each list item appears as the narrator says its cue. Without one, items are
- * revealed evenly across the first 70% of the scene.
+ * Items under a heading appear one by one, each as the narrator says its
+ * cue. Without one, items are revealed evenly across the first 70% of the
+ * scene.
  */
-export const getListItemStarts = (
-  scene: SceneOf<"list">,
+const getItemStarts = (
+  scene: Scene,
+  cues: (string | undefined)[],
   durationInFrames: number,
   fps: number,
 ): number[] => {
   const revealWindow = Math.max(
-    scene.items.length * 8,
-    durationInFrames * 0.7 - LIST_HEADING_FRAMES,
+    cues.length * 8,
+    durationInFrames * 0.7 - HEADING_FRAMES,
   );
-  const gap = revealWindow / scene.items.length;
+  const gap = revealWindow / cues.length;
   return getCueFrames({
     words: getSceneWords(scene),
-    cues: scene.items.map((_, index) => scene.cues?.[index]),
-    fallbacks: scene.items.map((_, index) => LIST_HEADING_FRAMES + index * gap),
+    cues,
+    fallbacks: cues.map((_, index) => HEADING_FRAMES + index * gap),
     fps,
   });
 };
+
+/** Each list item appears as the narrator says its cue. */
+export const getListItemStarts = (
+  scene: SceneOf<"list">,
+  durationInFrames: number,
+  fps: number,
+): number[] =>
+  getItemStarts(
+    scene,
+    scene.items.map((_, index) => scene.cues?.[index]),
+    durationInFrames,
+    fps,
+  );
+
+/** Each chart point's bar grows, or its line segment draws, as the narrator says its cue. */
+export const getChartPointStarts = (
+  scene: SceneOf<"chart">,
+  durationInFrames: number,
+  fps: number,
+): number[] =>
+  getItemStarts(
+    scene,
+    scene.points.map((point) => point.cue),
+    durationInFrames,
+    fps,
+  );
 
 /**
  * Each comparison side appears when the narration turns to it. Without a

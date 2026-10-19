@@ -63,6 +63,22 @@ const toScene = (draft: SceneDraft): Scene => {
         source: orUndefined(draft.source),
         cue: orUndefined(draft.cue),
       };
+    case "chart":
+      // The template shows at most 6 points. Values are never changed: a
+      // chart with a negative value or too few points fails validation.
+      return {
+        ...base,
+        type: "chart",
+        heading: draft.heading,
+        style: draft.style,
+        points: draft.points.slice(0, 6).map((point) => ({
+          label: point.label,
+          value: point.value,
+          cue: orUndefined(point.cue),
+        })),
+        unit: orUndefined(draft.unit),
+        source: draft.source,
+      };
     case "quote":
       return {
         ...base,

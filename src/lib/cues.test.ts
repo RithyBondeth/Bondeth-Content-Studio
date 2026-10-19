@@ -152,6 +152,24 @@ test("flags stat, comparison, and code cues", () => {
   );
 });
 
+test("flags chart point cues by their path", () => {
+  assert.deepEqual(
+    findUnmatchedCues({
+      narration,
+      audio,
+      type: "chart",
+      heading: "Scattering",
+      points: [
+        { label: "Gas", value: 1, cue: "gas molecules" },
+        { label: "Red", value: 2, cue: "red" },
+        { label: "Blue", value: 3 },
+        { label: "Light", value: 4, cue: "blue light" },
+      ],
+    }),
+    ["points.1.cue"],
+  );
+});
+
 test("matches cues against estimated timings when there is no audio", () => {
   const scene: Scene = {
     type: "stat",

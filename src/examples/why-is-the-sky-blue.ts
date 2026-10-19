@@ -48,6 +48,21 @@ export const whyIsTheSkyBlue: VideoSpecInput = {
         "In fact, blue light scatters about six times more than red light. Scientists call this Rayleigh scattering.",
     },
     {
+      type: "chart",
+      heading: "How much each color scatters",
+      // Rayleigh scattering goes as 1/wavelength⁴: (700 nm / wavelength)⁴.
+      points: [
+        { label: "Red", value: 1, cue: "next to red" },
+        { label: "Green", value: 3, cue: "green scatters" },
+        { label: "Blue", value: 5.9, cue: "blue nearly" },
+        { label: "Violet", value: 9.4, cue: "violet more" },
+      ],
+      unit: "x",
+      source: "Rayleigh scattering, relative to red light (700 nm)",
+      narration:
+        "The shorter the wave, the more it scatters. Next to red, green scatters about three times as much, blue nearly six times, and violet more than nine.",
+    },
+    {
       type: "comparison",
       transition: "wipe",
       heading: "So why not purple?",

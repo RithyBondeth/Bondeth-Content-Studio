@@ -119,3 +119,65 @@ test("leaves music off when the draft picks none", () => {
   );
   assert.equal(spec.music, undefined);
 });
+
+const chartDraft = (
+  points: { label: string; value: number; cue: string | null }[],
+) => ({
+  title: "Chart",
+  music: "none" as const,
+  scenes: [
+    {
+      type: "chart" as const,
+      heading: "Scattering",
+      style: "bar" as const,
+      points,
+      unit: null,
+      source: "Rayleigh scattering",
+      narration: "Red, then green, then blue.",
+      emoji: null,
+      transition: "fade" as const,
+    },
+  ],
+});
+
+test("converts chart drafts, keeping values exactly and at most 6 points", () => {
+  const spec = draftToSpec(
+    chartDraft([
+      { label: "Red", value: 1, cue: "Red" },
+      { label: "Green", value: 3.04, cue: null },
+      { label: "Blue", value: 5.86, cue: "blue" },
+      { label: "d", value: 4, cue: null },
+      { label: "e", value: 5, cue: null },
+      { label: "f", value: 6, cue: null },
+      { label: "g", value: 7, cue: null },
+    ]),
+    "en",
+  );
+  const [chart] = spec.scenes;
+  assert.equal(chart?.type, "chart");
+  if (chart?.type !== "chart") return;
+  assert.equal(chart.points.length, 6);
+  assert.deepEqual(chart.points.slice(0, 3), [
+    { label: "Red", value: 1, cue: "Red" },
+    { label: "Green", value: 3.04, cue: undefined },
+    { label: "Blue", value: 5.86, cue: "blue" },
+  ]);
+  assert.equal(chart.unit, undefined);
+  assert.equal(chart.style, "bar");
+  assert.equal(chart.source, "Rayleigh scattering");
+});
+
+test("rejects charts with negative values or a single point", () => {
+  assert.throws(() =>
+    draftToSpec(
+      chartDraft([
+        { label: "a", value: 1, cue: null },
+        { label: "b", value: -2, cue: null },
+      ]),
+      "en",
+    ),
+  );
+  assert.throws(() =>
+    draftToSpec(chartDraft([{ label: "a", value: 1, cue: null }]), "en"),
+  );
+});

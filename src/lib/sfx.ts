@@ -1,5 +1,6 @@
 import type { Scene, Transition, VideoSpec } from "../spec/schema";
 import {
+  getChartPointStarts,
   getCodeStepStarts,
   getComparisonStarts,
   getListItemStarts,
@@ -46,6 +47,8 @@ const getRevealSounds = (
   switch (scene.type) {
     case "list":
       return pops(getListItemStarts(scene, durationInFrames, fps));
+    case "chart":
+      return pops(getChartPointStarts(scene, durationInFrames, fps));
     case "comparison":
       return pops(getComparisonStarts(scene, durationInFrames, fps));
     case "code":
@@ -60,7 +63,7 @@ const getRevealSounds = (
 
 /**
  * Which sound effect plays on which frame: a whoosh or rise as a transition
- * starts, a pop as a list item, comparison side or code step appears, and a
+ * starts, a pop as a list item, chart bar, comparison side or code step appears, and a
  * tick as a stat starts counting. Reveal frames come from the same helpers
  * the scene templates animate with, so each sound lands with its visual.
  * Sorted by frame, with at most one sound per frame: when two land on the
