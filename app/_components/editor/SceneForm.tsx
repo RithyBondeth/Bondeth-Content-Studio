@@ -1,6 +1,13 @@
 "use client";
 
-import { CircleAlert, Mic, Plus, Trash2 } from "lucide-react";
+import {
+  ChevronDown,
+  CircleAlert,
+  Mic,
+  Plus,
+  Shapes,
+  Trash2,
+} from "lucide-react";
 import { useId, useMemo, useState } from "react";
 import { findUnmatchedCues, moveCuesWithItems } from "../../../src/lib/cues";
 import { ICON_NAMES, type IconName } from "../../../src/lib/icon-names";
@@ -16,9 +23,20 @@ import type {
   SceneType,
   Transition,
 } from "../../../src/spec/schema";
-import { Alert, Badge, Button, Field, Input, Select, Textarea } from "../ui";
+import {
+  Alert,
+  Badge,
+  Button,
+  buttonClass,
+  cx,
+  Field,
+  Input,
+  Select,
+  Textarea,
+} from "../ui";
 import { ImageFields, type ImageContext } from "./ImageFields";
-import { SCENE_META, SCENE_TYPE_ORDER } from "./scene-meta";
+import { SCENE_META } from "./scene-meta";
+import { TemplateMenu } from "./TemplateMenu";
 import { VoiceRecorder } from "./VoiceRecorder";
 
 type SceneFormProps = {
@@ -897,57 +915,6 @@ const Section = ({
   </section>
 );
 
-const TemplatePicker = ({
-  value,
-  onChange,
-}: {
-  value: SceneType;
-  onChange: (type: SceneType) => void;
-}) => (
-  <div
-    role="radiogroup"
-    aria-label="Scene template"
-    className="grid grid-cols-4 gap-1.5 @md:grid-cols-6"
-  >
-    {SCENE_TYPE_ORDER.map((type) => {
-      const meta = SCENE_META[type];
-      const active = type === value;
-      return (
-        <button
-          key={type}
-          type="button"
-          role="radio"
-          aria-checked={active}
-          title={meta.description}
-          onClick={() => onChange(type)}
-          className={`flex flex-col items-center gap-1.5 rounded-xl border px-1 py-2.5 text-[11px] transition-all ${
-            active
-              ? "border-transparent text-text"
-              : "border-line text-faint hover:border-line-strong hover:text-muted"
-          }`}
-          style={
-            active
-              ? {
-                  background: `${meta.color}1a`,
-                  boxShadow: `inset 0 0 0 1px ${meta.color}80`,
-                }
-              : undefined
-          }
-        >
-          <meta.icon
-            className="size-4"
-            style={{ color: active ? meta.color : undefined }}
-            aria-hidden
-          />
-          <span className="truncate">
-            {meta.label === "Call to action" ? "CTA" : meta.label}
-          </span>
-        </button>
-      );
-    })}
-  </div>
-);
-
 export const SceneForm = ({
   scene,
   index,
@@ -965,18 +932,42 @@ export const SceneForm = ({
     <div className="@container flex flex-col gap-4">
       <div className="flex items-center gap-3">
         <span
-          className="grid size-9 place-items-center rounded-xl"
+          className="grid size-9 shrink-0 place-items-center rounded-xl"
           style={{ background: `${meta.color}1f`, color: meta.color }}
         >
           <meta.icon className="size-4" aria-hidden />
         </span>
-        <div>
-          <h2 className="font-medium">Scene {index + 1}</h2>
-          <p className="text-xs text-faint">{meta.description}</p>
+        <div className="min-w-0 flex-1">
+          <h2 className="font-medium">
+            Scene {index + 1} · {meta.label}
+          </h2>
+          <p className="truncate text-xs text-faint">{meta.description}</p>
         </div>
+        <TemplateMenu
+          label="Change template"
+          placement="below"
+          current={scene.type}
+          onPick={onChangeType}
+          trigger={(open) => (
+            <span
+              className={cx(
+                buttonClass({ variant: "secondary", size: "sm" }),
+                open && "border-accent/60 text-accent-bright",
+              )}
+            >
+              <Shapes className="size-3.5" aria-hidden />
+              Change template
+              <ChevronDown
+                className={cx(
+                  "size-3.5 transition-transform",
+                  open && "rotate-180",
+                )}
+                aria-hidden
+              />
+            </span>
+          )}
+        />
       </div>
-
-      <TemplatePicker value={scene.type} onChange={onChangeType} />
 
       <Section
         title="Voice-over"
