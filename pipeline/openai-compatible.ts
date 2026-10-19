@@ -79,7 +79,7 @@ export const generateWithOpenAICompatible = async <T extends z.ZodType>(
     const detail = data.error?.message ?? res.statusText;
     if (res.status === 401 || res.status === 403) {
       throw new Error(
-        `${name} rejected the API key (${detail}). Check LLM_API_KEY in .env.`,
+        `${name} rejected the API key (${detail}). Check it in Settings (or LLM_API_KEY in .env).`,
       );
     }
     if (res.status === 429) {

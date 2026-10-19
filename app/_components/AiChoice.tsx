@@ -1,7 +1,8 @@
 "use client";
 
 import { PenLine, Sparkles } from "lucide-react";
-import type { ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, type ReactNode } from "react";
 import { useToast } from "./Toast";
 import { Button, cx } from "./ui";
 
@@ -9,7 +10,7 @@ import { Button, cx } from "./ui";
  * Every step AI can do can also be done by hand. These components show both
  * options side by side, the same way everywhere, so it's always clear which
  * is which. When the AI isn't set up its option still shows, and choosing it
- * explains how to set it up instead of doing nothing.
+ * opens the matching part of Settings instead of doing nothing.
  */
 
 export type ManualOption = {
@@ -22,31 +23,105 @@ export type ManualOption = {
   disabled?: boolean;
 };
 
+/** Where to set up an AI step: a section of the Settings page. */
+export type Setup = {
+  /** The Settings section's id, e.g. "voice". */
+  section: "ai" | "voice" | "images";
+  /** One line on what to do, e.g. "Add your ElevenLabs key in Settings." */
+  text: string;
+};
+
 export type AiOption = ManualOption & {
   /** Whether the AI service for this step is set up. */
   available: boolean;
-  /** How to set it up, e.g. "Add ELEVENLABS_API_KEY to .env and restart." */
-  setup: string;
+  /** Where to set it up. */
+  setup: Setup;
   /** Names the service in the setup message, e.g. "AI voice". */
   service?: string;
 };
 
 /** What to set up, for each AI step. */
 export const SETUP = {
-  writing:
-    "Add an ANTHROPIC_API_KEY (or another AI provider) to .env and restart the studio.",
-  voice: "Add an ELEVENLABS_API_KEY to .env and restart the studio.",
-  images: "Add an OPENAI_API_KEY to .env and restart the studio.",
-};
+  writing: {
+    section: "ai",
+    text: "Add an API key for Claude (or another AI provider) in Settings.",
+  },
+  voice: { section: "voice", text: "Add your ElevenLabs API key in Settings." },
+  images: { section: "images", text: "Add your OpenAI API key in Settings." },
+} satisfies Record<string, Setup>;
 
+export const settingsHref = (setup: Setup) =>
+  `/settings?from=setup#${setup.section}`;
+
+/** Set once Settings has been opened from here, so coming back refreshes. */
+let awaitingSetup = false;
+let lastRefresh = 0;
+
+/**
+ * Opens the matching Settings section in a new tab, so nothing here is lost.
+ * When the person comes back, the page refreshes so the AI option turns on.
+ */
 const useExplainSetup = () => {
   const notify = useToast();
-  return (option: AiOption) =>
+  const router = useRouter();
+
+  useEffect(() => {
+    const refresh = () => {
+      // Many AI options can be on one page; one refresh is enough.
+      if (!awaitingSetup || Date.now() - lastRefresh < 2000) return;
+      lastRefresh = Date.now();
+      router.refresh();
+    };
+    window.addEventListener("focus", refresh);
+    return () => window.removeEventListener("focus", refresh);
+  }, [router]);
+
+  return (option: Pick<AiOption, "setup" | "service">) => {
+    awaitingSetup = true;
+    const opened = window.open(settingsHref(option.setup), "_blank");
+    if (!opened) {
+      router.push(settingsHref(option.setup));
+      return;
+    }
     notify({
       tone: "info",
-      title: `${option.service ?? "AI"} isn't set up yet`,
-      description: `${option.setup} Until then, you can do this step yourself.`,
+      title: `Set up ${option.service ?? "AI"} in Settings`,
+      description:
+        "Settings opened in a new tab. Once it's connected, come back here and it's ready to use. Until then, you can do this step yourself.",
     });
+  };
+};
+
+/** A link to the Settings section that turns an AI step on. */
+export const SetupLink = ({
+  setup,
+  service,
+  children = "Set it up in Settings",
+  className,
+}: {
+  setup: Setup;
+  service?: string;
+  children?: ReactNode;
+  className?: string;
+}) => {
+  const explain = useExplainSetup();
+  return (
+    <a
+      href={settingsHref(setup)}
+      target="_blank"
+      rel="noopener"
+      onClick={(event) => {
+        event.preventDefault();
+        explain({ setup, service });
+      }}
+      className={cx(
+        "font-medium text-accent-bright underline-offset-4 hover:underline",
+        className,
+      )}
+    >
+      {children}
+    </a>
+  );
 };
 
 /** A small "AI" marker, so AI options read the same everywhere. */
@@ -101,7 +176,7 @@ export const ChoiceButtons = ({
         loading={ai.loading}
         disabled={ai.disabled}
         aria-disabled={!ai.available || undefined}
-        title={ai.available ? undefined : ai.setup}
+        title={ai.available ? undefined : ai.setup.text}
         onClick={() => (ai.available ? ai.onSelect() : explain(ai))}
         className={
           ai.available ? undefined : "text-muted opacity-75 hover:opacity-100"
@@ -222,7 +297,7 @@ export const ChoiceCards = ({
             onClick={() => explain(ai)}
             className="self-start text-left text-xs text-faint underline-offset-4 hover:text-muted hover:underline"
           >
-            Not set up yet. How to turn it on
+            Not set up yet. Set it up in Settings
           </button>
         )}
       </OptionCard>
@@ -256,7 +331,7 @@ export const AiButton = ({
       loading={option.loading}
       disabled={option.disabled}
       aria-disabled={!option.available || undefined}
-      title={option.available ? option.description : option.setup}
+      title={option.available ? option.description : option.setup.text}
       onClick={() => (option.available ? option.onSelect() : explain(option))}
       className={cx(
         !option.available && "text-muted opacity-75 hover:opacity-100",

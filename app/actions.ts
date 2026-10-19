@@ -53,6 +53,12 @@ import {
   type RenderFile,
 } from "../studio/server/projects";
 import {
+  getSettingsView,
+  saveSettings,
+  testSettings,
+  type SettingsInput,
+} from "../studio/server/settings";
+import {
   getRenderJob,
   startRenderJob,
   type RenderJob,
@@ -184,6 +190,18 @@ export const recordVoiceAction = async (slug: string, index: number) =>
     await saveSpec(plan, index, result.spec);
     return result;
   });
+
+/** Saves one section of the Settings page. Takes effect on the next request. */
+export const saveSettingsAction = async (input: SettingsInput) =>
+  run(async () => {
+    saveSettings(input);
+    revalidatePath("/", "layout");
+    return getSettingsView();
+  });
+
+/** Makes a cheap real call with a section's settings, saved or not. */
+export const testSettingsAction = async (input: SettingsInput) =>
+  run(() => testSettings(input));
 
 /** The voices in the ElevenLabs account. `fresh` skips the short cache. */
 export const listVoicesAction = async (fresh = false) =>

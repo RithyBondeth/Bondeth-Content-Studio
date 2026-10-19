@@ -135,7 +135,7 @@ export const resolveProvider = (env: Env = process.env): ProviderSettings => {
       model: "",
       jsonMode: "schema",
       ready: false,
-      missing: `LLM_PROVIDER "${requested}" isn't supported. Use one of: ${Object.keys(PROVIDERS).join(", ")}.`,
+      missing: `LLM_PROVIDER "${requested}" isn't supported. Pick a provider in Settings, or use one of: ${Object.keys(PROVIDERS).join(", ")}.`,
     };
   }
 
@@ -156,11 +156,11 @@ export const resolveProvider = (env: Env = process.env): ProviderSettings => {
   const keyNames = ["LLM_API_KEY", ...preset.keyEnv].join(" or ");
   const missing =
     !apiKey && !preset.keyless
-      ? `Set ${keyNames} in .env (see .env.example).`
+      ? `Add your ${preset.name} API key in Settings (or set ${keyNames} in .env).`
       : requested === "custom" && !baseUrl
-        ? "Set LLM_BASE_URL in .env to your provider's OpenAI-compatible endpoint."
+        ? "Add your provider's OpenAI-compatible address in Settings (or set LLM_BASE_URL in .env)."
         : !model
-          ? `Set LLM_MODEL in .env to the ${preset.name} model to use.`
+          ? `Choose the ${preset.name} model to use in Settings (or set LLM_MODEL in .env).`
           : undefined;
 
   return {
