@@ -65,6 +65,7 @@ import { SceneForm } from "./SceneForm";
 import { SceneList } from "./SceneList";
 import type { ThemeSetting as ThemeValue } from "../../../src/theme/resolve";
 import { ThemeSetting } from "./ThemeSetting";
+import { BackgroundSetting } from "./BackgroundSetting";
 import { VoiceSetting } from "./VoiceSetting";
 
 type SaveState =
@@ -854,6 +855,16 @@ export const VideoEditor = ({
                 brandTheme={brandTheme}
                 onChange={(theme) =>
                   setSpec((current) => ({ ...current, theme }), "theme")
+                }
+              />
+              <BackgroundSetting
+                background={spec.background}
+                theme={spec.theme}
+                onChange={(background) =>
+                  setSpec(
+                    (current) => ({ ...current, background }),
+                    "background",
+                  )
                 }
               />
               <MusicSetting

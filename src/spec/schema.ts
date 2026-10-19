@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ICON_NAMES } from "../lib/icon-names";
 import { SUPPORTED_LANGUAGES } from "../lib/languages";
+import { BACKGROUND_STYLES } from "../lib/backgrounds";
 import { HEX_COLOR } from "../lib/color";
 import { DEFAULT_MUSIC_VOLUME } from "../lib/music";
 import { THEME_FONT_NAMES, THEME_PRESET_NAMES } from "../theme/presets";
@@ -319,6 +320,12 @@ export const videoSpecSchema = z.object({
     .optional(),
   /** Defaults to the "midnight" preset. */
   theme: themeSettingSchema.optional(),
+  /**
+   * The moving pattern behind every scene, drawn in the theme's colors:
+   * "glow", "gradient", "shapes", "particles", "grid", "noise", or "plain".
+   * Defaults to "glow".
+   */
+  background: z.enum(BACKGROUND_STYLES).optional(),
   /** Defaults to the creator in src/brand.ts. */
   brand: brandSchema.optional(),
   /** Overrides the project's voice. Defaults to the brand kit's, then .env's. */

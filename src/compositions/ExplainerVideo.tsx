@@ -155,7 +155,7 @@ export const ExplainerVideo: React.FC<ExplainerVideoProps> = (props) => {
   return (
     <ThemeProvider theme={spec.theme} brand={spec.brand}>
       <AbsoluteFill>
-        <Background />
+        <Background style={spec.background} seed={spec.title} />
         {spec.music ? <Music music={spec.music} narration={narration} /> : null}
 
         {/* Sound effects, at most one per frame. */}
@@ -194,7 +194,11 @@ export const ExplainerVideo: React.FC<ExplainerVideoProps> = (props) => {
                   name={`${index + 1}. ${scene.type}`}
                 >
                   {/* Each scene has its own backdrop, so wipes and slides reveal a whole frame. */}
-                  <Background frameOffset={timing.starts[index]} />
+                  <Background
+                    style={spec.background}
+                    seed={spec.title}
+                    frameOffset={timing.starts[index]}
+                  />
                   <SceneFadeContext.Provider
                     value={{ fadeIn: index === 0, fadeOut: index === last }}
                   >
