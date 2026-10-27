@@ -6,6 +6,8 @@
  * Kept free of SDK imports so the studio can check the setup cheaply.
  */
 
+import { recommendedModel } from "./models";
+
 export type ProviderId =
   | "anthropic"
   | "openai"
@@ -147,6 +149,9 @@ export const resolveProvider = (env: Env = process.env): ProviderSettings => {
     env.LLM_MODEL ||
     (requested === "anthropic" ? env.CLAUDE_MODEL : undefined) ||
     preset.defaultModel ||
+    // Cloud providers start on their recommended model; local ones are
+    // whatever the person has downloaded, so they pick one.
+    (preset.keyless ? undefined : recommendedModel(requested)) ||
     "";
   const jsonMode: JsonMode =
     env.LLM_JSON_MODE === "object" || env.LLM_JSON_MODE === "schema"
