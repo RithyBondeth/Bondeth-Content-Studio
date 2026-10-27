@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useState, type ReactNode } from "react";
+import { modelChoices } from "../../pipeline/models";
 import { PROVIDERS, type ProviderId } from "../../pipeline/providers";
 import type { VoiceSummary } from "../../src/lib/voice";
 import type {
@@ -22,6 +23,7 @@ import type {
   SettingsView,
 } from "../../studio/server/settings";
 import {
+  listModelsAction,
   listVoicesAction,
   saveSettingsAction,
   testSettingsAction,
@@ -38,6 +40,7 @@ import {
   Input,
   Select,
   cx,
+  type SelectOption,
 } from "../_components/ui";
 
 /** Where to get a key, for each service. */
@@ -57,6 +60,15 @@ const KEY_LINKS: Partial<Record<ProviderId, string>> & Record<string, string> =
   };
 
 const PROVIDER_IDS = Object.keys(PROVIDERS) as ProviderId[];
+
+/** A line about the providers that need one, in the provider list. */
+const PROVIDER_HINTS: Partial<Record<ProviderId, string>> = {
+  anthropic: "The best writing for plans and scripts.",
+  openrouter: "One key for models from many companies.",
+  ollama: "Runs models on your own computer. Free, no key needed.",
+  lmstudio: "Runs models on your own computer. Free, no key needed.",
+  custom: "Any service with an OpenAI-compatible address.",
+};
 
 type Outcome = { ok: boolean; message: string };
 
@@ -317,6 +329,125 @@ const Actions = ({
   </div>
 );
 
+const OTHER = "\u0000other";
+
+/**
+ * Picks the model: Claude's models with a line about each, or the models the
+ * provider reports. "Another model" switches to typing a name.
+ */
+const ModelField = ({
+  id,
+  provider,
+  model,
+  defaultModel,
+  onChange,
+  request,
+}: {
+  id: string;
+  provider: ProviderId;
+  model: string;
+  defaultModel: string;
+  onChange: (model: string) => void;
+  /** The AI section as it is in the form, to ask the provider with. */
+  request: () => SettingsInput;
+}) => {
+  const [available, setAvailable] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+  const [typing, setTyping] = useState(false);
+  const shown = model || defaultModel;
+  const asked = request() as Extract<SettingsInput, { section: "ai" }>;
+
+  // Ask the provider which models it has, after typing settles.
+  useEffect(() => {
+    if (provider === "anthropic") return;
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setLoading(true);
+      const result = await listModelsAction({ ...asked, model: "" });
+      if (cancelled) return;
+      setLoading(false);
+      setAvailable(result.ok ? result.data : []);
+      setProblem(result.ok ? null : result.error);
+    }, 500);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+    // Only the provider, address and key change which models exist.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [provider, asked.baseUrl, asked.apiKey]);
+
+  const choices = modelChoices(
+    provider,
+    provider === "anthropic" ? [] : available,
+    shown || undefined,
+  );
+  const listed = choices.some((choice) => choice.id === shown);
+  const free = typing || choices.length === 0 || (Boolean(shown) && !listed);
+
+  const options: SelectOption[] = [
+    ...choices.map((choice) => ({
+      value: choice.id,
+      label: choice.label,
+      hint: choice.hint,
+      tag:
+        choice.recommended ||
+        (choice.id === defaultModel && provider !== "anthropic")
+          ? "Recommended"
+          : undefined,
+    })),
+    {
+      value: OTHER,
+      label: "Another model…",
+      hint: "Type the exact name of a model this provider offers.",
+    },
+  ];
+
+  const hint =
+    provider === "anthropic"
+      ? "Opus is the best balance for plans and scripts. Pick Sonnet or Haiku to spend less."
+      : loading
+        ? `Asking ${PROVIDERS[provider].name} which models it has…`
+        : problem
+          ? `${problem} You can still type a model name.`
+          : choices.length
+            ? `The models your ${PROVIDERS[provider].name} account offers. "Faster" ones cost less; "most capable" ones write better.`
+            : `Add your ${PROVIDERS[provider].name} key to choose from its models, or type a model name.`;
+
+  return (
+    <Field label="Model" htmlFor={id} hint={hint}>
+      {choices.length ? (
+        <Select
+          id={id}
+          value={free ? OTHER : shown}
+          options={options}
+          onChange={(event) => {
+            const next = event.target.value;
+            if (next === OTHER) {
+              setTyping(true);
+              return;
+            }
+            setTyping(false);
+            onChange(next === defaultModel ? "" : next);
+          }}
+        />
+      ) : null}
+      {free ? (
+        <Input
+          id={choices.length ? undefined : id}
+          aria-label={choices.length ? "Model name" : undefined}
+          value={model}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={defaultModel || "Model name"}
+          spellCheck={false}
+          className="font-mono"
+        />
+      ) : null}
+    </Field>
+  );
+};
+
 const AiSection = ({
   view,
   onSaved,
@@ -417,33 +548,29 @@ const AiSection = ({
             onChange={(event) => pick(event.target.value as ProviderId)}
           >
             {PROVIDER_IDS.map((id) => (
-              <option key={id} value={id}>
+              <option
+                key={id}
+                value={id}
+                data-hint={PROVIDER_HINTS[id]}
+                data-tag={id === "anthropic" ? "Recommended" : undefined}
+              >
                 {id === "custom"
                   ? "Other (OpenAI-compatible)"
                   : PROVIDERS[id].name}
-                {id === "anthropic" ? " (recommended)" : ""}
               </option>
             ))}
           </Select>
         </Field>
-        <Field
-          label="Model"
-          htmlFor={modelId}
-          hint={
-            current.defaultModel
-              ? `Leave empty to use ${current.defaultModel}.`
-              : `The ${preset.name} model to write with. Required.`
-          }
-        >
-          <Input
-            id={modelId}
-            value={model}
-            onChange={(event) => setModel(event.target.value)}
-            placeholder={current.defaultModel || "Model name"}
-            spellCheck={false}
-            className="font-mono"
-          />
-        </Field>
+        <ModelField
+          // A fresh picker for each provider: its own models, nothing typed.
+          key={provider}
+          id={modelId}
+          provider={provider}
+          model={model}
+          defaultModel={current.defaultModel}
+          onChange={setModel}
+          request={input}
+        />
       </div>
 
       {provider === "custom" ? baseUrlField : null}
