@@ -1,0 +1,27 @@
+# Runs the studio on a server. Put the keys and the password in .env next to
+# this file (see .env.example), then:
+#
+#   docker compose up -d --build
+#
+# Serve it over HTTPS through a reverse proxy (Caddy, nginx, Traefik) so the
+# password and the session cookie are never sent in the clear.
+services:
+  studio:
+    build: .
+    ports:
+      - "3100:3100"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # Keys come from the environment only; Settings shows them read-only.
+      STUDIO_KEYS_FROM_ENV: "1"
+    volumes:
+      - studio-data:/data
+    # Chrome needs more shared memory than Docker's 64 MB default.
+    shm_size: 1gb
+    init: true
+    restart: unless-stopped
+
+volumes:
+  studio-data:

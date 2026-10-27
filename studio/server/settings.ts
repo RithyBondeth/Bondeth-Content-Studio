@@ -12,9 +12,10 @@ import {
 } from "../../pipeline/providers";
 import {
   applySettingsInput,
+  keysFromEnv,
   maskKey,
   mergeSettings,
-  readSettings,
+  savedSettings,
   writeSettings,
   type SettingsInput,
 } from "../../pipeline/settings";
@@ -44,6 +45,8 @@ export type ProviderView = {
 };
 
 export type SettingsView = {
+  /** Keys come only from the server's environment, so nothing can be saved. */
+  locked: boolean;
   ai: { provider: ProviderId; providers: Record<ProviderId, ProviderView> };
   elevenLabs: { key: KeyView; voiceId: string; defaultVoiceId: string };
   openai: { key: KeyView };
@@ -65,7 +68,7 @@ const isProvider = (id: string): id is ProviderId =>
 
 /** The settings page's view: what's saved and what's in use, with keys masked. */
 export const getSettingsView = (env = process.env): SettingsView => {
-  const saved = readSettings();
+  const saved = savedSettings();
   const merged = mergeSettings(env, saved);
   const current = resolveProvider(merged);
 
@@ -97,6 +100,7 @@ export const getSettingsView = (env = process.env): SettingsView => {
   ) as Record<ProviderId, ProviderView>;
 
   return {
+    locked: keysFromEnv(env),
     ai: {
       provider: isProvider(current.id) ? current.id : "anthropic",
       providers,
@@ -112,7 +116,12 @@ export const getSettingsView = (env = process.env): SettingsView => {
 };
 
 export const saveSettings = (input: SettingsInput) => {
-  writeSettings(applySettingsInput(readSettings(), input));
+  if (keysFromEnv()) {
+    throw new Error(
+      "Keys on this server come from its environment. Change them there and restart.",
+    );
+  }
+  writeSettings(applySettingsInput(savedSettings(), input));
 };
 
 const needKey = (key: string | undefined, service: string) => {
@@ -124,7 +133,7 @@ const needKey = (key: string | undefined, service: string) => {
 export const testSettings = async (input: SettingsInput): Promise<string> => {
   const merged = mergeSettings(
     process.env,
-    applySettingsInput(readSettings(), input),
+    applySettingsInput(savedSettings(), input),
   );
   switch (input.section) {
     case "ai":
@@ -151,7 +160,7 @@ export const listModels = async (
 ): Promise<string[]> => {
   if (input.provider === "anthropic") return [];
   const provider = resolveProvider(
-    mergeSettings(process.env, applySettingsInput(readSettings(), input)),
+    mergeSettings(process.env, applySettingsInput(savedSettings(), input)),
   );
   if (!provider.baseUrl) return [];
   if (!provider.apiKey && !PROVIDERS[input.provider].keyless) return [];

@@ -98,3 +98,25 @@ jobs:
           name: snapshot-references
           path: snapshots/linux/
           retention-days: 7
+
+  docker:
+    name: Docker image
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build the server image
+        run: docker build -t content-studio .
+      # Starts it behind a password and checks the gate, then renders a short clip inside it.
+      - name: Smoke test
+        run: |
+          docker run -d --name studio -p 3100:3100 --init --shm-size 1g \
+            -e STUDIO_PASSWORD=ci-password content-studio
+          for i in $(seq 1 30); do curl -sf -o /dev/null http://localhost:3100/login && break; sleep 1; done
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3100/)" = 307
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3100/api/files/x.mp4)" = 401
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3100/login)" = 200
+          docker exec studio npx remotion render src/index.ts why-is-the-sky-blue-landscape /data/out/ci.mp4 --frames=0-29
+      - name: Server logs
+        if: failure()
+        run: docker logs studio
