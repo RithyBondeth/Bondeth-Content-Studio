@@ -236,14 +236,14 @@ In the editor's Theme setting, pick a preset, or open "Customize colors and font
 "brand": { "name": "Ms. Rivera", "handle": "@msrivera", "website": "rivera.edu" }
 ```
 
-Fonts are `inter`, `poppins`, `nunito`, `montserrat`, `playfair-display`, and `atkinson-hyperlegible`, loaded from Google Fonts as a video needs them.
+Fonts are `inter`, `poppins`, `nunito`, `montserrat`, `playfair-display`, and `atkinson-hyperlegible`. Their files are bundled in [`public/fonts/`](public/fonts/README.md) and load as a video needs them, so rendering never needs the network.
 
 | File                   | What it controls                                                |
 | ---------------------- | --------------------------------------------------------------- |
 | `src/brand.ts`         | The name, handle, and website for projects without a brand kit  |
 | `src/theme/presets.ts` | The theme presets, their colors and fonts, and the font choices |
 | `src/theme/resolve.ts` | How a theme's overrides are applied, and the contrast checks    |
-| `src/theme/fonts.ts`   | Loading fonts from Google Fonts                                 |
+| `src/theme/fonts.ts`   | Loading the bundled fonts in `public/fonts/`                    |
 | Settings, or `.env`    | AI provider and model, and the default ElevenLabs voice         |
 | `.env`                 | ElevenLabs model and OpenAI image model                         |
 
@@ -397,6 +397,7 @@ pipeline/                 # The idea → video pipeline (runs in Node)
 ├── connections.ts        # The cheap calls behind "Test connection"
 ├── render.ts             # Renders with Remotion, reporting progress
 ├── render-worker.ts      # Runs one render in its own process, for the studio
+├── snapshots.ts          # Visual snapshot check: render frames, diff with snapshots/
 └── store.ts              # Where plans, specs, and media are saved
 src/                      # The Remotion video app
 ├── spec/schema.ts        # The video spec format (zod)
@@ -404,10 +405,12 @@ src/                      # The Remotion video app
 ├── scenes/               # One component per scene type
 ├── components/           # Captions, code blocks, kinetic text, backgrounds
 ├── examples/             # Hand-written example videos
+├── snapshots/            # The frames the visual snapshot check renders
 ├── lib/                  # Timing, captions, highlighting, layout helpers
 └── theme/                # Theme presets, fonts, and the useTheme() hook
 content/                  # Generated plans and specs (git-ignored)
 public/content/           # Generated voice-overs (git-ignored)
+snapshots/linux/          # Reference images for the visual snapshot check
 out/                      # Renders, covers, caption files, and bundles (git-ignored)
 ```
 
@@ -420,6 +423,7 @@ out/                      # Renders, covers, caption files, and bundles (git-ign
 | `npm run dev`                   | Open Remotion Studio with the examples |
 | `npm run render -- <id>`        | Render a composition directly          |
 | `npm test`                      | Run the unit tests                     |
+| `npm run snapshots`             | Compare frames with reference images   |
 | `npm run check`                 | Type-check and lint                    |
 | `npm run format`                | Format the code with Prettier          |
 
@@ -429,8 +433,25 @@ Work happens on feature branches that merge into `develop` by pull request; `dev
 
 - **Typecheck, lint, tests:** `npm run typecheck`, `npm run lint`, and `npm test`. The tests need no API keys or network.
 - **Test render:** renders the first two seconds of the `why-is-the-sky-blue` example with Remotion and uploads the MP4 as the `ci-render` artifact on the run.
+- **Visual snapshots:** renders a set of frames and fails if any looks different from its reference image (see below).
 
 Run `npm run check && npm test` before opening a pull request to catch most failures locally.
+
+### Visual snapshots
+
+`npm run snapshots` renders 17 frames, listed in [`src/snapshots/frames.ts`](src/snapshots/frames.ts), at half size and compares each with its reference image. Together they cover every scene type, the three diagram layouts, both formats, and two transitions caught halfway; scene types the examples don't use come from [`src/snapshots/extras.ts`](src/snapshots/extras.ts). A frame fails when more than 0.1% of its pixels change noticeably, so anti-aliasing noise passes and a changed color or layout doesn't. For each failing frame it writes `out/snapshots/diff/<name>.png`: the reference, the new render, and the changed pixels in red, side by side. In CI those come with the run as the `snapshot-diffs` artifact.
+
+Renders are deterministic: fonts come from `public/fonts/`, images from `public/`, animation randomness is seeded, the Chrome Headless Shell version is pinned by `@remotion/renderer`, and WebGL runs in software.
+
+Text and emoji still render a little differently on each operating system, so **the committed references in `snapshots/linux/` are made on Linux**, in the Docker image CI uses ([`snapshots/Dockerfile`](snapshots/Dockerfile)). When you change how a scene looks on purpose:
+
+```bash
+npm run snapshots:docker -- --update
+```
+
+That needs Docker. It rewrites only the references that changed; commit them with your change. Without Docker, run the CI workflow by hand from the Actions tab with "update snapshots" ticked, and copy the `snapshot-references` artifact into `snapshots/linux/`.
+
+On macOS or Windows, `npm run snapshots` compares against `snapshots/<platform>/` instead, which is git-ignored: run `npm run snapshots -- --update` before your change to save a local baseline, then `npm run snapshots` after it. Pass names to check only some frames, e.g. `npm run snapshots -- list code`.
 
 ## Roadmap
 

@@ -12,7 +12,7 @@ export const CODE_THEMES = [
 ] as const;
 export type CodeTheme = (typeof CODE_THEMES)[number];
 
-/** Google Fonts a theme can use for its headings and body text. */
+/** Fonts a theme can use for its headings and body text (bundled in public/fonts/). */
 export const THEME_FONTS = {
   inter: { label: "Inter", description: "Clean and modern" },
   poppins: { label: "Poppins", description: "Geometric and friendly" },

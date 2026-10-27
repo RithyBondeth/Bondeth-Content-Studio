@@ -5,6 +5,14 @@ on:
     branches: [develop, main]
   push:
     branches: [develop, main]
+  # Run by hand from the Actions tab. With "update snapshots" ticked, the
+  # snapshot job writes new reference images and uploads them as an artifact.
+  workflow_dispatch:
+    inputs:
+      update-snapshots:
+        description: Regenerate the reference images in snapshots/linux/
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -61,4 +69,32 @@ jobs:
         with:
           name: ci-render
           path: out/ci-render.mp4
+          retention-days: 7
+
+  snapshots:
+    name: Visual snapshots
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      UPDATE: ${{ inputs.update-snapshots && '--update' || '' }}
+    steps:
+      - uses: actions/checkout@v5
+      # The same image `npm run snapshots:docker` uses, so CI renders the same pixels as a local Linux run.
+      - name: Build the snapshot image
+        run: docker build -t content-studio-snapshots -f snapshots/Dockerfile .
+      - name: Render and compare with snapshots/linux/
+        run: docker run --rm -v "$PWD":/app -v /app/node_modules content-studio-snapshots npm run snapshots -- $UPDATE
+      - name: Upload diffs
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: snapshot-diffs
+          path: out/snapshots/
+          retention-days: 7
+      - name: Upload new reference images
+        if: inputs.update-snapshots
+        uses: actions/upload-artifact@v6
+        with:
+          name: snapshot-references
+          path: snapshots/linux/
           retention-days: 7
