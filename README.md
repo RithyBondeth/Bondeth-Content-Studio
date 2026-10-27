@@ -93,6 +93,26 @@ With `.env` instead, set `ANTHROPIC_API_KEY`, or `LLM_PROVIDER` and `LLM_MODEL` 
 
 `LLM_API_KEY` works for every provider, and `LLM_BASE_URL` overrides a preset's endpoint (for a proxy or a self-hosted gateway). Every reply is checked against the expected format, so a model that can't follow it fails with a clear error instead of producing a broken video. Videos are planned with long, structured JSON, so larger models give much better results. If a provider rejects JSON Schema output, set `LLM_JSON_MODE=object`.
 
+## Running on a server
+
+To use the studio from anywhere, run it on a server you control (a VPS or a home server) with Docker. It is built for one person or a small team who share a password, not for the public.
+
+```bash
+cp .env.example .env   # add your keys and set STUDIO_PASSWORD
+docker compose up -d --build
+```
+
+It listens on port 3100. Put it behind a reverse proxy with HTTPS (Caddy, nginx, or Traefik) so the password and session cookie are encrypted on the way.
+
+- **Password:** with `STUDIO_PASSWORD` set, every page, file, and action needs a sign-in. A sign-in lasts 30 days, and changing the password signs everyone out. In production the studio refuses to start without one (set `STUDIO_ALLOW_OPEN=1` only if something else in front of it already handles sign-in).
+- **Keys:** `compose.yaml` sets `STUDIO_KEYS_FROM_ENV=1`, so keys come only from `.env` and the Settings page shows them read-only. You can still test each connection there.
+- **Data:** projects, voice-overs, images, renders, and saved settings live in the `studio-data` volume at `/data`, so rebuilding or replacing the container keeps them. Back it up like any Docker volume.
+- **Rendering:** the image includes Chrome Headless Shell and everything it needs, and renders run on the server. More CPU cores make renders faster.
+
+To update, pull the latest code and run `docker compose up -d --build` again.
+
+If you open it to other people who aren't on your team, check [Remotion's license](#license): rendering videos for others as a service needs a company license.
+
 ## Command line
 
 Everything the studio does is also available from the terminal. To go from an idea to finished videos in one command:
@@ -423,16 +443,17 @@ out/                      # Renders, covers, caption files, and bundles (git-ign
 
 ## Scripts
 
-| Command                         | Description                            |
-| ------------------------------- | -------------------------------------- |
-| `npm run studio`                | Open the web studio on port 3100       |
-| `npm run pipeline -- <command>` | Run the idea → video pipeline          |
-| `npm run dev`                   | Open Remotion Studio with the examples |
-| `npm run render -- <id>`        | Render a composition directly          |
-| `npm test`                      | Run the unit tests                     |
-| `npm run snapshots`             | Compare frames with reference images   |
-| `npm run check`                 | Type-check and lint                    |
-| `npm run format`                | Format the code with Prettier          |
+| Command                         | Description                               |
+| ------------------------------- | ----------------------------------------- |
+| `npm run studio`                | Open the web studio on port 3100          |
+| `npm run build` / `npm start`   | Build and serve the studio for production |
+| `npm run pipeline -- <command>` | Run the idea → video pipeline             |
+| `npm run dev`                   | Open Remotion Studio with the examples    |
+| `npm run render -- <id>`        | Render a composition directly             |
+| `npm test`                      | Run the unit tests                        |
+| `npm run snapshots`             | Compare frames with reference images      |
+| `npm run check`                 | Type-check and lint                       |
+| `npm run format`                | Format the code with Prettier             |
 
 ## Contributing / checks
 
@@ -471,7 +492,7 @@ On macOS or Windows, `npm run snapshots` compares against `snapshots/<platform>/
 
 ## Costs
 
-Each video calls the Claude API once to write the script and once for its publish kit, plus once per plan, and ElevenLabs once per scene (none for scenes you record yourself). Check current [Claude](https://platform.claude.com/docs/en/about-claude/pricing) and [ElevenLabs](https://elevenlabs.io/pricing) pricing. Rendering runs on your machine and is free.
+Each video calls the Claude API once to write the script and once for its publish kit, plus once per plan, and ElevenLabs once per scene (none for scenes you record yourself). Check current [Claude](https://platform.claude.com/docs/en/about-claude/pricing) and [ElevenLabs](https://elevenlabs.io/pricing) pricing. Rendering runs on your machine (or your server) and is free.
 
 ## Author
 
