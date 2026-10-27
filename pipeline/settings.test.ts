@@ -6,6 +6,7 @@ import { test } from "node:test";
 import { resolveProvider } from "./providers";
 import {
   applySettingsInput,
+  keysFromEnv,
   maskKey,
   mergeSettings,
   readSettings,
@@ -154,4 +155,10 @@ test("keys are masked to their last four characters", () => {
   assert.equal(maskKey("short"), "••••");
   assert.equal(maskKey(""), undefined);
   assert.equal(maskKey(undefined), undefined);
+});
+
+test("keys come only from the environment when STUDIO_KEYS_FROM_ENV is 1", () => {
+  assert.equal(keysFromEnv({}), false);
+  assert.equal(keysFromEnv({ STUDIO_KEYS_FROM_ENV: "1" }), true);
+  assert.equal(keysFromEnv({ STUDIO_KEYS_FROM_ENV: "0" }), false);
 });

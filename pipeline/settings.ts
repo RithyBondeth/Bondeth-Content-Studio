@@ -77,7 +77,10 @@ export const mergeSettings = (env: Env, settings: StudioSettings): Env => {
 /** The saved settings, or none when the file is missing or unreadable. */
 export const readSettings = (file = SETTINGS_FILE): StudioSettings => {
   try {
-    const data: unknown = JSON.parse(fs.readFileSync(file, "utf8"));
+    // The path is only known at runtime, so keep Next.js from tracing the whole project for it.
+    const data: unknown = JSON.parse(
+      fs.readFileSync(/* turbopackIgnore: true */ file, "utf8"),
+    );
     return data && typeof data === "object" ? (data as StudioSettings) : {};
   } catch {
     return {};
@@ -97,8 +100,20 @@ export const writeSettings = (
   fs.renameSync(temp, file);
 };
 
+/**
+ * On a server, STUDIO_KEYS_FROM_ENV=1 makes the environment the only source of
+ * keys: the Settings page turns read-only and any saved file is ignored.
+ */
+export const keysFromEnv = (env: Env = process.env) =>
+  env.STUDIO_KEYS_FROM_ENV?.trim() === "1";
+
+/** The saved settings in use: none when keys come only from the environment. */
+export const savedSettings = (): StudioSettings =>
+  keysFromEnv() ? {} : readSettings();
+
 /** .env plus saved settings, as of right now. */
-export const currentEnv = (): Env => mergeSettings(process.env, readSettings());
+export const currentEnv = (): Env =>
+  mergeSettings(process.env, savedSettings());
 
 /** One variable from .env or Settings. */
 export const getEnv = (name: string): string | undefined =>

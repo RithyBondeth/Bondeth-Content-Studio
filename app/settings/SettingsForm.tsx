@@ -13,7 +13,14 @@ import {
   PlugZap,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useId,
+  useState,
+  type ReactNode,
+} from "react";
 import { MODEL_CATALOG, modelChoices } from "../../pipeline/models";
 import { PROVIDERS, type ProviderId } from "../../pipeline/providers";
 import type { VoiceSummary } from "../../src/lib/voice";
@@ -71,6 +78,9 @@ const PROVIDER_HINTS: Partial<Record<ProviderId, string>> = {
 };
 
 type Outcome = { ok: boolean; message: string };
+
+/** Keys come only from the server's environment, so Save is turned off. */
+const LockedContext = createContext(false);
 
 /** Saving and testing one section, with the outcome of the last test. */
 const useSection = (onSaved: (view: SettingsView) => void) => {
@@ -287,47 +297,50 @@ const Actions = ({
   onSave: () => void;
   onTest: () => void;
   outcome: Outcome | null;
-}) => (
-  <div className="flex flex-col gap-3">
-    <div className="flex flex-wrap items-center gap-2">
-      <Button
-        variant="primary"
-        onClick={onSave}
-        loading={saving}
-        disabled={!canSave}
-      >
-        Save
-      </Button>
-      <Button
-        onClick={onTest}
-        loading={testing}
-        disabled={!canTest}
-        icon={<PlugZap className="size-4" aria-hidden />}
-      >
-        Test connection
-      </Button>
-    </div>
-    <div aria-live="polite">
-      {outcome ? (
-        <div
-          className={cx(
-            "flex items-start gap-2.5 rounded-xl border px-3.5 py-3 text-sm leading-relaxed",
-            outcome.ok
-              ? "border-success/25 bg-success/8 text-success"
-              : "border-danger/25 bg-danger/8 text-danger",
-          )}
+}) => {
+  const locked = useContext(LockedContext);
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          variant="primary"
+          onClick={onSave}
+          loading={saving}
+          disabled={locked || !canSave}
         >
-          {outcome.ok ? (
-            <CheckCircle2 className="mt-0.5 size-4 shrink-0" aria-hidden />
-          ) : (
-            <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
-          )}
-          <p className="min-w-0 flex-1">{outcome.message}</p>
-        </div>
-      ) : null}
+          Save
+        </Button>
+        <Button
+          onClick={onTest}
+          loading={testing}
+          disabled={!canTest}
+          icon={<PlugZap className="size-4" aria-hidden />}
+        >
+          Test connection
+        </Button>
+      </div>
+      <div aria-live="polite">
+        {outcome ? (
+          <div
+            className={cx(
+              "flex items-start gap-2.5 rounded-xl border px-3.5 py-3 text-sm leading-relaxed",
+              outcome.ok
+                ? "border-success/25 bg-success/8 text-success"
+                : "border-danger/25 bg-danger/8 text-danger",
+            )}
+          >
+            {outcome.ok ? (
+              <CheckCircle2 className="mt-0.5 size-4 shrink-0" aria-hidden />
+            ) : (
+              <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+            )}
+            <p className="min-w-0 flex-1">{outcome.message}</p>
+          </div>
+        ) : null}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const OTHER = "\u0000other";
 
@@ -895,46 +908,56 @@ export const SettingsForm = ({
 }) => {
   const [view, setView] = useState(initial);
   return (
-    <div className="flex flex-col gap-5">
-      {fromSetup ? (
-        <Alert tone="info">
-          Paste your key below, test it, and save. Then close this tab and go
-          back to your work: it picks up the new key by itself, no restart
-          needed.
-        </Alert>
-      ) : null}
-      <Overview view={view} />
-      <AiSection view={view.ai} onSaved={setView} />
-      <VoiceSection view={view.elevenLabs} onSaved={setView} />
-      <KeyOnlySection
-        id="openai"
-        name="OpenAI"
-        view={view.openai}
-        onSaved={setView}
-        icon={<ImageIcon className="size-4" aria-hidden />}
-        title={
-          <>
-            AI images <AiTag />
-          </>
-        }
-        description="OpenAI draws illustrations for image scenes from a short description. Without it, pick stock photos or upload your own."
-      />
-      <KeyOnlySection
-        id="pexels"
-        name="Pexels"
-        view={view.pexels}
-        onSaved={setView}
-        icon={<Images className="size-4" aria-hidden />}
-        title="Stock photos"
-        description="Free stock photos come from Openverse with no key. Add a Pexels key to search Pexels' library instead."
-      />
-      <p className="text-xs leading-relaxed text-faint">
-        Keys are saved in{" "}
-        <code className="font-mono">.studio/settings.json</code> in this folder,
-        which is never shared or committed. You can also set them in{" "}
-        <code className="font-mono">.env</code>; anything saved here takes
-        priority.
-      </p>
-    </div>
+    <LockedContext.Provider value={view.locked}>
+      <div className="flex flex-col gap-5">
+        {view.locked ? (
+          <Alert tone="info">
+            This server reads its keys from its environment, so they can&apos;t
+            be changed here. Set them where the server is configured and restart
+            it. You can still test each connection.
+          </Alert>
+        ) : fromSetup ? (
+          <Alert tone="info">
+            Paste your key below, test it, and save. Then close this tab and go
+            back to your work: it picks up the new key by itself, no restart
+            needed.
+          </Alert>
+        ) : null}
+        <Overview view={view} />
+        <AiSection view={view.ai} onSaved={setView} />
+        <VoiceSection view={view.elevenLabs} onSaved={setView} />
+        <KeyOnlySection
+          id="openai"
+          name="OpenAI"
+          view={view.openai}
+          onSaved={setView}
+          icon={<ImageIcon className="size-4" aria-hidden />}
+          title={
+            <>
+              AI images <AiTag />
+            </>
+          }
+          description="OpenAI draws illustrations for image scenes from a short description. Without it, pick stock photos or upload your own."
+        />
+        <KeyOnlySection
+          id="pexels"
+          name="Pexels"
+          view={view.pexels}
+          onSaved={setView}
+          icon={<Images className="size-4" aria-hidden />}
+          title="Stock photos"
+          description="Free stock photos come from Openverse with no key. Add a Pexels key to search Pexels' library instead."
+        />
+        {view.locked ? null : (
+          <p className="text-xs leading-relaxed text-faint">
+            Keys are saved in{" "}
+            <code className="font-mono">.studio/settings.json</code> in this
+            folder, which is never shared or committed. You can also set them in{" "}
+            <code className="font-mono">.env</code>; anything saved here takes
+            priority.
+          </p>
+        )}
+      </div>
+    </LockedContext.Provider>
   );
 };

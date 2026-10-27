@@ -1,0 +1,16 @@
+.git
+.github
+.claude
+.next
+node_modules
+snapshots
+content
+public/content
+out
+.studio
+.env
+.env.*
+!.env.example
+*.log
+*.tsbuildinfo
+.DS_Store
