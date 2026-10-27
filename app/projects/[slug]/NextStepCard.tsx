@@ -109,7 +109,7 @@ export const NextStepCard = ({
                 ) : null}
                 <span
                   className={cx(
-                    "flex items-center gap-1 rounded-full px-2 py-0.5",
+                    "flex items-center gap-1 rounded-md px-2 py-0.5",
                     done && "text-success",
                     active && "bg-accent/15 text-accent-bright",
                     !done && !active && "text-faint",

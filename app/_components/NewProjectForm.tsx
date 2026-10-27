@@ -1,6 +1,7 @@
 "use client";
 
-import { Check, Globe, Layers, Loader2, Sparkles, Users } from "lucide-react";
+import { Check, Globe, Layers, Sparkles, Users } from "lucide-react";
+import { BlockSpinner } from "./Blocks";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -59,7 +60,7 @@ const PillSelect = ({
   options: readonly (readonly [string, string])[];
   disabled?: boolean;
 }) => (
-  <label className="relative flex h-9 cursor-pointer items-center gap-2 rounded-full border border-line bg-raised/70 pr-3 pl-3 text-[13px] text-muted transition-colors focus-within:border-accent hover:border-line-strong hover:text-text">
+  <label className="relative flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-line bg-raised/70 pr-3 pl-3 text-[13px] text-muted transition-colors focus-within:border-accent hover:border-line-strong hover:text-text">
     {icon}
     <span className="sr-only">{label}</span>
     <span>{options.find(([key]) => key === value)?.[1]}</span>
@@ -113,7 +114,7 @@ const PlanningOverlay = ({ idea }: { idea: string }) => {
             >
               <span
                 className={cx(
-                  "grid size-5 place-items-center rounded-full",
+                  "grid size-5 place-items-center rounded-md",
                   index < active && "bg-success/15 text-success",
                   index === active && "text-accent-bright",
                   index > active && "border border-line-strong",
@@ -122,7 +123,7 @@ const PlanningOverlay = ({ idea }: { idea: string }) => {
                 {index < active ? (
                   <Check className="size-3" aria-hidden />
                 ) : index === active ? (
-                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                  <BlockSpinner />
                 ) : null}
               </span>
               {step}
@@ -268,7 +269,7 @@ export const NewProjectForm = ({ hasAi }: { hasAi: boolean }) => {
               onClick={() => setShowMore((value) => !value)}
               aria-expanded={showMore}
               className={cx(
-                "flex h-9 items-center gap-2 rounded-full border px-3 text-[13px] transition-colors",
+                "flex h-9 items-center gap-2 rounded-lg border px-3 text-[13px] transition-colors",
                 showMore || audience || tone
                   ? "border-accent/40 bg-accent/10 text-accent-bright"
                   : "border-line bg-raised/70 text-muted hover:border-line-strong hover:text-text",
@@ -314,7 +315,7 @@ export const NewProjectForm = ({ hasAi }: { hasAi: boolean }) => {
               textareaRef.current?.focus();
             }}
             disabled={pending !== null}
-            className="rounded-full border border-line bg-surface/50 px-3 py-1.5 text-xs text-muted transition-all hover:-translate-y-px hover:border-line-strong hover:text-text"
+            className="rounded-lg border border-line bg-surface/50 px-3 py-1.5 text-xs text-muted transition-all hover:-translate-y-px hover:border-line-strong hover:text-text"
           >
             {example}
           </button>

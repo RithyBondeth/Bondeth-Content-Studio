@@ -5,17 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ProjectSummary } from "../../studio/server/projects";
 import { deleteProjectAction } from "../actions";
+import { BlockMeter, BlockMosaic } from "./Blocks";
 import { useConfirm } from "./ConfirmDialog";
 import { Menu } from "./Menu";
 import { useToast } from "./Toast";
 import { relativeTime } from "./ui";
-
-/** A stable hue per project, so each card has its own color. */
-const hueFor = (text: string) => {
-  let hash = 0;
-  for (const char of text) hash = (hash * 31 + char.charCodeAt(0)) % 360;
-  return 230 + (hash % 110); // Keep within blue → violet → pink.
-};
 
 const Progress = ({ project }: { project: ProjectSummary }) => {
   const steps = [
@@ -33,14 +27,7 @@ const Progress = ({ project }: { project: ProjectSummary }) => {
               {step.value}/{project.videos}
             </span>
           </div>
-          <div className="h-1 overflow-hidden rounded-full bg-raised">
-            <div
-              className="bg-brand h-full rounded-full"
-              style={{
-                width: `${project.videos ? (step.value / project.videos) * 100 : 0}%`,
-              }}
-            />
-          </div>
+          <BlockMeter value={step.value} total={project.videos} />
         </div>
       ))}
     </div>
@@ -51,7 +38,6 @@ export const ProjectCard = ({ project }: { project: ProjectSummary }) => {
   const router = useRouter();
   const notify = useToast();
   const { confirm, dialog } = useConfirm();
-  const hue = hueFor(project.slug);
 
   const remove = async () => {
     const ok = await confirm({
@@ -78,13 +64,10 @@ export const ProjectCard = ({ project }: { project: ProjectSummary }) => {
   return (
     <article className="group relative flex flex-col overflow-hidden rounded-2xl border border-line bg-surface transition-all duration-200 hover:-translate-y-0.5 hover:border-line-strong hover:shadow-2xl hover:shadow-black/40">
       {dialog}
-      <div
-        className="relative h-24 overflow-hidden"
-        style={{
-          background: `radial-gradient(120% 140% at 0% 0%, hsl(${hue} 85% 62% / 0.55), transparent 60%), radial-gradient(100% 120% at 100% 100%, hsl(${hue + 40} 80% 55% / 0.35), transparent 60%), var(--color-raised)`,
-        }}
-      >
-        <span className="absolute bottom-3 left-4 text-4xl font-bold tracking-tight text-text/90 drop-shadow">
+      <div className="relative h-24 overflow-hidden bg-raised">
+        {/* Each project gets its own pattern of lit blocks. */}
+        <BlockMosaic seed={project.slug} className="absolute top-2 left-2" />
+        <span className="absolute bottom-3 left-4 grid size-12 place-items-center rounded-xl bg-surface/90 text-2xl font-bold tracking-tight text-text shadow-lg ring-1 ring-line backdrop-blur-sm">
           {project.title
             .replace(/^example:\s*/i, "")
             .slice(0, 1)

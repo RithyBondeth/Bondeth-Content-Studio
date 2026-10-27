@@ -133,7 +133,7 @@ export const Preview = ({
         borderRadius: format === "vertical" ? 28 : 18,
         overflow: "hidden",
         boxShadow:
-          "0 0 0 1px var(--color-line-strong), 0 0 0 8px color-mix(in srgb, var(--color-line) 45%, transparent), 0 30px 80px -20px rgb(0 0 0 / 0.5), 0 0 120px -40px rgb(124 92 255 / 0.5)",
+          "0 0 0 1px var(--color-line-strong), 0 0 0 8px color-mix(in srgb, var(--color-line) 45%, transparent), 0 30px 80px -20px rgb(0 0 0 / 0.5), 0 0 120px -40px rgb(10 102 194 / 0.5)",
       }}
     />
   );

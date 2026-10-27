@@ -1,4 +1,3 @@
-import { Loader2 } from "lucide-react";
 import type {
   ButtonHTMLAttributes,
   InputHTMLAttributes,
@@ -6,6 +5,7 @@ import type {
   SelectHTMLAttributes,
   TextareaHTMLAttributes,
 } from "react";
+import { BlockMeter, BlockSpinner } from "./Blocks";
 
 export const cx = (...classes: (string | false | null | undefined)[]) =>
   classes.filter(Boolean).join(" ");
@@ -35,7 +35,7 @@ export const buttonClass = ({
     size === "md" && (iconOnly ? "size-10" : "h-10 px-4 text-sm"),
     size === "lg" && (iconOnly ? "size-12" : "h-12 px-6 text-[15px]"),
     variant === "primary" &&
-      "bg-brand text-white shadow-[0_8px_24px_-8px_rgb(124_92_255/0.7),inset_0_1px_0_rgb(255_255_255/0.2)] hover:enabled:brightness-110",
+      "bg-brand text-white shadow-[0_8px_24px_-8px_rgb(10_102_194/0.7),inset_0_1px_0_rgb(255_255_255/0.2)] hover:enabled:brightness-110",
     variant === "secondary" &&
       "border border-line bg-raised text-text hover:enabled:border-line-strong hover:enabled:bg-hover",
     variant === "outline" &&
@@ -64,7 +64,7 @@ export const Button = ({
       className,
     )}
   >
-    {loading ? <Loader2 className="size-4 animate-spin" aria-hidden /> : icon}
+    {loading ? <BlockSpinner /> : icon}
     {children}
   </button>
 );
@@ -156,7 +156,7 @@ export const Badge = ({
 }) => (
   <span
     className={cx(
-      "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium whitespace-nowrap ring-1 ring-inset",
+      "inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium whitespace-nowrap ring-1 ring-inset",
       tone === "neutral" && "bg-raised text-muted ring-line",
       tone === "accent" && "bg-accent/12 text-accent-bright ring-accent/25",
       tone === "success" && "bg-success/10 text-success ring-success/20",
@@ -186,25 +186,14 @@ export const Card = ({
   </div>
 );
 
+/** Progress from 0 to 1, as a row of blocks. */
 export const ProgressBar = ({
   value,
   className,
 }: {
   value: number;
   className?: string;
-}) => (
-  <div
-    className={cx(
-      "h-1.5 w-full overflow-hidden rounded-full bg-raised",
-      className,
-    )}
-  >
-    <div
-      className="bg-brand h-full rounded-full transition-[width] duration-500 ease-out"
-      style={{ width: `${Math.round(Math.min(1, Math.max(0, value)) * 100)}%` }}
-    />
-  </div>
-);
+}) => <BlockMeter value={value} className={className} />;
 
 export const Alert = ({
   tone = "danger",

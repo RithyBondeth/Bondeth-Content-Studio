@@ -18,7 +18,7 @@ const ubuntuMono = Ubuntu_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Content Studio",
+  title: "Bondeth Studio",
   description:
     "Turn an idea into a content plan and finished explainer videos.",
 };
