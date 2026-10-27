@@ -1,6 +1,15 @@
 "use client";
 
-import { Check, Globe, Layers, Sparkles, Users } from "lucide-react";
+import {
+  Check,
+  CornerDownLeft,
+  Globe,
+  Layers,
+  Lightbulb,
+  Sparkles,
+  Users,
+  X,
+} from "lucide-react";
 import { BlockSpinner } from "./Blocks";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -130,6 +139,42 @@ const PlanningOverlay = ({ idea }: { idea: string }) => {
   );
 };
 
+/** The draft and choices, kept in this browser so a refresh doesn't lose them. */
+const DRAFT_KEY = "new-project-draft";
+
+type Draft = {
+  idea: string;
+  videos: string;
+  language: string;
+  audience: string;
+  tone: string;
+};
+
+const readDraft = (): Partial<Draft> => {
+  try {
+    const data: unknown = JSON.parse(localStorage.getItem(DRAFT_KEY) ?? "{}");
+    return data && typeof data === "object" ? (data as Partial<Draft>) : {};
+  } catch {
+    return {};
+  }
+};
+
+const writeDraft = (draft: Draft) => {
+  try {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+  } catch {
+    // Private windows and full storage: the draft just isn't kept.
+  }
+};
+
+/** Ideas this short rarely give the AI enough to plan a good series. */
+const isVague = (idea: string) => {
+  const words = idea.trim().split(/\s+/).filter(Boolean).length;
+  return words > 0 && words < 4;
+};
+
+const TEXTAREA_MAX = 240;
+
 export const NewProjectForm = ({ hasAi }: { hasAi: boolean }) => {
   const router = useRouter();
   const notify = useToast();
@@ -143,8 +188,56 @@ export const NewProjectForm = ({ hasAi }: { hasAi: boolean }) => {
   const [pending, setPending] = useState<"plan" | "blank" | "example" | null>(
     null,
   );
+  const [restored, setRestored] = useState(false);
+  const [exampleIndex, setExampleIndex] = useState(0);
 
   const canCreate = idea.trim().length > 0 && pending === null;
+
+  // Bring back the last draft and choices, once, after the first render.
+  useEffect(() => {
+    const draft = readDraft();
+    if (draft.idea) setIdea(draft.idea);
+    if (draft.videos) setVideos(draft.videos);
+    if (draft.language) setLanguage(draft.language);
+    if (draft.audience) setAudience(draft.audience);
+    if (draft.tone) setTone(draft.tone);
+    if (draft.audience || draft.tone) setShowMore(true);
+    setRestored(true);
+  }, []);
+
+  useEffect(() => {
+    if (restored) writeDraft({ idea, videos, language, audience, tone });
+  }, [restored, idea, videos, language, audience, tone]);
+
+  // Grow with the text, up to a limit, then scroll.
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    textarea.style.height = "auto";
+    textarea.style.height = `${Math.min(textarea.scrollHeight, TEXTAREA_MAX)}px`;
+    textarea.style.overflowY =
+      textarea.scrollHeight > TEXTAREA_MAX ? "auto" : "hidden";
+  }, [idea]);
+
+  // While the box is empty, cycle through example ideas in the placeholder.
+  useEffect(() => {
+    if (idea) return;
+    const timer = setInterval(
+      () => setExampleIndex((index) => (index + 1) % EXAMPLE_IDEAS.length),
+      3500,
+    );
+    return () => clearInterval(timer);
+  }, [idea]);
+
+  const pickExample = (example: string) => {
+    setIdea(example);
+    const textarea = textareaRef.current;
+    textarea?.focus();
+    // Put the cursor at the end so it's easy to add to.
+    requestAnimationFrame(() =>
+      textarea?.setSelectionRange(example.length, example.length),
+    );
+  };
 
   /** With AI, the idea becomes a full plan. Without, it's the project's title and you plan it yourself. */
   const create = async (withAi: boolean) => {
@@ -161,6 +254,7 @@ export const NewProjectForm = ({ hasAi }: { hasAi: boolean }) => {
       ? await createProjectAction(input)
       : await createBlankProjectAction(input);
     if (result.ok) {
+      writeDraft({ idea: "", videos, language, audience: "", tone: "" });
       router.push(`/projects/${result.data}`);
     } else {
       notify({
@@ -197,122 +291,188 @@ export const NewProjectForm = ({ hasAi }: { hasAi: boolean }) => {
           event.preventDefault();
           void create(hasAi);
         }}
-        className="group relative rounded-3xl bg-gradient-to-b from-line-strong to-line p-px shadow-2xl shadow-black/40 transition focus-within:from-accent/70 focus-within:to-pink/30"
+        className="group relative rounded-3xl bg-linear-to-b from-line-strong to-line p-px shadow-2xl shadow-black/40 transition focus-within:from-accent/70 focus-within:to-pink/30"
       >
         <div className="rounded-[calc(1.5rem-1px)] bg-surface">
-          <label htmlFor="idea" className="sr-only">
-            What do you want to teach?
-          </label>
+          <div className="flex items-center justify-between gap-3 px-5 pt-4">
+            <label
+              htmlFor="idea"
+              className="text-[13px] font-medium text-muted transition-colors group-focus-within:text-text"
+            >
+              What do you want to teach?
+            </label>
+            <div className="flex items-center gap-1">
+              {idea && pending === null ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIdea("");
+                    textareaRef.current?.focus();
+                  }}
+                  className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-faint transition-colors hover:bg-raised hover:text-text"
+                >
+                  <X className="size-3.5" aria-hidden />
+                  Clear
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => setShowMore((value) => !value)}
+                aria-expanded={showMore}
+                disabled={pending !== null}
+                className={cx(
+                  "flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-60",
+                  showMore || audience || tone
+                    ? "text-accent-bright hover:bg-accent/10"
+                    : "text-faint hover:bg-raised hover:text-text",
+                )}
+              >
+                <Users className="size-3.5" aria-hidden />
+                Audience & tone
+                {!showMore && (audience || tone) ? (
+                  <span className="grid size-4 place-items-center rounded bg-accent/25 text-[10px]">
+                    {[audience, tone].filter(Boolean).length}
+                  </span>
+                ) : null}
+              </button>
+            </div>
+          </div>
           <textarea
             id="idea"
             ref={textareaRef}
-            rows={3}
+            rows={1}
             value={idea}
             onChange={(event) => setIdea(event.target.value)}
-            placeholder="What do you want to teach? e.g. Personal finance basics for university students"
+            placeholder={`e.g. ${EXAMPLE_IDEAS[exampleIndex]}`}
             disabled={pending !== null}
+            aria-describedby="idea-help"
             onKeyDown={(event) => {
-              if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+              // Enter creates; Shift+Enter adds a line. Never while an input
+              // method (Khmer, Japanese, ...) is still composing a word.
+              if (
+                event.key === "Enter" &&
+                !event.shiftKey &&
+                !event.nativeEvent.isComposing
+              ) {
                 event.preventDefault();
                 void create(hasAi);
               }
             }}
-            className="block min-h-32 w-full resize-none rounded-t-3xl bg-transparent px-5 pt-5 pb-2 text-[17px] leading-relaxed placeholder:text-faint focus:outline-none"
+            className="block min-h-14 w-full resize-none max-sm:min-h-[4.5rem] bg-transparent px-5 pt-2 pb-2 text-[17px] leading-relaxed placeholder:text-faint focus:outline-none"
           />
+
+          <div id="idea-help" className="min-h-9 px-5 pb-2">
+            {!idea ? (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="mr-0.5 text-xs text-faint">Try</span>
+                {EXAMPLE_IDEAS.map((example, index) => (
+                  <button
+                    key={example}
+                    type="button"
+                    onClick={() => pickExample(example)}
+                    disabled={pending !== null}
+                    // Two are plenty on a phone.
+                    className={cx(
+                      index >= 2 && "max-sm:hidden",
+                      "rounded-lg border border-line bg-raised/50 px-2.5 py-1 text-xs text-muted transition-colors hover:border-line-strong hover:text-text",
+                    )}
+                  >
+                    {example}
+                  </button>
+                ))}
+              </div>
+            ) : hasAi && isVague(idea) ? (
+              <p className="animate-fade-in flex items-center gap-1.5 text-xs text-faint">
+                <Lightbulb className="size-3.5 text-warning" aria-hidden />
+                Add who it&apos;s for and what they&apos;ll learn for a sharper
+                plan.
+              </p>
+            ) : (
+              // Keyboard shortcuts mean nothing on a phone.
+              <p className="flex items-center gap-1.5 text-xs text-faint max-sm:hidden">
+                <Kbd>
+                  <CornerDownLeft className="size-3" aria-label="Enter" />
+                </Kbd>
+                to {hasAi ? "plan with AI" : "create"}
+                <span aria-hidden>·</span>
+                <Kbd>Shift</Kbd>
+                <Kbd>
+                  <CornerDownLeft className="size-3" aria-label="Enter" />
+                </Kbd>
+                for a new line
+              </p>
+            )}
+          </div>
+
           {showMore ? (
-            <div className="animate-fade-in grid gap-3 px-5 pb-2 sm:grid-cols-2">
-              <Input
-                aria-label="Audience"
-                value={audience}
-                onChange={(event) => setAudience(event.target.value)}
-                placeholder="Audience (optional), e.g. first-year students"
-                disabled={pending !== null}
-              />
-              <Input
-                aria-label="Tone"
-                value={tone}
-                onChange={(event) => setTone(event.target.value)}
-                placeholder="Tone (optional), e.g. warm and playful"
-                disabled={pending !== null}
-              />
+            <div className="animate-fade-in grid gap-3 border-t border-line/70 px-5 pt-4 pb-2 sm:grid-cols-2">
+              <label className="flex flex-col gap-1.5">
+                <span className="text-xs text-faint">
+                  Audience <span className="text-faint/70">· optional</span>
+                </span>
+                <Input
+                  value={audience}
+                  onChange={(event) => setAudience(event.target.value)}
+                  placeholder="e.g. first-year students"
+                  disabled={pending !== null}
+                />
+              </label>
+              <label className="flex flex-col gap-1.5">
+                <span className="text-xs text-faint">
+                  Tone <span className="text-faint/70">· optional</span>
+                </span>
+                <Input
+                  value={tone}
+                  onChange={(event) => setTone(event.target.value)}
+                  placeholder="e.g. warm and playful"
+                  disabled={pending !== null}
+                />
+              </label>
             </div>
           ) : null}
-          <div className="flex flex-wrap items-center gap-2 px-4 pt-2 pb-4">
-            <PillSelect
-              icon={<Layers className="size-3.5" aria-hidden />}
-              label="Videos in the series"
-              value={videos}
-              onChange={setVideos}
-              disabled={pending !== null}
-              options={[3, 5, 7, 10].map(
-                (count) => [String(count), `${count} videos`] as const,
-              )}
-            />
-            <PillSelect
-              icon={<Globe className="size-3.5" aria-hidden />}
-              label="Language"
-              value={language}
-              onChange={setLanguage}
-              disabled={pending !== null}
-              options={LANGUAGES}
-            />
-            <button
-              type="button"
-              onClick={() => setShowMore((value) => !value)}
-              aria-expanded={showMore}
-              className={cx(
-                "flex h-9 items-center gap-2 rounded-lg border px-3 text-[13px] transition-colors",
-                showMore || audience || tone
-                  ? "border-accent/40 bg-accent/10 text-accent-bright"
-                  : "border-line bg-raised/70 text-muted hover:border-line-strong hover:text-text",
-              )}
-            >
-              <Users className="size-3.5" aria-hidden />
-              Audience & tone
-            </button>
-            <div className="ml-auto flex items-center gap-3">
-              <span className="hidden items-center gap-1 text-xs text-faint md:flex">
-                <Kbd>⌘ Enter</Kbd>
-              </span>
-              <ChoiceButtons
-                manual={{
-                  label: "Plan it myself",
-                  onSelect: () => void create(false),
-                  loading: pending === "blank",
-                  disabled: !canCreate,
-                }}
-                ai={{
-                  label: "Plan with AI",
-                  service: "AI writing",
-                  available: hasAi,
-                  setup: SETUP.writing,
-                  onSelect: () => void create(true),
-                  loading: pending === "plan",
-                  disabled: hasAi && !canCreate,
-                }}
+
+          <div className="flex flex-col gap-3 px-4 pt-2 pb-4 sm:flex-row sm:flex-wrap sm:items-center">
+            <div className="flex flex-wrap items-center gap-2">
+              <PillSelect
+                icon={<Layers className="size-3.5" aria-hidden />}
+                label="Videos in the series"
+                value={videos}
+                onChange={setVideos}
+                disabled={pending !== null}
+                options={[3, 5, 7, 10].map(
+                  (count) => [String(count), `${count} videos`] as const,
+                )}
+              />
+              <PillSelect
+                icon={<Globe className="size-3.5" aria-hidden />}
+                label="Language"
+                value={language}
+                onChange={setLanguage}
+                disabled={pending !== null}
+                options={LANGUAGES}
               />
             </div>
+            <ChoiceButtons
+              className="sm:ml-auto [&>button]:w-full [&>button]:whitespace-nowrap sm:[&>button]:w-auto"
+              manual={{
+                label: "Plan it myself",
+                onSelect: () => void create(false),
+                loading: pending === "blank",
+                disabled: !canCreate,
+              }}
+              ai={{
+                label: "Plan with AI",
+                service: "AI writing",
+                available: hasAi,
+                setup: SETUP.writing,
+                onSelect: () => void create(true),
+                loading: pending === "plan",
+                disabled: hasAi && !canCreate,
+              }}
+            />
           </div>
         </div>
       </form>
-
-      <div className="flex flex-wrap items-center justify-center gap-2">
-        <span className="text-xs text-faint">Try:</span>
-        {EXAMPLE_IDEAS.map((example) => (
-          <button
-            key={example}
-            type="button"
-            onClick={() => {
-              setIdea(example);
-              textareaRef.current?.focus();
-            }}
-            disabled={pending !== null}
-            className="rounded-lg border border-line bg-surface/50 px-3 py-1.5 text-xs text-muted transition-all hover:-translate-y-px hover:border-line-strong hover:text-text"
-          >
-            {example}
-          </button>
-        ))}
-      </div>
 
       <p className="mx-auto max-w-xl text-center text-xs leading-relaxed text-faint">
         <span className="text-muted">Plan it myself</span> makes your text the
