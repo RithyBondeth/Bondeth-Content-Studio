@@ -73,7 +73,7 @@ const widthClass = (className?: string) =>
   /(^|\s)w-/.test(className ?? "") ? "" : "w-full";
 
 const fieldClass =
-  "rounded-xl border border-line bg-bg/60 px-3.5 text-sm text-text placeholder:text-faint transition-colors hover:border-line-strong focus:border-accent focus:bg-bg focus:outline-none focus:ring-4 focus:ring-accent/15 disabled:opacity-60";
+  "rounded-xl border border-line bg-bg/60 px-3.5 text-sm text-text placeholder:text-faint transition-colors hover:border-line-strong focus:border-accent focus:bg-bg focus:outline-none disabled:opacity-60";
 
 export const Input = ({
   className,
