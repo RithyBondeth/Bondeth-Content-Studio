@@ -1,4 +1,5 @@
 import { saveMusicUpload } from "../../../studio/server/projects";
+import { workspaceRoute } from "../../../studio/server/session";
 
 /**
  * Uploads a music track for one video. A route rather than a server action,
@@ -7,7 +8,7 @@ import { saveMusicUpload } from "../../../studio/server/projects";
  * Form fields: `slug`, `index` (0-based video index) and `file`.
  * Responds with `{ src }`, or `{ error }` and a 400.
  */
-export const POST = async (request: Request) => {
+export const POST = workspaceRoute(async (request: Request) => {
   try {
     const form = await request.formData();
     const slug = form.get("slug");
@@ -30,4 +31,4 @@ export const POST = async (request: Request) => {
       { status: 400 },
     );
   }
-};
+});

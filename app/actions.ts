@@ -60,6 +60,7 @@ import {
   testSettings,
   type SettingsInput,
 } from "../studio/server/settings";
+import { canManageKeys, inWorkspace } from "../studio/server/session";
 import {
   getRenderJob,
   startRenderJob,
@@ -70,9 +71,10 @@ import {
 export type Result<T = undefined> =
   { ok: true; data: T } | { ok: false; error: string };
 
+/** Every action runs in the signed-in person's workspace, so it only reaches their projects. */
 const run = async <T>(task: () => Promise<T>): Promise<Result<T>> => {
   try {
-    return { ok: true, data: await task() };
+    return { ok: true, data: await inWorkspace(task) };
   } catch (error) {
     console.error(error);
     return {
@@ -209,9 +211,17 @@ export const splitTakeAction = async (
     splitTake(await videoMediaDir(slug, index), take, cuts, narrations),
   );
 
+/** With accounts, only admins (ADMIN_EMAILS) can see or change the API keys. */
+const requireKeyManager = async () => {
+  if (!(await canManageKeys())) {
+    throw new Error("Only an admin can change this studio's API keys.");
+  }
+};
+
 /** Saves one section of the Settings page. Takes effect on the next request. */
 export const saveSettingsAction = async (input: SettingsInput) =>
   run(async () => {
+    await requireKeyManager();
     saveSettings(input);
     revalidatePath("/", "layout");
     return getSettingsView();
@@ -219,12 +229,19 @@ export const saveSettingsAction = async (input: SettingsInput) =>
 
 /** Makes a cheap real call with a section's settings, saved or not. */
 export const testSettingsAction = async (input: SettingsInput) =>
-  run(() => testSettings(input));
+  run(async () => {
+    await requireKeyManager();
+    return testSettings(input);
+  });
 
 /** The models the AI provider in the form offers (none for Claude). */
 export const listModelsAction = async (
   input: Extract<SettingsInput, { section: "ai" }>,
-) => run(() => listModels(input));
+) =>
+  run(async () => {
+    await requireKeyManager();
+    return listModels(input);
+  });
 
 /** The voices in the ElevenLabs account. `fresh` skips the short cache. */
 export const listVoicesAction = async (fresh = false) =>

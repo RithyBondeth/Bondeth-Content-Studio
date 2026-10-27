@@ -1,10 +1,10 @@
-# Runs the studio on a server. Put the keys and the password in .env next to
-# this file (see .env.example), then:
+# Runs the studio on a server, with accounts. Put the keys and the account
+# settings in .env next to this file (see .env.example), then:
 #
 #   docker compose up -d --build
 #
-# Serve it over HTTPS through a reverse proxy (Caddy, nginx, Traefik) so the
-# password and the session cookie are never sent in the clear.
+# Serve it over HTTPS through a reverse proxy (Caddy, nginx, Traefik) so
+# sign-in codes and session cookies are never sent in the clear.
 services:
   studio:
     build: .

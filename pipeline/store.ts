@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import type { PublishKit } from "../src/lib/publish";
 import type { BrandKit, VideoSpecInput } from "../src/spec/schema";
-import { CONTENT_DIR, MEDIA_SUBDIR, OUT_DIR, PUBLIC_DIR } from "./config";
+import { contentDir, mediaSubdir, outDir, PUBLIC_DIR } from "./config";
 import type { ContentPlan } from "./schemas";
 
 /** What `plan` saves: the generated plan plus how it was made. */
@@ -39,7 +39,7 @@ export const slugify = (text: string, maxLength = 48) =>
     .slice(0, maxLength)
     .replace(/-+$/, "") || "untitled";
 
-export const planDir = (planSlug: string) => path.join(CONTENT_DIR, planSlug);
+export const planDir = (planSlug: string) => path.join(contentDir(), planSlug);
 const planFile = (planSlug: string) =>
   path.join(planDir(planSlug), "plan.json");
 
@@ -88,16 +88,20 @@ export const publishPath = (plan: PlanFile, index: number) =>
 
 /** Media folder for a video, relative to public/ (what staticFile() expects). */
 export const mediaDir = (plan: PlanFile, index: number) =>
-  path.posix.join(MEDIA_SUBDIR, plan.slug, videoKey(plan, index));
+  path.posix.join(mediaSubdir(), plan.slug, videoKey(plan, index));
 
 export const publicPath = (relative: string) => path.join(PUBLIC_DIR, relative);
 
 export const outputPath = (plan: PlanFile, index: number, format: string) =>
-  path.join(OUT_DIR, plan.slug, `${videoKey(plan, index)}-${format}.mp4`);
+  path.join(outDir(), plan.slug, `${videoKey(plan, index)}-${format}.mp4`);
 
 /** The cover image exported for one format of a video. */
 export const coverPath = (plan: PlanFile, index: number, format: string) =>
-  path.join(OUT_DIR, plan.slug, `${videoKey(plan, index)}-${format}-cover.png`);
+  path.join(
+    outDir(),
+    plan.slug,
+    `${videoKey(plan, index)}-${format}-cover.png`,
+  );
 
 /** A caption file for one format of a video, next to its render. */
 export const captionPath = (
@@ -106,11 +110,11 @@ export const captionPath = (
   format: string,
   type: "srt" | "vtt",
 ) =>
-  path.join(OUT_DIR, plan.slug, `${videoKey(plan, index)}-${format}.${type}`);
+  path.join(outDir(), plan.slug, `${videoKey(plan, index)}-${format}.${type}`);
 
 /** The "download for posting" zip for one platform. */
 export const bundlePath = (plan: PlanFile, index: number, platform: string) =>
-  path.join(OUT_DIR, plan.slug, `${videoKey(plan, index)}-${platform}.zip`);
+  path.join(outDir(), plan.slug, `${videoKey(plan, index)}-${platform}.zip`);
 
 const exists = async (file: string) =>
   fs.access(file).then(
@@ -141,10 +145,11 @@ export const loadPlan = async (planSlug: string): Promise<PlanFile> => {
 };
 
 export const listPlans = async (): Promise<string[]> => {
-  if (!(await exists(CONTENT_DIR))) {
+  const dir = contentDir();
+  if (!(await exists(dir))) {
     return [];
   }
-  const entries = await fs.readdir(CONTENT_DIR, { withFileTypes: true });
+  const entries = await fs.readdir(dir, { withFileTypes: true });
   const plans: string[] = [];
   for (const entry of entries) {
     if (entry.isDirectory() && (await exists(planFile(entry.name)))) {

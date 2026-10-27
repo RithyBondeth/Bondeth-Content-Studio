@@ -8,6 +8,7 @@ import {
 } from "../../../../../pipeline/store";
 import { getKeyStatus } from "../../../../../studio/server/env";
 import { listCovers, listRenders } from "../../../../../studio/server/projects";
+import { inPageWorkspace } from "../../../../../studio/server/session";
 import { VideoEditor } from "../../../../_components/editor/VideoEditor";
 
 export const dynamic = "force-dynamic";
@@ -21,13 +22,24 @@ export default async function VideoPage({
 }) {
   const { slug, video } = await params;
   const { tab } = await searchParams;
-  if (!(await listPlans()).includes(slug)) notFound();
-  const plan = await loadPlan(slug);
   const index = Number(video) - 1;
-  if (!Number.isInteger(index) || !plan.plan.videos[index]) notFound();
-
-  const spec = await loadSpec(plan, index);
-  if (!spec) notFound();
+  const data = await inPageWorkspace(async () => {
+    if (!(await listPlans()).includes(slug)) return null;
+    const plan = await loadPlan(slug);
+    if (!Number.isInteger(index) || !plan.plan.videos[index]) return null;
+    const spec = await loadSpec(plan, index);
+    if (!spec) return null;
+    return {
+      plan,
+      spec,
+      renders: await listRenders(plan, index),
+      publishKit: (await loadPublishKit(plan, index)) ?? blankPublishKit(spec),
+      covers: await listCovers(plan, index),
+      keys: await getKeyStatus(),
+    };
+  });
+  if (!data) notFound();
+  const { plan, spec } = data;
 
   return (
     <VideoEditor
@@ -36,12 +48,10 @@ export default async function VideoPage({
       index={index}
       videoCount={plan.plan.videos.length}
       initialSpec={spec}
-      initialRenders={await listRenders(plan, index)}
-      initialPublishKit={
-        (await loadPublishKit(plan, index)) ?? blankPublishKit(spec)
-      }
-      initialCovers={await listCovers(plan, index)}
-      keys={getKeyStatus()}
+      initialRenders={data.renders}
+      initialPublishKit={data.publishKit}
+      initialCovers={data.covers}
+      keys={data.keys}
       brandTheme={plan.brand?.theme}
       projectVoice={plan.brand?.voice}
       initialTab={tab === "video" || tab === "publish" ? tab : "scene"}

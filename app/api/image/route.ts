@@ -1,5 +1,6 @@
 import { saveImage } from "../../../pipeline/images";
 import { videoMediaDir } from "../../../studio/server/projects";
+import { workspaceRoute } from "../../../studio/server/session";
 
 /**
  * Uploads an image for one video's image scene. A route rather than a server
@@ -8,7 +9,7 @@ import { videoMediaDir } from "../../../studio/server/projects";
  * Form fields: `slug`, `index` (0-based video index) and `file`.
  * Responds with `{ src }`, or `{ error }` and a 400.
  */
-export const POST = async (request: Request) => {
+export const POST = workspaceRoute(async (request: Request) => {
   try {
     const form = await request.formData();
     const slug = form.get("slug");
@@ -30,4 +31,4 @@ export const POST = async (request: Request) => {
       { status: 400 },
     );
   }
-};
+});

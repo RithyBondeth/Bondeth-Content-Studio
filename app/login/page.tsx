@@ -1,9 +1,15 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { getGate, safeNext } from "../../studio/auth";
+import {
+  getAuthMode,
+  hasEmailCodes,
+  hasGoogle,
+  safeNext,
+} from "../../studio/auth-mode";
+import { getUser } from "../../studio/server/session";
 import { BlockField } from "../_components/BlockField";
 import { BrandLogo } from "../_components/BrandLogo";
-import { Card } from "../_components/ui";
+import { Alert, Card } from "../_components/ui";
 import { LoginForm } from "./LoginForm";
 
 export const dynamic = "force-dynamic";
@@ -15,8 +21,9 @@ export default async function LoginPage({
 }: {
   searchParams: Promise<{ next?: string }>;
 }) {
-  const { next } = await searchParams;
-  if (getGate().kind !== "password") redirect("/");
+  const next = safeNext((await searchParams).next);
+  // Nothing to sign in to without accounts, and no need when already in.
+  if (getAuthMode().kind !== "accounts" || (await getUser())) redirect(next);
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-x-clip px-4">
       <div
@@ -27,11 +34,21 @@ export default async function LoginPage({
       <Card className="relative flex w-full max-w-sm flex-col gap-6 p-6">
         <div className="flex flex-col gap-3">
           <BrandLogo className="h-8 w-auto self-start" />
-          <p className="text-sm leading-relaxed text-muted">
-            This studio is private. Enter its password to continue.
-          </p>
+          <div className="flex flex-col gap-1">
+            <h1 className="text-lg font-medium">Sign in</h1>
+            <p className="text-sm leading-relaxed text-muted">
+              New here? Signing in creates your account.
+            </p>
+          </div>
         </div>
-        <LoginForm next={safeNext(next)} />
+        {hasGoogle() || hasEmailCodes() ? (
+          <LoginForm next={next} google={hasGoogle()} email={hasEmailCodes()} />
+        ) : (
+          <Alert tone="warning">
+            Sign-in isn&apos;t set up on this server yet. Its admin needs to add
+            RESEND_API_KEY and EMAIL_FROM for email codes, or a Google client.
+          </Alert>
+        )}
       </Card>
     </div>
   );

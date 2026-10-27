@@ -1,5 +1,6 @@
 import { saveTake } from "../../../../pipeline/recording";
 import { videoMediaDir } from "../../../../studio/server/projects";
+import { workspaceRoute } from "../../../../studio/server/session";
 
 /**
  * Uploads one voice-over take covering the whole video, recorded in the
@@ -13,7 +14,7 @@ import { videoMediaDir } from "../../../../studio/server/projects";
  * Responds with `{ take, src, durationInSeconds, pauses, cuts }`, where
  * `cuts` are indexes into `pauses`, or `{ error }` and a 400.
  */
-export const POST = async (request: Request) => {
+export const POST = workspaceRoute(async (request: Request) => {
   try {
     const form = await request.formData();
     const slug = form.get("slug");
@@ -44,7 +45,7 @@ export const POST = async (request: Request) => {
       { status: 400 },
     );
   }
-};
+});
 
 const parseJson = (value: FormDataEntryValue | null): unknown => {
   if (typeof value !== "string") return undefined;

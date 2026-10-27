@@ -1,6 +1,7 @@
 import { Settings } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { AccountMenu } from "./AccountMenu";
 import { AppearanceSwitch } from "./Appearance";
 import { BlockDot } from "./Blocks";
 import { BrandLogo } from "./BrandLogo";
@@ -41,10 +42,13 @@ export const SettingsLink = ({
 
 export const Header = ({
   needsSetup,
+  canManageKeys = true,
   children,
 }: {
   /** Mark the settings gear: no AI service is connected yet. */
   needsSetup?: boolean;
+  /** Show the settings gear: false for people who can't change the keys. */
+  canManageKeys?: boolean;
   children?: ReactNode;
 }) => (
   <header className="sticky top-0 z-30 border-b border-line/70 bg-bg/70 backdrop-blur-xl">
@@ -52,8 +56,9 @@ export const Header = ({
       <Logo />
       <div className="flex items-center gap-3">
         {children}
-        <SettingsLink needsSetup={needsSetup} />
+        {canManageKeys ? <SettingsLink needsSetup={needsSetup} /> : null}
         <AppearanceSwitch />
+        <AccountMenu />
       </div>
     </div>
   </header>
