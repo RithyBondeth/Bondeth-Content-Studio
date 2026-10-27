@@ -18,13 +18,14 @@ test("Claude is the default provider", () => {
   assert.equal(resolveProvider({}).ready, false);
 });
 
-test("OpenAI-compatible providers need a key and a model", () => {
+test("OpenAI-compatible providers need a key, and start on their recommended model", () => {
   const env = { LLM_PROVIDER: "OpenAI", OPENAI_API_KEY: "sk" };
-  const noModel = resolveProvider(env);
-  assert.equal(noModel.ready, false);
-  assert.match(noModel.missing ?? "", /LLM_MODEL/);
+  const recommended = resolveProvider(env);
+  assert.equal(recommended.ready, true);
+  assert.equal(recommended.model, "gpt-6.1-sol");
 
   const openai = resolveProvider({ ...env, LLM_MODEL: "gpt-x" });
+  assert.equal(openai.model, "gpt-x");
   assert.equal(openai.ready, true);
   assert.equal(openai.baseUrl, "https://api.openai.com/v1");
   assert.equal(openai.apiKey, "sk");
@@ -39,7 +40,11 @@ test("OpenAI-compatible providers need a key and a model", () => {
   );
 });
 
-test("local and custom providers", () => {
+test("local and custom providers need a model chosen", () => {
+  assert.match(
+    resolveProvider({ LLM_PROVIDER: "ollama" }).missing ?? "",
+    /LLM_MODEL/,
+  );
   assert.equal(
     resolveProvider({ LLM_PROVIDER: "ollama", LLM_MODEL: "llama" }).ready,
     true,
