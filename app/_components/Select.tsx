@@ -93,7 +93,7 @@ type SelectProps = Omit<
 };
 
 const fieldClass =
-  "flex h-10 items-center gap-2 rounded-xl border border-line bg-bg/60 pr-3 pl-3.5 text-left text-sm text-text transition-colors hover:border-line-strong focus-visible:border-accent focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15 disabled:cursor-not-allowed disabled:opacity-60 aria-expanded:border-accent aria-expanded:ring-4 aria-expanded:ring-accent/15";
+  "flex h-10 items-center gap-2 rounded-xl border border-line bg-bg/60 pr-3 pl-3.5 text-left text-sm text-text transition-colors hover:border-line-strong focus-visible:border-accent focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60 aria-expanded:border-accent";
 
 /** Fields fill their container unless the caller gives them a width. */
 const widthClass = (className?: string) =>

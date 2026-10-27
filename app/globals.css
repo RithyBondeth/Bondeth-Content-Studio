@@ -100,6 +100,14 @@ body {
   outline-offset: 2px;
 }
 
+/* Form fields never get an outline: their border shows focus instead. */
+input,
+textarea,
+select,
+[contenteditable] {
+  outline: none !important;
+}
+
 /* Thin, quiet scrollbars for the editor's panels. */
 * {
   scrollbar-width: thin;
