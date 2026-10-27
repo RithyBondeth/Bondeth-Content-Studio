@@ -5,7 +5,6 @@ import { BlockField } from "./_components/BlockField";
 import { BlockDot, BlockMeter } from "./_components/Blocks";
 import { BrandMark } from "./_components/BrandLogo";
 import { Header } from "./_components/Header";
-import { KeyStatus } from "./_components/KeyStatus";
 import { NewProjectForm } from "./_components/NewProjectForm";
 import { ProjectCard } from "./_components/ProjectCard";
 
@@ -51,9 +50,7 @@ export default async function HomePage() {
         aria-hidden
       />
       <BlockField intro className="h-[720px]" />
-      <Header>
-        <KeyStatus status={keys} />
-      </Header>
+      <Header needsSetup={!keys.ai} />
 
       <main className="relative mx-auto flex max-w-6xl flex-col gap-20 px-4 pt-16 pb-24 sm:px-6 sm:pt-24">
         <section className="mx-auto flex w-full max-w-3xl flex-col gap-10">

@@ -27,6 +27,7 @@ import {
   testSettingsAction,
 } from "../actions";
 import { AiTag } from "../_components/AiChoice";
+import { BlockDot, BlockMeter } from "../_components/Blocks";
 import { useToast } from "../_components/Toast";
 import {
   Alert,
@@ -137,11 +138,14 @@ const Section = ({
             </h2>
             {connected ? (
               <Badge tone="success">
-                <CheckCircle2 className="size-3" aria-hidden />
-                Set up
+                <BlockDot className="bg-success" />
+                Connected
               </Badge>
             ) : (
-              <Badge>Not set up</Badge>
+              <Badge>
+                <BlockDot className="bg-faint" />
+                Not set up
+              </Badge>
             )}
           </div>
           <p className="text-[13px] leading-relaxed text-muted">
@@ -651,6 +655,104 @@ const KeyOnlySection = ({
   );
 };
 
+/** One tile per service, at the top of Settings. Each one jumps to its section. */
+const Overview = ({ view }: { view: SettingsView }) => {
+  const ai = view.ai.providers[view.ai.provider];
+  const services = [
+    {
+      id: "ai",
+      icon: PenLine,
+      name: `AI writing · ${PROVIDERS[view.ai.provider].name}`,
+      unlocks: "Plans series and writes scripts and posts",
+      connected: ai.ready,
+    },
+    {
+      id: "voice",
+      icon: Mic,
+      name: "AI voice-over · ElevenLabs",
+      unlocks: "Records narration with natural voices",
+      connected: Boolean(view.elevenLabs.key.masked),
+    },
+    {
+      id: "openai",
+      icon: ImageIcon,
+      name: "AI images · OpenAI",
+      unlocks: "Draws illustrations for image scenes",
+      connected: Boolean(view.openai.key.masked),
+    },
+    {
+      id: "pexels",
+      icon: Images,
+      name: "Stock photos · Pexels",
+      unlocks: "Searches Pexels instead of Openverse",
+      connected: Boolean(view.pexels.key.masked),
+    },
+  ];
+  const count = services.filter((service) => service.connected).length;
+  return (
+    <section aria-labelledby="overview-title" className="flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-4">
+        <h2
+          id="overview-title"
+          className="text-sm font-medium whitespace-nowrap text-muted"
+        >
+          {count} of {services.length} connected
+        </h2>
+        <BlockMeter
+          value={count}
+          total={services.length}
+          className="w-24 shrink-0"
+        />
+      </div>
+      <ul className="grid gap-3 sm:grid-cols-2">
+        {services.map((service) => (
+          <li key={service.id}>
+            <a
+              href={`#${service.id}`}
+              className={cx(
+                "group flex h-full items-start gap-3 rounded-2xl border p-4 transition-all hover:-translate-y-0.5",
+                service.connected
+                  ? "border-accent/30 bg-accent/8 hover:border-accent/50"
+                  : "border-line bg-surface/60 hover:border-line-strong",
+              )}
+            >
+              <span
+                className={cx(
+                  "grid size-9 shrink-0 place-items-center rounded-xl ring-1 ring-inset",
+                  service.connected
+                    ? "bg-accent text-white ring-accent"
+                    : "bg-raised text-faint ring-line",
+                )}
+              >
+                <service.icon className="size-4" aria-hidden />
+              </span>
+              <span className="flex min-w-0 flex-col gap-1">
+                <span className="text-sm font-medium">{service.name}</span>
+                <span className="text-xs leading-relaxed text-muted">
+                  {service.unlocks}
+                </span>
+                <span
+                  className={cx(
+                    "mt-1 flex items-center gap-1.5 text-xs font-medium",
+                    service.connected ? "text-accent-bright" : "text-faint",
+                  )}
+                >
+                  <BlockDot
+                    className={
+                      service.connected ? "bg-accent-bright" : "bg-line-strong"
+                    }
+                  />
+                  {service.connected ? "Connected" : "Not set up · Add a key"}
+                </span>
+              </span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+};
+
 export const SettingsForm = ({
   initial,
   fromSetup,
@@ -668,6 +770,7 @@ export const SettingsForm = ({
           needed.
         </Alert>
       ) : null}
+      <Overview view={view} />
       <AiSection view={view.ai} onSaved={setView} />
       <VoiceSection view={view.elevenLabs} onSaved={setView} />
       <KeyOnlySection

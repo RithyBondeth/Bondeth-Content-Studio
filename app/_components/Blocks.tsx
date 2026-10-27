@@ -50,7 +50,12 @@ export const BlockMeter = ({
   const lit = Math.round(Math.min(1, Math.max(0, fraction)) * segments);
   return (
     <div
-      className={cx("flex h-1.5 w-full gap-[3px]", className)}
+      className={cx(
+        "flex h-1.5 gap-[3px]",
+        // Full width unless the caller sets one.
+        !/(^|\s)w-/.test(className ?? "") && "w-full",
+        className,
+      )}
       role="progressbar"
       aria-valuemin={0}
       aria-valuemax={100}
