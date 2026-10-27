@@ -62,12 +62,7 @@ export const BrandLogo = ({ className }: { className?: string }) => (
     aria-label="Bondeth Studio"
   >
     <MarkShapes />
-    <g
-      fill="none"
-      strokeWidth="7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
+    <g fill="none" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round">
       <path
         d={BONDETH}
         transform="translate(78 18) scale(0.62)"

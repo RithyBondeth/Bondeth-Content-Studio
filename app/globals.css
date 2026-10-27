@@ -110,12 +110,7 @@ body {
 }
 
 @utility text-gradient {
-  background: linear-gradient(
-    100deg,
-    #a8d4ff 0%,
-    #70b5f9 45%,
-    #378fe9 100%
-  );
+  background: linear-gradient(100deg, #a8d4ff 0%, #70b5f9 45%, #378fe9 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -123,11 +118,7 @@ body {
 
 /* Deeper colors on light backgrounds, where the pastel ones wash out. */
 html[data-theme="light"] .text-gradient {
-  background-image: linear-gradient(
-    100deg,
-    #0a66c2 0%,
-    #004182 100%
-  );
+  background-image: linear-gradient(100deg, #0a66c2 0%, #004182 100%);
 }
 
 @utility bg-brand {
