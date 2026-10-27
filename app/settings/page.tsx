@@ -9,7 +9,7 @@ import { SettingsForm } from "./SettingsForm";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = { title: "Settings · Content Studio" };
+export const metadata: Metadata = { title: "Settings · Bondeth Studio" };
 
 export default async function SettingsPage({
   searchParams,

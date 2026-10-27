@@ -35,7 +35,7 @@ export const buttonClass = ({
     size === "md" && (iconOnly ? "size-10" : "h-10 px-4 text-sm"),
     size === "lg" && (iconOnly ? "size-12" : "h-12 px-6 text-[15px]"),
     variant === "primary" &&
-      "bg-brand text-white shadow-[0_8px_24px_-8px_rgb(124_92_255/0.7),inset_0_1px_0_rgb(255_255_255/0.2)] hover:enabled:brightness-110",
+      "bg-brand text-white shadow-[0_8px_24px_-8px_rgb(10_102_194/0.7),inset_0_1px_0_rgb(255_255_255/0.2)] hover:enabled:brightness-110",
     variant === "secondary" &&
       "border border-line bg-raised text-text hover:enabled:border-line-strong hover:enabled:bg-hover",
     variant === "outline" &&

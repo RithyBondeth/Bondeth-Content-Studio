@@ -1,6 +1,11 @@
 <div align="center">
 
-# Bondeth Content Studio
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="public/brand/logo-on-dark.svg">
+  <img src="public/brand/logo.svg" alt="Bondeth Studio" width="330">
+</picture>
+
+# Bondeth Studio
 
 **Turn one idea into a content plan, then into finished explainer videos.**
 
@@ -18,7 +23,7 @@ An AI content studio for educators and explainers: Claude plans the series and w
 
 ## Why
 
-Most people who want to teach online get stuck in the same places: deciding what to post, writing the script, and editing the video. Bondeth Content Studio handles all three, while leaving you in control of every step.
+Most people who want to teach online get stuck in the same places: deciding what to post, writing the script, and editing the video. Bondeth Studio handles all three, while leaving you in control of every step.
 
 1. **Plan:** describe your idea, and Claude turns it into a content series with an audience, themes, a posting schedule, and a list of videos with hooks.
 2. **Script:** Claude writes each video as a sequence of scenes (title, list, statistic, chart, diagram, image, comparison, code, and more), with narration and on-screen text. Image scenes get a stock photo or an AI illustration automatically.
@@ -60,6 +65,8 @@ The studio walks you through the whole process in your browser:
 6. **Publish:** Claude writes a title, post text, call to action, and hashtags for TikTok, YouTube Shorts, Instagram Reels, and YouTube in one go. Edit them with live character counters, copy them, and export a cover image from any scene, then download one zip per platform with the video, cover, post text, and caption files. See [Publishing](#publishing).
 
 The studio runs locally and stores everything in this folder, the same files the command line uses.
+
+The logo, favicon, and brand colours live in [`public/brand/`](public/brand/README.md).
 
 ## AI providers
 
