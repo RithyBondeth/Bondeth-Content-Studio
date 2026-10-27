@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getKeyStatus } from "../../studio/server/env";
 import { getSettingsView } from "../../studio/server/settings";
-import { BlockField } from "../_components/Blocks";
+import { BlockField } from "../_components/BlockField";
 import { Header } from "../_components/Header";
 import { KeyStatus } from "../_components/KeyStatus";
 import { SettingsForm } from "./SettingsForm";

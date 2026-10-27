@@ -1,7 +1,8 @@
 import { Clapperboard, FileText, Lightbulb, Mic } from "lucide-react";
 import { getKeyStatus, type KeyStatus as Keys } from "../studio/server/env";
 import { listProjects } from "../studio/server/projects";
-import { BlockDot, BlockField, BlockMeter } from "./_components/Blocks";
+import { BlockField } from "./_components/BlockField";
+import { BlockDot, BlockMeter } from "./_components/Blocks";
 import { BrandMark } from "./_components/BrandLogo";
 import { Header } from "./_components/Header";
 import { KeyStatus } from "./_components/KeyStatus";
@@ -49,7 +50,7 @@ export default async function HomePage() {
         className="bg-stage pointer-events-none absolute inset-x-0 top-0 h-[720px]"
         aria-hidden
       />
-      <BlockField className="h-[720px]" />
+      <BlockField intro className="h-[720px]" />
       <Header>
         <KeyStatus status={keys} />
       </Header>
