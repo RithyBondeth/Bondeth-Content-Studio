@@ -41,6 +41,7 @@ import {
 } from "../../actions";
 import { AppearanceSwitch } from "../Appearance";
 import { BlockSpinner } from "../Blocks";
+import { AccountMenu } from "../AccountMenu";
 import { SettingsLink } from "../Header";
 import { useConfirm } from "../ConfirmDialog";
 import { AiButton, SETUP } from "../AiChoice";
@@ -739,11 +740,14 @@ export const VideoEditor = ({
             />
           </div>
           <SaveIndicator state={saveState} />
-          <SettingsLink
-            needsSetup={!keys.ai}
-            className="hidden md:inline-flex"
-          />
+          {keys.manage ? (
+            <SettingsLink
+              needsSetup={!keys.ai}
+              className="hidden md:inline-flex"
+            />
+          ) : null}
           <AppearanceSwitch className="hidden md:flex" />
+          <AccountMenu className="hidden md:block" />
           <FormatToggle value={format} onChange={setFormat} />
           {/* Your own voice: one take for the whole video, in the Video tab. */}
           <Button

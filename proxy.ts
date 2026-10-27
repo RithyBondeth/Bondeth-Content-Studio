@@ -1,19 +1,23 @@
+import { getSessionCookie } from "better-auth/cookies";
 import { NextResponse, type NextRequest } from "next/server";
-import { getGate, SESSION_COOKIE, verifySession } from "./studio/auth";
+import { getAuthMode } from "./studio/auth-mode";
 
-/** Keeps a studio on a server behind its password; see studio/auth.ts. */
-export async function proxy(request: NextRequest) {
-  const gate = getGate();
-  if (gate.kind === "open") return NextResponse.next();
-  if (gate.kind === "misconfigured") {
+/**
+ * With accounts, sends anyone without a session cookie to the sign-in page
+ * (APIs answer 401). It only checks that a cookie is there; every page,
+ * action, and route checks the session itself before touching any files.
+ */
+export function proxy(request: NextRequest) {
+  const mode = getAuthMode();
+  if (mode.kind === "open") return NextResponse.next();
+  if (mode.kind === "misconfigured") {
     return new NextResponse(
-      "This studio has no password. Set STUDIO_PASSWORD and restart it, or set STUDIO_ALLOW_OPEN=1 to run it without one.",
+      "This studio has no accounts set up. Set BETTER_AUTH_SECRET and restart it, or set STUDIO_ALLOW_OPEN=1 to run it without sign-in.",
       { status: 503, headers: { "Content-Type": "text/plain; charset=utf-8" } },
     );
   }
 
-  const session = request.cookies.get(SESSION_COOKIE)?.value;
-  if (await verifySession(session, gate.secret)) return NextResponse.next();
+  if (getSessionCookie(request)) return NextResponse.next();
 
   const { pathname, search } = request.nextUrl;
   if (pathname.startsWith("/api/")) {
@@ -25,8 +29,8 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Everything except the login page and what it needs to render.
+  // Everything except sign-in itself and what the sign-in page needs.
   matcher: [
-    "/((?!login|_next/static|_next/image|icon.svg|apple-icon.png|favicon.ico|fonts/).*)",
+    "/((?!login|api/auth|_next/static|_next/image|icon.svg|apple-icon.png|favicon.ico|fonts/|brand/).*)",
   ],
 };

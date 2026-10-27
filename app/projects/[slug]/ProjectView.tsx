@@ -428,7 +428,7 @@ export const ProjectView = ({
         aria-hidden
       />
       <BlockField className="h-[520px] opacity-70" />
-      <Header needsSetup={!keys.ai} />
+      <Header needsSetup={!keys.ai} canManageKeys={keys.manage} />
       <main className="relative mx-auto flex max-w-6xl flex-col gap-10 px-4 pt-8 pb-24 sm:px-6">
         <div className="flex flex-col gap-5">
           <Link

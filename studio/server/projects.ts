@@ -16,7 +16,12 @@ import {
   MUSIC_UPLOAD_TYPES,
   musicUploadFileName,
 } from "../../src/lib/music";
-import { OUT_DIR, PUBLIC_DIR, MEDIA_SUBDIR } from "../../pipeline/config";
+import {
+  mediaSubdir,
+  OUT_ROOT,
+  outDir,
+  PUBLIC_DIR,
+} from "../../pipeline/config";
 import type { ContentPlan } from "../../pipeline/schemas";
 import { applyBrandKit, kitCreator } from "../../pipeline/script";
 import { scenesToRecord, voiceForVideo } from "../../pipeline/voice";
@@ -85,7 +90,8 @@ const listOutFiles = async (
     const file = fileFor(format);
     const stat = await fs.stat(file).catch(() => null);
     if (stat) {
-      const relative = path.relative(OUT_DIR, file).split(path.sep).join("/");
+      // Relative to out/ itself, so the URL names the workspace too.
+      const relative = path.relative(OUT_ROOT, file).split(path.sep).join("/");
       files.push({
         format,
         url: `/api/files/${relative}?v=${stat.mtimeMs.toFixed(0)}`,
@@ -466,8 +472,8 @@ export const deleteProject = async (slug: string) => {
   await Promise.all(
     [
       planDir(plan.slug),
-      path.join(PUBLIC_DIR, MEDIA_SUBDIR, plan.slug),
-      path.join(OUT_DIR, plan.slug),
+      path.join(PUBLIC_DIR, mediaSubdir(), plan.slug),
+      path.join(outDir(), plan.slug),
     ].map((dir) => fs.rm(dir, { recursive: true, force: true })),
   );
 };

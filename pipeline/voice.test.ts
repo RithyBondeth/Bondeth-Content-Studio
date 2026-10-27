@@ -4,7 +4,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { after, test } from "node:test";
 import type { VideoSpecInput } from "../src/spec/schema";
-import { config, MEDIA_SUBDIR } from "./config";
+import { config, mediaSubdir } from "./config";
 import { publicPath } from "./store";
 import {
   addVoiceOver,
@@ -102,7 +102,7 @@ test("voiceForVideo uses the video's voice, then the project's, then .env", () =
   );
 });
 
-const dir = path.posix.join(MEDIA_SUBDIR, `.voice-test-${process.pid}`);
+const dir = path.posix.join(mediaSubdir(), `.voice-test-${process.pid}`);
 after(() => fs.rm(publicPath(dir), { recursive: true, force: true }));
 
 test("scenesToRecord finds scenes recorded with another voice or settings", async () => {

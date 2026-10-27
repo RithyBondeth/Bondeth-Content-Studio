@@ -1,5 +1,6 @@
 import { saveRecording } from "../../../pipeline/recording";
 import { videoMediaDir } from "../../../studio/server/projects";
+import { workspaceRoute } from "../../../studio/server/session";
 
 /**
  * Uploads a voice-over the creator recorded in the browser for one scene,
@@ -10,7 +11,7 @@ import { videoMediaDir } from "../../../studio/server/projects";
  * index), `narration` (the text that was read) and `file`.
  * Responds with the SceneAudio, or `{ error }` and a 400.
  */
-export const POST = async (request: Request) => {
+export const POST = workspaceRoute(async (request: Request) => {
   try {
     const form = await request.formData();
     const slug = form.get("slug");
@@ -42,4 +43,4 @@ export const POST = async (request: Request) => {
       { status: 400 },
     );
   }
-};
+});
