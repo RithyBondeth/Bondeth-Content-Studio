@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useState, type ReactNode } from "react";
-import { modelChoices } from "../../pipeline/models";
+import { MODEL_CATALOG, modelChoices } from "../../pipeline/models";
 import { PROVIDERS, type ProviderId } from "../../pipeline/providers";
 import type { VoiceSummary } from "../../src/lib/voice";
 import type {
@@ -332,8 +332,8 @@ const Actions = ({
 const OTHER = "\u0000other";
 
 /**
- * Picks the model: Claude's models with a line about each, or the models the
- * provider reports. "Another model" switches to typing a name.
+ * Picks the model: the provider's current models with a line about each,
+ * then any others the account offers. "Another model" switches to typing.
  */
 const ModelField = ({
   id,
@@ -378,11 +378,14 @@ const ModelField = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [provider, asked.baseUrl, asked.apiKey]);
 
-  const choices = modelChoices(
-    provider,
-    provider === "anthropic" ? [] : available,
-    shown || undefined,
+  const choices = modelChoices(provider, available, shown || undefined);
+  const suggested = new Set(
+    (MODEL_CATALOG[provider] ?? []).map((choice) => choice.id),
   );
+  // Headings only when the list mixes suggested models and the account's own.
+  const grouped =
+    choices.some((choice) => suggested.has(choice.id)) &&
+    choices.some((choice) => !suggested.has(choice.id));
   const listed = choices.some((choice) => choice.id === shown);
   const free = typing || choices.length === 0 || (Boolean(shown) && !listed);
 
@@ -391,11 +394,12 @@ const ModelField = ({
       value: choice.id,
       label: choice.label,
       hint: choice.hint,
-      tag:
-        choice.recommended ||
-        (choice.id === defaultModel && provider !== "anthropic")
-          ? "Recommended"
-          : undefined,
+      tag: choice.recommended ? "Recommended" : undefined,
+      group: grouped
+        ? suggested.has(choice.id)
+          ? "Suggested"
+          : "More from your account"
+        : undefined,
     })),
     {
       value: OTHER,
@@ -404,16 +408,18 @@ const ModelField = ({
     },
   ];
 
-  const hint =
-    provider === "anthropic"
-      ? "Opus is the best balance for plans and scripts. Pick Sonnet or Haiku to spend less."
-      : loading
-        ? `Asking ${PROVIDERS[provider].name} which models it has…`
-        : problem
-          ? `${problem} You can still type a model name.`
-          : choices.length
-            ? `The models your ${PROVIDERS[provider].name} account offers. "Faster" ones cost less; "most capable" ones write better.`
-            : `Add your ${PROVIDERS[provider].name} key to choose from its models, or type a model name.`;
+  const name = PROVIDERS[provider].name;
+  const hint = loading
+    ? `Checking which models your ${name} account has…`
+    : problem
+      ? `${problem} You can still pick one above or type a name.`
+      : provider === "custom"
+        ? "Type the model name your provider gives you."
+        : provider === "lmstudio"
+          ? "Load a model in LM Studio and it shows up here."
+          : (MODEL_CATALOG[provider]?.length ?? 0) > 0
+            ? "The recommended one suits most people. Faster ones cost less; the most capable write a little better."
+            : `Choose from the models your ${name} account offers.`;
 
   return (
     <Field label="Model" htmlFor={id} hint={hint}>
