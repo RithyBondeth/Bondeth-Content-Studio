@@ -37,7 +37,6 @@ import { NextStepCard } from "./NextStepCard";
 import { BlockField } from "../../_components/BlockField";
 import { BlockMeter, BlockSpinner } from "../../_components/Blocks";
 import { Header } from "../../_components/Header";
-import { KeyStatus } from "../../_components/KeyStatus";
 import { Menu } from "../../_components/Menu";
 import { useToast } from "../../_components/Toast";
 import {
@@ -429,9 +428,7 @@ export const ProjectView = ({
         aria-hidden
       />
       <BlockField className="h-[520px] opacity-70" />
-      <Header>
-        <KeyStatus status={keys} />
-      </Header>
+      <Header needsSetup={!keys.ai} />
       <main className="relative mx-auto flex max-w-6xl flex-col gap-10 px-4 pt-8 pb-24 sm:px-6">
         <div className="flex flex-col gap-5">
           <Link

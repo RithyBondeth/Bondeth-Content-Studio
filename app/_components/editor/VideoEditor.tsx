@@ -739,7 +739,10 @@ export const VideoEditor = ({
             />
           </div>
           <SaveIndicator state={saveState} />
-          <SettingsLink className="hidden md:inline-flex" />
+          <SettingsLink
+            needsSetup={!keys.ai}
+            className="hidden md:inline-flex"
+          />
           <AppearanceSwitch className="hidden md:flex" />
           <FormatToggle value={format} onChange={setFormat} />
           {/* Your own voice: one take for the whole video, in the Video tab. */}
