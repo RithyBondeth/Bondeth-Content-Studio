@@ -7,7 +7,6 @@ import {
   Download,
   ImageIcon,
   Package,
-  Loader2,
   Megaphone,
   RefreshCw,
 } from "lucide-react";
@@ -51,6 +50,7 @@ import {
   Textarea,
   cx,
 } from "../ui";
+import { BlockSpinner } from "../Blocks";
 import { SCENE_META } from "./scene-meta";
 
 const SAVE_DELAY = 700;
@@ -549,7 +549,7 @@ export const PublishPanel = ({
                 disabled={active.length > 0}
                 icon={
                   active.length ? (
-                    <Loader2 className="size-4 animate-spin" aria-hidden />
+                    <BlockSpinner />
                   ) : (
                     <ImageIcon className="size-4" aria-hidden />
                   )

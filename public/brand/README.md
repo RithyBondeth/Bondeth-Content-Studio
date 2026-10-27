@@ -13,7 +13,7 @@ The mark is a 5×5 grid of content blocks. The lit ones form a play button: smal
 
 In the studio, the header draws the logo inline from `app/_components/BrandLogo.tsx`, so the wordmark follows the light or dark appearance. The block animation's CSS is in `app/globals.css`.
 
-The wordmark is hand-drawn monoline lettering, stored as SVG strokes, so it doesn't need a font to load.
+The wordmark is "bondeth" in Ubuntu Bold and "studio" in Ubuntu Regular (the studio UI font), outlined into SVG paths so it doesn't need a font to load. Ubuntu is under the Ubuntu Font Licence 1.0.
 
 ## Colours
 

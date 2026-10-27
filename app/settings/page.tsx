@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getKeyStatus } from "../../studio/server/env";
 import { getSettingsView } from "../../studio/server/settings";
+import { BlockField } from "../_components/Blocks";
 import { Header } from "../_components/Header";
 import { KeyStatus } from "../_components/KeyStatus";
 import { SettingsForm } from "./SettingsForm";
@@ -23,6 +24,7 @@ export default async function SettingsPage({
         className="bg-stage pointer-events-none absolute inset-x-0 top-0 h-[520px] opacity-70"
         aria-hidden
       />
+      <BlockField className="h-[520px] opacity-70" />
       <Header>
         <KeyStatus status={getKeyStatus()} />
       </Header>

@@ -8,7 +8,6 @@ import {
   Clapperboard,
   FileText,
   Lightbulb,
-  Loader2,
   Mic,
   Pencil,
   Plus,
@@ -35,6 +34,7 @@ import { ChoiceButtons, SETUP } from "../../_components/AiChoice";
 import { useConfirm } from "../../_components/ConfirmDialog";
 import { BrandKitCard } from "./BrandKitCard";
 import { NextStepCard } from "./NextStepCard";
+import { BlockField, BlockMeter, BlockSpinner } from "../../_components/Blocks";
 import { Header } from "../../_components/Header";
 import { KeyStatus } from "../../_components/KeyStatus";
 import { Menu } from "../../_components/Menu";
@@ -69,7 +69,7 @@ const StageTrack = ({ video }: { video: VideoSummary }) => {
         <li key={stage.key} className="flex items-center gap-1.5">
           <span
             className={cx(
-              "flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] ring-1 ring-inset",
+              "flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] ring-1 ring-inset",
               done[stage.key]
                 ? "bg-success/10 text-success ring-success/20"
                 : "text-faint ring-line",
@@ -117,14 +117,9 @@ const StatTile = ({
       )}
     </p>
     {total !== undefined ? (
-      <div className="h-1 overflow-hidden rounded-full bg-raised">
-        <div
-          className="bg-brand h-full rounded-full transition-[width] duration-500"
-          style={{ width: `${total ? (value / total) * 100 : 0}%` }}
-        />
-      </div>
+      <BlockMeter value={value} total={total} />
     ) : (
-      <div className="h-1" />
+      <div className="h-1.5" />
     )}
   </div>
 );
@@ -432,6 +427,7 @@ export const ProjectView = ({
         className="bg-stage pointer-events-none absolute inset-x-0 top-0 h-[520px] opacity-70"
         aria-hidden
       />
+      <BlockField className="h-[520px] opacity-70" />
       <Header>
         <KeyStatus status={keys} />
       </Header>
@@ -553,7 +549,7 @@ export const ProjectView = ({
                     <span
                       key={pillar.name}
                       title={pillar.description}
-                      className="rounded-full bg-accent/10 px-3 py-1 text-xs text-accent-bright ring-1 ring-accent/20 ring-inset"
+                      className="rounded-lg bg-accent/10 px-3 py-1 text-xs text-accent-bright ring-1 ring-accent/20 ring-inset"
                     >
                       {pillar.name}
                     </span>
@@ -687,10 +683,7 @@ export const ProjectView = ({
                     <div className="relative z-10 flex shrink-0 items-center gap-1">
                       {isWriting ? (
                         <span className="flex items-center gap-2 px-3 text-sm text-accent-bright">
-                          <Loader2
-                            className="size-4 animate-spin"
-                            aria-hidden
-                          />
+                          <BlockSpinner />
                           Writing…
                         </span>
                       ) : scripted ? (

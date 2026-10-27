@@ -1,6 +1,7 @@
 "use client";
 
-import { Download, Loader2, Monitor, Play, Smartphone, X } from "lucide-react";
+import { Download, Monitor, Play, Smartphone, X } from "lucide-react";
+import { BlockSpinner } from "../Blocks";
 import { useEffect, useState } from "react";
 import type { VideoFormat } from "../../../src/lib/formats";
 import type { RenderFile } from "../../../studio/server/projects";
@@ -179,10 +180,7 @@ export const RenderPanel = ({
               <span className="flex w-full items-center justify-between">
                 <info.icon className="size-4 text-accent-bright" aria-hidden />
                 {running ? (
-                  <Loader2
-                    className="size-3.5 animate-spin text-accent-bright"
-                    aria-hidden
-                  />
+                  <BlockSpinner className="size-3.5 text-accent-bright" />
                 ) : null}
               </span>
               <span className="text-sm font-medium">
