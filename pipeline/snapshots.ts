@@ -32,7 +32,7 @@ import {
   type SnapshotFrame,
 } from "../src/snapshots/frames";
 import { videoSpecSchema } from "../src/spec/schema";
-import { OUT_DIR, ROOT } from "./config";
+import { OUT_ROOT, ROOT } from "./config";
 
 /** Half size: enough to see a broken layout, a quarter of the pixels to compare. */
 const SCALE = 0.5;
@@ -47,8 +47,8 @@ const CHROMIUM_OPTIONS: ChromiumOptions = { gl: "swangle" };
 
 const PLATFORM = process.platform;
 const REFERENCE_DIR = path.join(ROOT, "snapshots", PLATFORM);
-const ACTUAL_DIR = path.join(OUT_DIR, "snapshots", "actual");
-const DIFF_DIR = path.join(OUT_DIR, "snapshots", "diff");
+const ACTUAL_DIR = path.join(OUT_ROOT, "snapshots", "actual");
+const DIFF_DIR = path.join(OUT_ROOT, "snapshots", "diff");
 
 type Result =
   | { frame: SnapshotFrame; status: "pass"; changed: number }
@@ -135,7 +135,7 @@ const main = async () => {
     throw new Error(`No snapshot frame matches ${filters.join(", ")}.`);
   }
 
-  fs.rmSync(path.join(OUT_DIR, "snapshots"), { recursive: true, force: true });
+  fs.rmSync(path.join(OUT_ROOT, "snapshots"), { recursive: true, force: true });
   for (const dir of [REFERENCE_DIR, ACTUAL_DIR, DIFF_DIR]) {
     fs.mkdirSync(dir, { recursive: true });
   }

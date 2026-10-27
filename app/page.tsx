@@ -1,6 +1,7 @@
 import { Clapperboard, FileText, Lightbulb, Mic } from "lucide-react";
 import { getKeyStatus, type KeyStatus as Keys } from "../studio/server/env";
 import { listProjects } from "../studio/server/projects";
+import { inPageWorkspace } from "../studio/server/session";
 import { BlockField } from "./_components/BlockField";
 import { BlockDot, BlockMeter } from "./_components/Blocks";
 import { BrandMark } from "./_components/BrandLogo";
@@ -41,7 +42,9 @@ const steps = (keys: Keys) => [
 ];
 
 export default async function HomePage() {
-  const [projects, keys] = [await listProjects(), getKeyStatus()];
+  const [projects, keys] = await inPageWorkspace(() =>
+    Promise.all([listProjects(), getKeyStatus()]),
+  );
 
   return (
     <div className="relative min-h-screen overflow-x-clip">
@@ -50,7 +53,7 @@ export default async function HomePage() {
         aria-hidden
       />
       <BlockField intro className="h-[720px]" />
-      <Header needsSetup={!keys.ai} />
+      <Header needsSetup={!keys.ai} canManageKeys={keys.manage} />
 
       <main className="relative mx-auto flex max-w-6xl flex-col gap-20 px-4 pt-16 pb-24 sm:px-6 sm:pt-24">
         <section className="mx-auto flex w-full max-w-3xl flex-col gap-10">

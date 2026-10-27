@@ -6,7 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import readline from "node:readline";
 import type { VideoFormat } from "../../src/lib/formats";
-import { ROOT } from "../../pipeline/config";
+import { currentWorkspace, ROOT, runInWorkspace } from "../../pipeline/config";
 import {
   coverPath,
   loadPlan,
@@ -17,6 +17,8 @@ import type { WorkerMessage } from "../../pipeline/render-worker";
 
 export type RenderJob = {
   id: string;
+  /** Whose project it is; none when running without accounts. */
+  workspace?: string;
   slug: string;
   index: number;
   format: VideoFormat;
@@ -55,7 +57,8 @@ const runNext = async () => {
 
   store.running = true;
   try {
-    await runJob(job);
+    // The queue runs outside any request, so step into the job's workspace.
+    await runInWorkspace(job.workspace, () => runJob(job));
     job.status = "done";
     job.progress = 1;
   } catch (error) {
@@ -137,8 +140,10 @@ export const startRenderJob = (
   cover?: { scene: number },
 ) => {
   const kind = cover ? "cover" : "video";
+  const workspace = currentWorkspace();
   const existing = [...store.jobs.values()].find(
     (job) =>
+      job.workspace === workspace &&
       job.slug === slug &&
       job.index === index &&
       job.format === format &&
@@ -150,6 +155,7 @@ export const startRenderJob = (
 
   const job: RenderJob = {
     id: randomUUID(),
+    ...(workspace ? { workspace } : {}),
     slug,
     index,
     format,
@@ -164,11 +170,18 @@ export const startRenderJob = (
   return job;
 };
 
-export const getRenderJob = (id: string) => store.jobs.get(id) ?? null;
+/** Only the current workspace's jobs are visible. */
+const isMine = (job: RenderJob) => job.workspace === currentWorkspace();
+
+export const getRenderJob = (id: string) => {
+  const job = store.jobs.get(id);
+  return job && isMine(job) ? job : null;
+};
 
 export const getActiveJobs = (slug: string, index: number) =>
   [...store.jobs.values()].filter(
     (job) =>
+      isMine(job) &&
       job.slug === slug &&
       job.index === index &&
       !["done", "error"].includes(job.status),

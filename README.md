@@ -95,23 +95,25 @@ With `.env` instead, set `ANTHROPIC_API_KEY`, or `LLM_PROVIDER` and `LLM_MODEL` 
 
 ## Running on a server
 
-To use the studio from anywhere, run it on a server you control (a VPS or a home server) with Docker. It is built for one person or a small team who share a password, not for the public.
+To let people use the studio from anywhere, run it on a server with Docker. Everyone signs in with Google or a code sent to their email, and each person gets their own private projects.
 
 ```bash
-cp .env.example .env   # add your keys and set STUDIO_PASSWORD
+cp .env.example .env   # set BETTER_AUTH_SECRET, BETTER_AUTH_URL, your keys, and ADMIN_EMAILS
 docker compose up -d --build
 ```
 
-It listens on port 3100. Put it behind a reverse proxy with HTTPS (Caddy, nginx, or Traefik) so the password and session cookie are encrypted on the way.
+It listens on port 3100. Put it behind a reverse proxy with HTTPS (Caddy, nginx, or Traefik), and set `BETTER_AUTH_URL` to the address people use, e.g. `https://studio.example.com`.
 
-- **Password:** with `STUDIO_PASSWORD` set, every page, file, and action needs a sign-in. A sign-in lasts 30 days, and changing the password signs everyone out. In production the studio refuses to start without one (set `STUDIO_ALLOW_OPEN=1` only if something else in front of it already handles sign-in).
-- **Keys:** `compose.yaml` sets `STUDIO_KEYS_FROM_ENV=1`, so keys come only from `.env` and the Settings page shows them read-only. You can still test each connection there.
-- **Data:** projects, voice-overs, images, renders, and saved settings live in the `studio-data` volume at `/data`, so rebuilding or replacing the container keeps them. Back it up like any Docker volume.
-- **Rendering:** the image includes Chrome Headless Shell and everything it needs, and renders run on the server. More CPU cores make renders faster.
+- **Accounts:** set `BETTER_AUTH_SECRET` to a long random value (`openssl rand -base64 32`) to turn them on. Signing in for the first time creates the account; a sign-in lasts 30 days on each device. In production the studio refuses to start without accounts (set `STUDIO_ALLOW_OPEN=1` only if something in front of it already handles sign-in).
+- **Email codes:** sent through [Resend](https://resend.com). Set `RESEND_API_KEY` and `EMAIL_FROM` (an address on a domain you've verified there). In development, codes are printed to the server log instead.
+- **Google:** optional. Create an OAuth client in Google Cloud with the redirect URL `<BETTER_AUTH_URL>/api/auth/callback/google`, then set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. The button only appears when both are set.
+- **Keys:** the AI and voice keys are the studio's, shared by everyone. `compose.yaml` sets `STUDIO_KEYS_FROM_ENV=1`, so they come only from `.env`. Only the emails in `ADMIN_EMAILS` can open Settings.
+- **Data:** accounts (`auth.db`), projects, voice-overs, images, and renders live in the `studio-data` volume at `/data`, so rebuilding or replacing the container keeps them. Back it up like any Docker volume.
+- **Rendering:** the image includes Chrome Headless Shell and everything it needs. Renders run on the server one at a time; more CPU cores make them faster.
 
 To update, pull the latest code and run `docker compose up -d --build` again.
 
-If you open it to other people who aren't on your team, check [Remotion's license](#license): rendering videos for others as a service needs a company license.
+Rendering videos for other people as a service needs a Remotion company license: see [License](#license).
 
 ## Command line
 
