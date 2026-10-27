@@ -16,3 +16,8 @@ public/content
 .next
 next-env.d.ts
 *.tsbuildinfo
+
+# Visual snapshot references: only the Linux ones (what CI checks) are committed.
+/snapshots/*
+!/snapshots/linux
+!/snapshots/Dockerfile*

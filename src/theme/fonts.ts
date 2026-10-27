@@ -1,49 +1,50 @@
-import { loadFont as loadAtkinson } from "@remotion/google-fonts/AtkinsonHyperlegible";
-import { loadFont as loadInter } from "@remotion/google-fonts/Inter";
-import { loadFont as loadJetBrainsMono } from "@remotion/google-fonts/JetBrainsMono";
-import { loadFont as loadMontserrat } from "@remotion/google-fonts/Montserrat";
-import { loadFont as loadNunito } from "@remotion/google-fonts/Nunito";
-import { loadFont as loadPlayfair } from "@remotion/google-fonts/PlayfairDisplay";
-import { loadFont as loadPoppins } from "@remotion/google-fonts/Poppins";
-import type { ThemeFont } from "./presets";
+import { loadFont } from "@remotion/fonts";
+import { staticFile } from "remotion";
+import { THEME_FONTS, type ThemeFont } from "./presets";
 
-// Load only the weights and subsets we use, to keep renders fast. Each font
-// loads the first time a video uses it; loading it again is free.
-const loaders: Record<ThemeFont, () => string> = {
-  inter: () =>
-    loadInter("normal", { weights: ["400", "600", "800"], subsets: ["latin"] })
-      .fontFamily,
-  poppins: () =>
-    loadPoppins("normal", {
-      weights: ["400", "600", "800"],
-      subsets: ["latin"],
-    }).fontFamily,
-  nunito: () =>
-    loadNunito("normal", { weights: ["400", "600", "800"], subsets: ["latin"] })
-      .fontFamily,
-  montserrat: () =>
-    loadMontserrat("normal", {
-      weights: ["400", "600", "800"],
-      subsets: ["latin"],
-    }).fontFamily,
-  "playfair-display": () =>
-    loadPlayfair("normal", {
-      weights: ["400", "600", "800"],
-      subsets: ["latin"],
-    }).fontFamily,
-  // Only comes in regular and bold; heavier text uses the bold.
-  "atkinson-hyperlegible": () =>
-    loadAtkinson("normal", { weights: ["400", "700"], subsets: ["latin"] })
-      .fontFamily,
+// The font files live in public/fonts/ (Latin subset, from Fontsource), so
+// renders never fetch from the network and always use the same glyphs.
+// Only the weights we use are bundled; heavier text uses the heaviest one.
+const WEIGHTS: Record<ThemeFont, string[]> = {
+  inter: ["400", "600", "800"],
+  poppins: ["400", "600", "800"],
+  nunito: ["400", "600", "800"],
+  montserrat: ["400", "600", "800"],
+  "playfair-display": ["400", "600", "800"],
+  // Only comes in regular and bold.
+  "atkinson-hyperlegible": ["400", "700"],
 };
 
-let mono: string | null = null;
+const MONO = { file: "jetbrains-mono", family: "JetBrains Mono" };
+const MONO_WEIGHTS = ["400", "600"];
+
+const loaded = new Set<string>();
+
+/**
+ * Registers a font's weights the first time a video uses it. Remotion waits
+ * for them (loadFont delays the render) before taking a frame.
+ */
+const load = (file: string, family: string, weights: string[]) => {
+  if (loaded.has(file)) return family;
+  loaded.add(file);
+  for (const weight of weights) {
+    loadFont({
+      family,
+      url: staticFile(`fonts/${file}-${weight}.woff2`),
+      weight,
+      style: "normal",
+    }).catch((error: unknown) => {
+      console.error(`Could not load ${family} ${weight}:`, error);
+    });
+  }
+  return family;
+};
 
 /** Loads a theme's font (and the code font) and returns their CSS font families. */
 export const loadThemeFonts = (font: ThemeFont) => {
-  mono ??= loadJetBrainsMono("normal", {
-    weights: ["400", "600"],
-    subsets: ["latin"],
-  }).fontFamily;
-  return { sans: (loaders[font] ?? loaders.inter)(), mono };
+  const name = font in WEIGHTS ? font : "inter";
+  return {
+    sans: load(name, THEME_FONTS[name].label, WEIGHTS[name]),
+    mono: load(MONO.file, MONO.family, MONO_WEIGHTS),
+  };
 };
