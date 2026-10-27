@@ -56,6 +56,7 @@ import {
 import {
   getSettingsView,
   saveSettings,
+  listModels,
   testSettings,
   type SettingsInput,
 } from "../studio/server/settings";
@@ -219,6 +220,11 @@ export const saveSettingsAction = async (input: SettingsInput) =>
 /** Makes a cheap real call with a section's settings, saved or not. */
 export const testSettingsAction = async (input: SettingsInput) =>
   run(() => testSettings(input));
+
+/** The models the AI provider in the form offers (none for Claude). */
+export const listModelsAction = async (
+  input: Extract<SettingsInput, { section: "ai" }>,
+) => run(() => listModels(input));
 
 /** The voices in the ElevenLabs account. `fresh` skips the short cache. */
 export const listVoicesAction = async (fresh = false) =>

@@ -11,7 +11,7 @@ import {
 } from "../actions";
 import { ChoiceButtons, SETUP } from "./AiChoice";
 import { useToast } from "./Toast";
-import { Input, Kbd, cx } from "./ui";
+import { Input, Kbd, Select, cx } from "./ui";
 
 const LANGUAGES = [
   ["en", "English"],
@@ -60,24 +60,16 @@ const PillSelect = ({
   options: readonly (readonly [string, string])[];
   disabled?: boolean;
 }) => (
-  <label className="relative flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-line bg-raised/70 pr-3 pl-3 text-[13px] text-muted transition-colors focus-within:border-accent hover:border-line-strong hover:text-text">
-    {icon}
-    <span className="sr-only">{label}</span>
-    <span>{options.find(([key]) => key === value)?.[1]}</span>
-    <select
-      value={value}
-      disabled={disabled}
-      onChange={(event) => onChange(event.target.value)}
-      className="absolute inset-0 cursor-pointer opacity-0"
-      aria-label={label}
-    >
-      {options.map(([key, name]) => (
-        <option key={key} value={key}>
-          {name}
-        </option>
-      ))}
-    </select>
-  </label>
+  <Select
+    bare
+    aria-label={label}
+    value={value}
+    disabled={disabled}
+    onChange={(event) => onChange(event.target.value)}
+    icon={icon}
+    options={options.map(([key, name]) => ({ value: key, label: name }))}
+    className="flex h-9 items-center gap-2 rounded-lg border border-line bg-raised/70 pr-2 pl-3 text-[13px] text-muted transition-colors hover:border-line-strong hover:text-text focus-visible:border-accent focus-visible:outline-none aria-expanded:border-accent aria-expanded:text-text disabled:cursor-not-allowed disabled:opacity-60"
+  />
 );
 
 const PlanningOverlay = ({ idea }: { idea: string }) => {

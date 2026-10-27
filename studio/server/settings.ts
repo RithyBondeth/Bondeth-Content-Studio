@@ -140,3 +140,42 @@ export const testSettings = async (input: SettingsInput): Promise<string> => {
       return testPexels(needKey(merged.PEXELS_API_KEY, "Pexels"));
   }
 };
+
+/**
+ * The models an OpenAI-compatible provider offers, from its `/models` list,
+ * using the form's provider, address and key (typed or saved). Claude's
+ * models are listed in the studio itself, so this returns none for Claude.
+ */
+export const listModels = async (
+  input: Extract<SettingsInput, { section: "ai" }>,
+): Promise<string[]> => {
+  if (input.provider === "anthropic") return [];
+  const provider = resolveProvider(
+    mergeSettings(process.env, applySettingsInput(readSettings(), input)),
+  );
+  if (!provider.baseUrl) return [];
+  if (!provider.apiKey && !PROVIDERS[input.provider].keyless) return [];
+  const response = await fetch(
+    `${provider.baseUrl.replace(/\/+$/, "")}/models`,
+    {
+      headers: provider.apiKey
+        ? { Authorization: `Bearer ${provider.apiKey}` }
+        : {},
+      signal: AbortSignal.timeout(8000),
+    },
+  ).catch(() => {
+    throw new Error(`Couldn't reach ${provider.name} to list its models.`);
+  });
+  if (response.status === 401 || response.status === 403)
+    throw new Error(`${provider.name} rejected the API key.`);
+  if (!response.ok)
+    throw new Error(
+      `${provider.name} didn't return its models (${response.status}).`,
+    );
+  const body = (await response.json().catch(() => null)) as {
+    data?: { id?: unknown }[];
+  } | null;
+  return (body?.data ?? [])
+    .map((model) => (typeof model.id === "string" ? model.id : ""))
+    .filter(Boolean);
+};

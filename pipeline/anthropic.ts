@@ -23,6 +23,9 @@ export const getClaudeClient = (
   return cached.client;
 };
 
+/** Claude models that accept `fallbacks: "default"`; Haiku doesn't. */
+export const hasServerFallback = (model: string) => !/haiku/i.test(model);
+
 /** Asks Claude for JSON matching `schema` and returns the validated result. */
 export const generateWithClaude = async <T extends z.ZodType>(
   settings: ProviderSettings,
@@ -34,9 +37,14 @@ export const generateWithClaude = async <T extends z.ZodType>(
       model: settings.model,
       max_tokens: 16000,
       // If the model declines for policy reasons, the API retries on its
-      // default fallback model instead of failing.
-      betas: ["server-side-fallback-2026-07-01"],
-      fallbacks: "default",
+      // default fallback model instead of failing. Haiku has no server-side
+      // fallback, so it goes without.
+      ...(hasServerFallback(settings.model)
+        ? {
+            betas: ["server-side-fallback-2026-07-01"],
+            fallbacks: "default" as const,
+          }
+        : {}),
       output_config: {
         effort: "high",
         format: betaZodOutputFormat(schema),

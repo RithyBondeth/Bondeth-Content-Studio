@@ -2,7 +2,6 @@ import type {
   ButtonHTMLAttributes,
   InputHTMLAttributes,
   ReactNode,
-  SelectHTMLAttributes,
   TextareaHTMLAttributes,
 } from "react";
 import { BlockMeter, BlockSpinner } from "./Blocks";
@@ -101,23 +100,8 @@ export const Textarea = ({
   />
 );
 
-export const Select = ({
-  className,
-  children,
-  ...props
-}: SelectHTMLAttributes<HTMLSelectElement>) => (
-  <select
-    {...props}
-    className={cx(
-      fieldClass,
-      widthClass(className),
-      "h-10 cursor-pointer pr-8",
-      className,
-    )}
-  >
-    {children}
-  </select>
-);
+// A styled dropdown with the same props as <select>; see Select.tsx.
+export { Select, type SelectOption } from "./Select";
 
 export const Field = ({
   label,
