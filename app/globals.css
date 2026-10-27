@@ -1,20 +1,21 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #07090f;
-  --color-surface: #0e121b;
-  --color-raised: #151a26;
-  --color-hover: #1b2131;
-  --color-line: #222939;
-  --color-line-strong: #2f374a;
-  --color-text: #eef0f6;
-  --color-muted: #a3aabb;
+  /* LinkedIn-style blues and neutrals. The logo uses the same #0a66c2. */
+  --color-bg: #000000;
+  --color-surface: #1b1f23;
+  --color-raised: #23292e;
+  --color-hover: #2c333a;
+  --color-line: #2e353b;
+  --color-line-strong: #38434f;
+  --color-text: #e8e9ea;
+  --color-muted: #b8bec4;
   /* Lightest text that still reads at small sizes: at least 4.5:1 on every surface. */
-  --color-faint: #848da2;
-  --color-accent: #7c5cff;
-  --color-accent-hover: #8d72ff;
-  --color-accent-bright: #b4a2ff;
-  --color-pink: #e879f9;
+  --color-faint: #959ea8;
+  --color-accent: #0a66c2;
+  --color-accent-hover: #0b74dc;
+  --color-accent-bright: #70b5f9;
+  --color-pink: #378fe9;
   --color-cyan: #22d3ee;
   --color-success: #34d399;
   --color-warning: #fbbf24;
@@ -55,8 +56,6 @@
 
 html {
   color-scheme: dark;
-  /* Lines in the faint background grid. */
-  --grid-line: rgb(255 255 255 / 0.04);
 }
 
 /*
@@ -66,20 +65,19 @@ html {
  */
 html[data-theme="light"] {
   color-scheme: light;
-  --grid-line: rgb(15 23 42 / 0.06);
-  --color-bg: #f6f7fb;
+  --color-bg: #f4f2ee;
   --color-surface: #ffffff;
-  --color-raised: #eef0f6;
-  --color-hover: #e5e8f0;
-  --color-line: #dfe2eb;
-  --color-line-strong: #c9cedb;
-  --color-text: #121624;
-  --color-muted: #454c5e;
-  --color-faint: #5c6376;
-  --color-accent: #6d4cff;
-  --color-accent-hover: #5d3cf0;
-  --color-accent-bright: #5a3ee0;
-  --color-pink: #c026d3;
+  --color-raised: #eef0f2;
+  --color-hover: #e6e9ec;
+  --color-line: #e0dfdc;
+  --color-line-strong: #c8c6c1;
+  --color-text: #191919;
+  --color-muted: #4d4d4d;
+  --color-faint: #666666;
+  --color-accent: #0a66c2;
+  --color-accent-hover: #004182;
+  --color-accent-bright: #0a66c2;
+  --color-pink: #004182;
   --color-cyan: #0e7490;
   --color-success: #047857;
   --color-warning: #a1500a;
@@ -109,13 +107,7 @@ body {
 }
 
 @utility text-gradient {
-  background: linear-gradient(
-    100deg,
-    #c4b5fd 0%,
-    #a78bfa 35%,
-    #e879f9 70%,
-    #f0abfc 100%
-  );
+  background: linear-gradient(100deg, #a8d4ff 0%, #70b5f9 45%, #378fe9 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -123,35 +115,27 @@ body {
 
 /* Deeper colors on light backgrounds, where the pastel ones wash out. */
 html[data-theme="light"] .text-gradient {
-  background-image: linear-gradient(
-    100deg,
-    #6d4cff 0%,
-    #7c3aed 40%,
-    #c026d3 100%
-  );
+  background-image: linear-gradient(100deg, #0a66c2 0%, #004182 100%);
 }
 
 @utility bg-brand {
-  background: linear-gradient(135deg, #8b5cf6 0%, #7c5cff 45%, #c026d3 120%);
+  background: linear-gradient(135deg, #378fe9 0%, #0a66c2 50%, #004182 120%);
 }
 
 /* A soft spotlight and faint grid behind page headers. */
 @utility bg-stage {
   background:
-    radial-gradient(60% 50% at 50% 0%, rgb(124 92 255 / 0.22), transparent 70%),
+    radial-gradient(60% 50% at 50% 0%, rgb(10 102 194 / 0.28), transparent 70%),
     radial-gradient(
       40% 35% at 85% 10%,
-      rgb(232 121 249 / 0.12),
+      rgb(112 181 249 / 0.12),
       transparent 70%
     );
 }
 
-@utility bg-grid {
-  background-image:
-    linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
-  background-size: 48px 48px;
-  mask-image: radial-gradient(70% 60% at 50% 0%, black, transparent 75%);
+/* The canvas block grid behind page headers fades out downwards and to the sides. */
+.block-field {
+  mask-image: radial-gradient(75% 65% at 50% 0%, black, transparent 78%);
 }
 
 @utility skeleton {
@@ -165,7 +149,49 @@ html[data-theme="light"] .text-gradient {
   animation: var(--animate-shimmer);
 }
 
+/* The logo's lit blocks pop in on load, and again when the logo is hovered. */
+.brand-block {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: brand-block 0.45s cubic-bezier(0.2, 0.8, 0.2, 1.3) both;
+}
+.brand-logo:hover .brand-block {
+  animation-name: brand-block-again;
+}
+@keyframes brand-block {
+  from {
+    fill-opacity: 0.2;
+    transform: scale(0.4);
+  }
+}
+@keyframes brand-block-again {
+  from {
+    fill-opacity: 0.2;
+    transform: scale(0.4);
+  }
+}
+
+/* BlockSpinner: four blocks lighting up in turn. */
+.block-chase {
+  opacity: 0.25;
+  animation: block-chase 0.8s ease-in-out infinite;
+}
+@keyframes block-chase {
+  0%,
+  45%,
+  100% {
+    opacity: 0.25;
+  }
+  15% {
+    opacity: 1;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .block-chase {
+    animation: none;
+    opacity: 0.6;
+  }
   *,
   *::before,
   *::after {

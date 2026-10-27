@@ -1,6 +1,9 @@
 import { Clapperboard, FileText, Lightbulb, Mic } from "lucide-react";
 import { getKeyStatus, type KeyStatus as Keys } from "../studio/server/env";
 import { listProjects } from "../studio/server/projects";
+import { BlockField } from "./_components/BlockField";
+import { BlockDot, BlockMeter } from "./_components/Blocks";
+import { BrandMark } from "./_components/BrandLogo";
 import { Header } from "./_components/Header";
 import { KeyStatus } from "./_components/KeyStatus";
 import { NewProjectForm } from "./_components/NewProjectForm";
@@ -47,10 +50,7 @@ export default async function HomePage() {
         className="bg-stage pointer-events-none absolute inset-x-0 top-0 h-[720px]"
         aria-hidden
       />
-      <div
-        className="bg-grid pointer-events-none absolute inset-x-0 top-0 h-[720px]"
-        aria-hidden
-      />
+      <BlockField intro className="h-[720px]" />
       <Header>
         <KeyStatus status={keys} />
       </Header>
@@ -58,8 +58,8 @@ export default async function HomePage() {
       <main className="relative mx-auto flex max-w-6xl flex-col gap-20 px-4 pt-16 pb-24 sm:px-6 sm:pt-24">
         <section className="mx-auto flex w-full max-w-3xl flex-col gap-10">
           <div className="flex flex-col items-center gap-5 text-center">
-            <span className="animate-fade-in inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-xs text-accent-bright">
-              <span className="size-1.5 rounded-full bg-accent-bright" />
+            <span className="animate-fade-in inline-flex items-center gap-2 rounded-lg border border-accent/30 bg-accent/10 px-3 py-1 text-xs text-accent-bright">
+              <BlockDot className="bg-accent-bright" />
               {keys.ai ? "AI studio" : "Studio"} for explainer videos
             </span>
             <h1 className="text-4xl leading-[1.08] font-bold tracking-tight text-balance sm:text-6xl">
@@ -89,9 +89,7 @@ export default async function HomePage() {
                   <span className="grid size-9 place-items-center rounded-xl bg-accent/12 text-accent-bright ring-1 ring-accent/20 ring-inset">
                     <step.icon className="size-4" aria-hidden />
                   </span>
-                  <span className="font-mono text-xs text-faint">
-                    0{index + 1}
-                  </span>
+                  <BlockMeter value={index + 1} total={4} className="w-14" />
                 </div>
                 <h3 className="font-medium">{step.title}</h3>
                 <p className="text-[13px] leading-relaxed text-muted">
@@ -115,7 +113,7 @@ export default async function HomePage() {
           </div>
           {projects.length === 0 ? (
             <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-line-strong px-6 py-14 text-center">
-              <Clapperboard className="size-6 text-faint" aria-hidden />
+              <BrandMark className="mb-2 size-10 opacity-80" />
               <p className="font-medium">No projects yet</p>
               <p className="max-w-sm text-sm text-muted">
                 {keys.ai

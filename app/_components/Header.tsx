@@ -1,20 +1,13 @@
-import { Clapperboard, Settings } from "lucide-react";
+import { Settings } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { AppearanceSwitch } from "./Appearance";
+import { BrandLogo } from "./BrandLogo";
 import { buttonClass, cx } from "./ui";
 
 export const Logo = () => (
-  <Link
-    href="/"
-    className="group flex items-center gap-2.5 font-medium tracking-tight"
-  >
-    <span className="bg-brand grid size-8 place-items-center rounded-xl shadow-[0_6px_20px_-6px_rgb(124_92_255/0.8)] transition-transform group-hover:-rotate-6">
-      <Clapperboard className="size-4 text-white" aria-hidden />
-    </span>
-    <span className="text-[15px]">
-      Content <span className="text-muted">Studio</span>
-    </span>
+  <Link href="/" className="brand-logo flex items-center">
+    <BrandLogo className="h-8 w-auto" />
   </Link>
 );
 

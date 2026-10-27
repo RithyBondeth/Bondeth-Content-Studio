@@ -154,7 +154,7 @@ export const createExampleProject = async (): Promise<string> => {
     plan: {
       title: "Example: explainer starter",
       audience: "Curious learners who like short, clear explanations",
-      goal: "Show what Content Studio can make before you add API keys",
+      goal: "Show what Bondeth Studio can make before you add API keys",
       tone: "Friendly, clear, and upbeat",
       pillars: [
         {

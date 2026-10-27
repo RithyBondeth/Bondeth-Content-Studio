@@ -8,7 +8,6 @@ import {
   Captions,
   Check,
   CircleAlert,
-  Loader2,
   Clapperboard,
   Mic,
   Monitor,
@@ -41,6 +40,7 @@ import {
   scenesToRecordAction,
 } from "../../actions";
 import { AppearanceSwitch } from "../Appearance";
+import { BlockSpinner } from "../Blocks";
 import { SettingsLink } from "../Header";
 import { useConfirm } from "../ConfirmDialog";
 import { AiButton, SETUP } from "../AiChoice";
@@ -117,7 +117,7 @@ const SaveIndicator = ({ state }: { state: SaveState }) => {
   if (state.kind === "saving" || state.kind === "pending")
     return (
       <span className={cx(base, "text-faint")}>
-        <Loader2 className="size-3.5 animate-spin" aria-hidden /> Saving…
+        <BlockSpinner className="size-3.5" /> Saving…
       </span>
     );
   return (

@@ -40,7 +40,7 @@ import { filterVoices, voiceLabels } from "../src/lib/voice";
 import { addVoiceOver } from "./voice";
 import { listVoices } from "./voices";
 
-const HELP = `Content Studio pipeline: idea → content plan → script → voice-over → video
+const HELP = `Bondeth Studio pipeline: idea → content plan → script → voice-over → video
 
 Usage: npm run pipeline -- <command> [options]
 
