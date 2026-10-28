@@ -23,18 +23,24 @@ export type BucketConfig = {
   secretAccessKey: string;
 };
 
-export const bucketConfig = (env: Env = process.env): BucketConfig | null => {
-  const {
-    S3_ENDPOINT: endpoint,
-    S3_BUCKET: bucket,
-    S3_ACCESS_KEY_ID: accessKeyId,
-    S3_SECRET_ACCESS_KEY: secretAccessKey,
-  } = env;
+/**
+ * A bucket from the environment: S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY_ID,
+ * and S3_SECRET_ACCESS_KEY, or the same names after another prefix (the
+ * backups use BACKUP_S3_..., falling back to S3_ENDPOINT and S3_REGION).
+ */
+export const bucketConfig = (
+  env: Env = process.env,
+  prefix = "",
+): BucketConfig | null => {
+  const endpoint = env[`${prefix}S3_ENDPOINT`] || env.S3_ENDPOINT;
+  const bucket = env[`${prefix}S3_BUCKET`];
+  const accessKeyId = env[`${prefix}S3_ACCESS_KEY_ID`];
+  const secretAccessKey = env[`${prefix}S3_SECRET_ACCESS_KEY`];
   if (!endpoint || !bucket || !accessKeyId || !secretAccessKey) return null;
   return {
     endpoint: endpoint.replace(/\/+$/, ""),
     bucket,
-    region: env.S3_REGION || "auto",
+    region: env[`${prefix}S3_REGION`] || env.S3_REGION || "auto",
     accessKeyId,
     secretAccessKey,
   };
@@ -113,7 +119,7 @@ const bucketFor = (file: string) => {
   return config && key ? { config, key } : null;
 };
 
-const request = async (
+export const request = async (
   config: BucketConfig,
   key: string,
   init: RequestInit,
@@ -213,7 +219,7 @@ export const presign = async (
 };
 
 /** Every key under a prefix, following the listing's pages. */
-const listKeys = async (config: BucketConfig, prefix: string) => {
+export const listKeys = async (config: BucketConfig, prefix: string) => {
   const keys: string[] = [];
   let token: string | undefined;
   do {

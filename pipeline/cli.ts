@@ -39,6 +39,7 @@ import { addImages } from "./images";
 import { filterVoices, voiceLabels } from "../src/lib/voice";
 import { addVoiceOver } from "./voice";
 import { listVoices } from "./voices";
+import { listBackups, restoreBackup, runBackup } from "./backup";
 
 const HELP = `Bondeth Studio pipeline: idea → content plan → script → voice-over → video
 
@@ -56,6 +57,9 @@ Commands:
   make "<idea>"         Do all of the above in one go
   list [plan]           Show plans, or the videos in one plan and their status
   voices [search]       List the voices in your ElevenLabs account
+  backup                Back up projects and accounts to the backup bucket now
+  backups               List the backups in the backup bucket
+  restore [latest|key]  Put a backup back (stop the studio first)
 
 Options:
   --videos <n>          Number of videos to plan (plan, make; default 5)
@@ -543,6 +547,30 @@ const voices = async (search: string | undefined) => {
   );
 };
 
+const backupNow = async () => {
+  const { key, bytes, removed } = await runBackup();
+  log(`✔ Saved ${key} (${Math.round(bytes / 1024)} KB).`);
+  if (removed) log(`  Removed ${removed} older backup(s).`);
+};
+
+const backups = async () => {
+  const keys = await listBackups();
+  if (!keys.length) {
+    log("No backups yet. Make one with: npm run pipeline -- backup");
+    return;
+  }
+  for (const key of keys) log(`  ${key}`);
+  log(`\n${keys.length} backup(s), newest first.`);
+};
+
+const restore = async (which: string | undefined) => {
+  const { key, files, previous } = await restoreBackup(which ?? "latest");
+  log(`✔ Restored ${key} (${files} files).`);
+  log(
+    `  What was there before is in ${path.relative(process.cwd(), previous)}`,
+  );
+};
+
 const main = async () => {
   const [command, argument] = positionals;
   if (values.help || !command) {
@@ -585,6 +613,15 @@ const main = async () => {
       break;
     case "voices":
       await voices(argument);
+      break;
+    case "backup":
+      await backupNow();
+      break;
+    case "backups":
+      await backups();
+      break;
+    case "restore":
+      await restore(argument);
       break;
     default:
       throw new Error(

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { inflateRawSync } from "node:zlib";
-import { crc32, createZip } from "./zip";
+import { crc32, createZip, readZip as parseZip } from "./zip";
 
 /** Reads a zip back through its central directory, the way unzip tools do. */
 const readZip = (zip: Buffer) => {
@@ -50,4 +50,30 @@ test("files come back out of the zip unchanged", () => {
   });
   // Repetitive text is deflated; the video is stored as it is.
   assert.ok(zip.length < text.length);
+});
+
+test("a zip reads back exactly as it was written", () => {
+  const entries = [
+    {
+      name: "content/a/plan.json",
+      data: Buffer.from('{"title":"ok"}'.repeat(50)),
+    },
+    { name: "auth.db", data: Buffer.from([0, 1, 2, 3, 255]) },
+    { name: "empty.txt", data: Buffer.alloc(0) },
+    { name: "ថ្មី/ខ្មែរ.json", data: Buffer.from("Khmer name") },
+  ];
+  const read = parseZip(createZip(entries));
+  assert.deepEqual(
+    read.map((entry) => [entry.name, Buffer.from(entry.data).toString("hex")]),
+    entries.map((entry) => [entry.name, entry.data.toString("hex")]),
+  );
+});
+
+test("a damaged zip is refused", () => {
+  const zip = createZip([{ name: "a.json", data: Buffer.from("hello world") }]);
+  const broken = Buffer.from(zip);
+  // A byte of the file itself, after the 30-byte header and the name.
+  broken[37] = broken[37]! ^ 0xff;
+  assert.throws(() => parseZip(broken), /damaged|unsupported/);
+  assert.throws(() => parseZip(Buffer.from("nope")), /isn't a zip/);
 });

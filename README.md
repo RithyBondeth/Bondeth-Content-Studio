@@ -112,6 +112,19 @@ It listens on port 3100. Put it behind a reverse proxy with HTTPS (Caddy, nginx,
 - **Cloud storage (recommended):** with a bucket, every voice-over, image, and finished video is also stored there, so losing or replacing the server doesn't lose them, and downloads come straight from the bucket instead of through the server. With [Cloudflare R2](https://developers.cloudflare.com/r2/): create a bucket, then an R2 API token with read and write access to it, and set `S3_ENDPOINT` (`https://<account-id>.r2.cloudflarestorage.com`), `S3_BUCKET`, `S3_ACCESS_KEY_ID`, and `S3_SECRET_ACCESS_KEY`. Any S3-compatible service works (set `S3_REGION` if it needs one). The server keeps its own copy as a working cache and fetches anything it's missing from the bucket. Files made before the bucket was set up stay on the server only.
 - **Rendering:** the image includes Chrome Headless Shell and everything it needs. Renders wait in a queue that survives restarts and takes turns fairly between people; each person sees their place in line and can have up to `RENDER_MAX_QUEUED` (default 3) renders waiting or running. `RENDER_CONCURRENCY` (default 1) sets how many run at once: raise it on a server with many CPU cores. The app is bundled once and reused until the code changes, so renders start straight away.
 
+- **Backups:** the bucket above already holds media and videos, but projects (plans, scripts, scene edits) and accounts live only on the server. With a second bucket set up, the studio backs those up once a day: one zip per day with `content/` and a consistent copy of `auth.db`, keeping the newest `BACKUP_KEEP` (default 30). Saved API keys are left out. Create a separate bucket (e.g. `bondeth-studio-backup`) and an R2 token for **only that bucket**, so the studio's main token can't touch the backups, then set `BACKUP_S3_BUCKET`, `BACKUP_S3_ACCESS_KEY_ID`, and `BACKUP_S3_SECRET_ACCESS_KEY` (it uses the same `S3_ENDPOINT`).
+
+### Restoring a backup
+
+```bash
+docker compose exec studio npm run pipeline -- backups        # list them, newest first
+docker compose stop studio
+docker compose run --rm studio npm run pipeline -- restore latest   # or a key from the list
+docker compose start studio
+```
+
+What was on the server before is moved to `.studio/before-restore-<time>/` in the data volume, so a restore can be undone. To back up right away (before an upgrade, say), run `docker compose exec studio npm run pipeline -- backup`.
+
 To update, pull the latest code and run `docker compose up -d --build` again.
 
 Rendering videos for other people as a service needs a Remotion company license: see [License](#license).
