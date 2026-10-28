@@ -1,10 +1,12 @@
 import "server-only";
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import fsSync from "node:fs";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import readline from "node:readline";
+import { DatabaseSync } from "node:sqlite";
 import type { VideoFormat } from "../../src/lib/formats";
 import { currentWorkspace, ROOT, runInWorkspace } from "../../pipeline/config";
 import {
@@ -14,59 +16,61 @@ import {
   outputPath,
 } from "../../pipeline/store";
 import type { WorkerMessage } from "../../pipeline/render-worker";
+import { createJobStore, type JobStore, type RenderJob } from "../job-store";
 
-export type RenderJob = {
-  id: string;
-  /** Whose project it is; none when running without accounts. */
-  workspace?: string;
-  slug: string;
-  index: number;
-  format: VideoFormat;
-  /** A video, or a cover image of one scene. */
-  kind: "video" | "cover";
-  /** For covers: the 0-based scene to export. */
-  scene?: number;
-  status: "queued" | "bundling" | "rendering" | "done" | "error";
-  /** 0 to 1 within the current stage. */
-  progress: number;
-  error?: string;
+export type { RenderJob } from "../job-store";
+
+/** Renders use every CPU core, so by default they run one at a time. */
+const CONCURRENCY = Math.max(1, Number(process.env.RENDER_CONCURRENCY) || 1);
+/** How many unfinished renders one person can have at once. */
+const MAX_PER_PERSON = Math.max(1, Number(process.env.RENDER_MAX_QUEUED) || 3);
+/** Finished jobs are forgotten after a day. */
+const KEEP_FINISHED = 24 * 60 * 60 * 1000;
+
+type Queue = { jobs: JobStore; running: Set<string> };
+
+/**
+ * The queue, in .studio/jobs.db so it survives restarts. Kept on globalThis
+ * so a hot reload in development keeps the same one (and doesn't mistake its
+ * own running renders for ones a restart interrupted).
+ */
+const queue = (): Queue => {
+  const holder = globalThis as { __renderQueue?: Queue };
+  if (!holder.__renderQueue) {
+    const file = path.join(ROOT, ".studio", "jobs.db");
+    fsSync.mkdirSync(path.dirname(file), { recursive: true });
+    const jobs = createJobStore(new DatabaseSync(file));
+    // Anything still marked running was cut off by a restart: queue it again.
+    jobs.recover();
+    holder.__renderQueue = { jobs, running: new Set() };
+    setTimeout(pump, 0);
+  }
+  return holder.__renderQueue;
 };
 
-type JobStore = {
-  jobs: Map<string, RenderJob>;
-  queue: string[];
-  running: boolean;
-};
-
-// Kept on globalThis so jobs survive hot reloads in development.
-const store: JobStore = ((
-  globalThis as { __renderJobs?: JobStore }
-).__renderJobs ??= {
-  jobs: new Map(),
-  queue: [],
-  running: false,
-});
-
-/** Renders use every CPU core, so they run one at a time. */
-const runNext = async () => {
-  if (store.running) return;
-  const id = store.queue.shift();
-  if (!id) return;
-  const job = store.jobs.get(id);
-  if (!job) return;
-
-  store.running = true;
-  try {
-    // The queue runs outside any request, so step into the job's workspace.
-    await runInWorkspace(job.workspace, () => runJob(job));
-    job.status = "done";
-    job.progress = 1;
-  } catch (error) {
-    job.status = "error";
-    job.error = error instanceof Error ? error.message : String(error);
-  } finally {
-    store.running = false;
-    void runNext();
+/** Starts queued renders while there's room. */
+const pump = () => {
+  const { jobs, running } = queue();
+  while (running.size < CONCURRENCY) {
+    const job = jobs.next();
+    if (!job) return;
+    running.add(job.id);
+    jobs.update(job.id, { status: "bundling", progress: 0 });
+    void (async () => {
+      try {
+        // The queue runs outside any request, so step into the job's workspace.
+        await runInWorkspace(job.workspace, () => runJob(job));
+        jobs.update(job.id, { status: "done", progress: 1 });
+      } catch (error) {
+        jobs.update(job.id, {
+          status: "error",
+          error: error instanceof Error ? error.message : String(error),
+        });
+      } finally {
+        running.delete(job.id);
+        pump();
+      }
+    })();
   }
 };
 
@@ -78,7 +82,6 @@ const runJob = async (job: RenderJob) => {
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "content-studio-"));
   const specFile = path.join(tempDir, "spec.json");
   await fs.writeFile(specFile, JSON.stringify(spec));
-  job.status = "bundling";
 
   try {
     await new Promise<void>((resolve, reject) => {
@@ -110,8 +113,10 @@ const runJob = async (job: RenderJob) => {
           return; // Not one of our messages, e.g. a log line from a dependency.
         }
         if (message.type === "progress") {
-          job.status = message.stage;
-          job.progress = message.progress;
+          queue().jobs.update(job.id, {
+            status: message.stage,
+            progress: message.progress,
+          });
         } else if (message.type === "error") {
           failure = message.message;
         }
@@ -138,22 +143,28 @@ export const startRenderJob = (
   index: number,
   format: VideoFormat,
   cover?: { scene: number },
-) => {
+): RenderJob => {
+  const { jobs } = queue();
   const kind = cover ? "cover" : "video";
   const workspace = currentWorkspace();
-  const existing = [...store.jobs.values()].find(
+  const active = jobs.active(workspace);
+  const existing = active.find(
     (job) =>
-      job.workspace === workspace &&
       job.slug === slug &&
       job.index === index &&
       job.format === format &&
       job.kind === kind &&
-      job.scene === cover?.scene &&
-      !["done", "error"].includes(job.status),
+      job.scene === cover?.scene,
   );
   if (existing) return existing;
+  if (active.length >= MAX_PER_PERSON) {
+    throw new Error(
+      `You already have ${active.length} renders waiting or running. Start this one when one of them finishes.`,
+    );
+  }
 
-  const job: RenderJob = {
+  jobs.prune(KEEP_FINISHED);
+  const job = jobs.add({
     id: randomUUID(),
     ...(workspace ? { workspace } : {}),
     slug,
@@ -161,28 +172,21 @@ export const startRenderJob = (
     format,
     kind,
     ...(cover ? { scene: cover.scene } : {}),
-    status: "queued",
-    progress: 0,
-  };
-  store.jobs.set(job.id, job);
-  store.queue.push(job.id);
-  void runNext();
+  });
+  pump();
   return job;
 };
 
-/** Only the current workspace's jobs are visible. */
-const isMine = (job: RenderJob) => job.workspace === currentWorkspace();
-
-export const getRenderJob = (id: string) => {
-  const job = store.jobs.get(id);
-  return job && isMine(job) ? job : null;
-};
+/** A job of the current workspace's, with its place in the queue. */
+export const getRenderJob = (id: string) =>
+  queue().jobs.get(id, currentWorkspace());
 
 export const getActiveJobs = (slug: string, index: number) =>
-  [...store.jobs.values()].filter(
-    (job) =>
-      isMine(job) &&
-      job.slug === slug &&
-      job.index === index &&
-      !["done", "error"].includes(job.status),
-  );
+  queue()
+    .jobs.active(currentWorkspace())
+    .filter((job) => job.slug === slug && job.index === index);
+
+/** Picks up renders a restart interrupted, without waiting for someone to open the studio. */
+export const resumeRenderQueue = () => {
+  queue();
+};

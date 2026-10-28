@@ -13,7 +13,7 @@
     "render": "remotion render",
     "still": "remotion still",
     "typecheck": "tsc",
-    "lint": "eslint src pipeline app studio proxy.ts",
+    "lint": "eslint src pipeline app studio proxy.ts instrumentation.ts",
     "format": "prettier --write .",
     "check": "npm run typecheck && npm run lint",
     "pipeline": "tsx pipeline/cli.ts",
