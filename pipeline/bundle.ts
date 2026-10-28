@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import { ensureLocal, existsAnywhere } from "./storage";
 import path from "node:path";
 import {
   bundleFileName,
@@ -15,7 +16,6 @@ import { videoSpecSchema } from "../src/spec/schema";
 import {
   captionPath,
   coverPath,
-  exists,
   loadPublishKit,
   loadSpec,
   outputPath,
@@ -81,7 +81,7 @@ export const buildBundle = async (
     contents.files.push({ piece, name });
   };
   const addFile = async (piece: BundlePiece, file: string) => {
-    if (await exists(file)) {
+    if (await ensureLocal(file)) {
       add(piece, path.basename(file), await fs.readFile(file));
     } else {
       contents.missing.push(piece);
@@ -142,8 +142,10 @@ export const bundleStatus = async (
   for (const platform of PLATFORMS) {
     const { format } = PLATFORM_RULES[platform];
     const missing: BundlePiece[] = [];
-    if (!(await exists(outputPath(plan, index, format)))) missing.push("video");
-    if (!(await exists(coverPath(plan, index, format)))) missing.push("cover");
+    if (!(await existsAnywhere(outputPath(plan, index, format))))
+      missing.push("video");
+    if (!(await existsAnywhere(coverPath(plan, index, format))))
+      missing.push("cover");
     if (!kit?.posts) missing.push("post");
     if (!hasNarration) missing.push("captions");
     status[platform] = missing;

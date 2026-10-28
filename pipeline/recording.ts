@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { ensureLocal, saved } from "./storage";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -7,7 +8,7 @@ import { speechWindow, spreadWords } from "../src/lib/recording";
 import { planTake, takePieces } from "../src/lib/take";
 import type { SceneAudio } from "../src/spec/schema";
 import { audibleParts, parseSilences } from "./silence";
-import { exists, publicPath } from "./store";
+import { publicPath } from "./store";
 
 /** About 20 minutes of browser audio; far longer than any scene. */
 export const MAX_RECORDING_BYTES = 25 * 1024 * 1024;
@@ -152,11 +153,12 @@ export const saveRecording = async (
       );
     }
 
-    if (!(await exists(file))) {
+    if (!(await ensureLocal(file))) {
       await fs.mkdir(path.dirname(file), { recursive: true });
       const trimmed = path.join(work, "voice.mp3");
       await cutMp3(levelled, window.start, window.end, trimmed);
       await fs.copyFile(trimmed, file);
+      await saved(file);
     }
 
     // Measured from the file itself, so the scene is exactly as long as it.
@@ -202,7 +204,7 @@ export const saveTake = async (
   const take = takeFileName(bytes);
   const src = path.posix.join(mediaDir, take);
   const file = publicPath(src);
-  if (!(await exists(file))) {
+  if (!(await ensureLocal(file))) {
     const work = await fs.mkdtemp(path.join(os.tmpdir(), "voice-take-"));
     try {
       const input = path.join(work, "input");
@@ -214,6 +216,7 @@ export const saveTake = async (
       await ffmpeg(["-i", levelled, "-c:a", "libmp3lame", "-b:a", "192k", mp3]);
       await fs.mkdir(path.dirname(file), { recursive: true });
       await fs.copyFile(mp3, file);
+      await saved(file);
     } finally {
       await fs.rm(work, { recursive: true, force: true });
     }
@@ -239,7 +242,7 @@ export const splitTake = async (
 ): Promise<SceneAudio[]> => {
   if (!TAKE_FILE.test(take)) throw new Error("That take doesn't exist.");
   const file = publicPath(path.posix.join(mediaDir, take));
-  if (!(await exists(file))) {
+  if (!(await ensureLocal(file))) {
     throw new Error("That take is gone. Record or upload it again.");
   }
   if (cuts.length !== narrations.length - 1) {
@@ -264,10 +267,11 @@ export const splitTake = async (
         ),
       );
       const output = publicPath(src);
-      if (!(await exists(output))) {
+      if (!(await ensureLocal(output))) {
         const temporary = `${output}.${process.pid}.tmp.mp3`;
         await cutMp3(file, piece.start, piece.end, temporary);
         await fs.rename(temporary, output);
+        await saved(output);
       }
       return {
         src,

@@ -14,7 +14,9 @@ import {
   loadPlan,
   loadSpec,
   outputPath,
+  publicPath,
 } from "../../pipeline/store";
+import { ensureLocal, mediaSources, saved } from "../../pipeline/storage";
 import type { WorkerMessage } from "../../pipeline/render-worker";
 import { createJobStore, type JobStore, type RenderJob } from "../job-store";
 
@@ -78,6 +80,15 @@ const runJob = async (job: RenderJob) => {
   const plan = await loadPlan(job.slug);
   const spec = await loadSpec(plan, job.index);
   if (!spec) throw new Error("This video has no script yet.");
+  // The renderer reads media from this server's disk: fetch any that only
+  // the bucket has (a new server, or a cleared disk).
+  for (const src of mediaSources(spec)) {
+    await ensureLocal(publicPath(src));
+  }
+  const output =
+    job.kind === "cover"
+      ? coverPath(plan, job.index, job.format)
+      : outputPath(plan, job.index, job.format);
 
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "content-studio-"));
   const specFile = path.join(tempDir, "spec.json");
@@ -93,9 +104,8 @@ const runJob = async (job: RenderJob) => {
           path.join(ROOT, "pipeline", "render-worker.ts"),
           specFile,
           job.format,
-          ...(job.kind === "cover"
-            ? [coverPath(plan, job.index, job.format), String(job.scene ?? 0)]
-            : [outputPath(plan, job.index, job.format)]),
+          output,
+          ...(job.kind === "cover" ? [String(job.scene ?? 0)] : []),
         ],
         { cwd: ROOT, stdio: ["ignore", "pipe", "pipe"] },
       );
@@ -133,6 +143,7 @@ const runJob = async (job: RenderJob) => {
           );
       });
     });
+    await saved(output);
   } finally {
     await fs.rm(tempDir, { recursive: true, force: true });
   }

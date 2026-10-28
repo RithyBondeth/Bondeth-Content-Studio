@@ -23,6 +23,12 @@ import {
   PUBLIC_DIR,
 } from "../../pipeline/config";
 import type { ContentPlan } from "../../pipeline/schemas";
+import {
+  existsAnywhere,
+  removeDir,
+  saved,
+  statAnywhere,
+} from "../../pipeline/storage";
 import { applyBrandKit, kitCreator } from "../../pipeline/script";
 import { scenesToRecord, voiceForVideo } from "../../pipeline/voice";
 import {
@@ -88,13 +94,13 @@ const listOutFiles = async (
   const files: RenderFile[] = [];
   for (const format of FORMAT_NAMES) {
     const file = fileFor(format);
-    const stat = await fs.stat(file).catch(() => null);
+    const stat = await statAnywhere(file);
     if (stat) {
       // Relative to out/ itself, so the URL names the workspace too.
       const relative = path.relative(OUT_ROOT, file).split(path.sep).join("/");
       files.push({
         format,
-        url: `/api/files/${relative}?v=${stat.mtimeMs.toFixed(0)}`,
+        url: `/api/files/${relative}?v=${stat.mtime.getTime()}`,
         updatedAt: stat.mtime.toISOString(),
       });
     }
@@ -459,9 +465,10 @@ export const saveMusicUpload = async (
   }
   const src = path.posix.join(dir, name);
   const file = publicPath(src);
-  if (!(await exists(file))) {
+  if (!(await existsAnywhere(file))) {
     await fs.mkdir(path.dirname(file), { recursive: true });
     await fs.writeFile(file, bytes);
+    await saved(file);
   }
   return src;
 };
@@ -469,13 +476,12 @@ export const saveMusicUpload = async (
 /** Deletes a project's plan, scripts, voice-overs, and renders. */
 export const deleteProject = async (slug: string) => {
   const plan = await loadPlan(slug);
-  await Promise.all(
-    [
-      planDir(plan.slug),
-      path.join(PUBLIC_DIR, mediaSubdir(), plan.slug),
-      path.join(outDir(), plan.slug),
-    ].map((dir) => fs.rm(dir, { recursive: true, force: true })),
-  );
+  await Promise.all([
+    fs.rm(planDir(plan.slug), { recursive: true, force: true }),
+    // Media and renders may have copies in the bucket too.
+    removeDir(path.join(PUBLIC_DIR, mediaSubdir(), plan.slug)),
+    removeDir(path.join(outDir(), plan.slug)),
+  ]);
 };
 
 export { exists };
