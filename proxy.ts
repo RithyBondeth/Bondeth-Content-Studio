@@ -31,6 +31,6 @@ export function proxy(request: NextRequest) {
 export const config = {
   // Everything except sign-in itself and what the sign-in page needs.
   matcher: [
-    "/((?!login|api/auth|_next/static|_next/image|icon.svg|apple-icon.png|favicon.ico|fonts/|brand/).*)",
+    "/((?!login|api/auth|api/health|_next/static|_next/image|icon.svg|apple-icon.png|favicon.ico|fonts/|brand/).*)",
   ],
 };
