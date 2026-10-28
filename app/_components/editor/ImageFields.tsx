@@ -13,7 +13,7 @@ import {
   pickStockImageAction,
   searchImagesAction,
 } from "../../actions";
-import { AiTag, SETUP, SetupLink } from "../AiChoice";
+import { AiTag, SETUP, SetupLink, useCanSetUp } from "../AiChoice";
 import { useToast } from "../Toast";
 import { Button, cx, Field, Input, Select, Textarea } from "../ui";
 
@@ -192,6 +192,7 @@ const Generator = ({
   const notify = useToast();
   const id = useId();
   const [prompt, setPrompt] = useState(scene.prompt ?? scene.alt);
+  const canSetUp = useCanSetUp();
   const [generating, setGenerating] = useState(false);
 
   const generate = async () => {
@@ -226,9 +227,15 @@ const Generator = ({
           <AiTag /> AI images aren&apos;t set up yet
         </p>
         <p className="text-[13px] leading-relaxed text-muted">
-          Add your OpenAI API key to draw pictures with AI.{" "}
-          <SetupLink setup={SETUP.images} service="AI images" />. Until then,
-          pick a free stock photo or upload your own.
+          {canSetUp ? (
+            <>
+              Add your OpenAI API key to draw pictures with AI.{" "}
+              <SetupLink setup={SETUP.images} service="AI images" />. Until
+              then, pick a free stock photo or upload your own.
+            </>
+          ) : (
+            "This studio hasn't turned on AI images. Pick a free stock photo or upload your own."
+          )}
         </p>
       </div>
     );
