@@ -39,7 +39,8 @@ RUN mkdir -p /data public \
 ENV NODE_ENV=production \
   PORT=3100 \
   HOSTNAME=0.0.0.0
-USER node
+# Starts as root only to prepare the data volume (hosts like Railway mount it
+# owned by root); the entrypoint then runs the studio as "node".
 VOLUME /data
 EXPOSE 3100
 

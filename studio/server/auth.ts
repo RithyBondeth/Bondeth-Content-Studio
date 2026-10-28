@@ -3,11 +3,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { betterAuth, type BetterAuthOptions } from "better-auth";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import { getMigrations } from "better-auth/db/migration";
 import { nextCookies } from "better-auth/next-js";
 import { emailOTP } from "better-auth/plugins/email-otp";
 import { ROOT } from "../../pipeline/config";
-import { hasGoogle } from "../auth-mode";
+import { hasGoogle, INVITE_ONLY_MESSAGE, isInvited } from "../auth-mode";
 
 /** Accounts and sessions, in SQLite next to the saved settings (the data volume on a server). */
 const DB_FILE = path.join(ROOT, ".studio", "auth.db");
@@ -64,6 +65,28 @@ const createAuth = async () => {
           },
         }
       : {},
+    // With an invite list, only invited emails get a code or an account.
+    hooks: {
+      before: createAuthMiddleware(async (ctx) => {
+        if (ctx.path !== "/email-otp/send-verification-otp") return;
+        const email = (ctx.body as { email?: unknown } | undefined)?.email;
+        if (typeof email === "string" && !isInvited(email)) {
+          throw new APIError("FORBIDDEN", { message: INVITE_ONLY_MESSAGE });
+        }
+      }),
+    },
+    databaseHooks: {
+      user: {
+        create: {
+          // Also covers Google, which creates the account on the way back.
+          before: async (user) => {
+            if (!isInvited(user.email)) {
+              throw new APIError("FORBIDDEN", { message: INVITE_ONLY_MESSAGE });
+            }
+          },
+        },
+      },
+    },
     session: {
       expiresIn: 30 * 24 * 60 * 60,
       // Read the session from a signed cookie for a few minutes between database checks.

@@ -9,6 +9,12 @@
 
 type Env = Record<string, string | undefined>;
 
+const emailList = (value: string | undefined) =>
+  (value ?? "")
+    .split(",")
+    .map((entry) => entry.trim().toLowerCase())
+    .filter(Boolean);
+
 export type AuthMode =
   /** No accounts: running locally, or opened up on purpose. */
   | { kind: "open" }
@@ -40,12 +46,25 @@ export const hasGoogle = (env: Env = process.env) =>
 export const isAdmin = (email: string | undefined, env: Env = process.env) => {
   if (getAuthMode(env).kind !== "accounts") return true;
   if (!email) return false;
-  const admins = (env.ADMIN_EMAILS ?? "")
-    .split(",")
-    .map((entry) => entry.trim().toLowerCase())
-    .filter(Boolean);
-  return admins.includes(email.trim().toLowerCase());
+  return emailList(env.ADMIN_EMAILS).includes(email.trim().toLowerCase());
 };
+
+/**
+ * Whether an email may sign in. With INVITED_EMAILS set (a test with a few
+ * people, say), only those addresses and the admins can; without it, anyone
+ * can sign up.
+ */
+export const isInvited = (email: string, env: Env = process.env) => {
+  const invited = emailList(env.INVITED_EMAILS);
+  if (!invited.length) return true;
+  const normal = email.trim().toLowerCase();
+  return (
+    invited.includes(normal) || emailList(env.ADMIN_EMAILS).includes(normal)
+  );
+};
+
+export const INVITE_ONLY_MESSAGE =
+  "This studio is invite-only for now. Ask the person who shared it to add your email.";
 
 /** Where to go after signing in: only a path on this site. */
 export const safeNext = (next: string | null | undefined) =>
