@@ -1,4 +1,4 @@
-import { deflateRawSync } from "node:zlib";
+import { deflateRawSync, inflateRawSync } from "node:zlib";
 
 /**
  * A small zip writer, so bundles need no extra dependency. Videos and images
@@ -114,4 +114,58 @@ export const createZip = (entries: ZipEntry[]): Buffer => {
   end.writeUInt32LE(offset, 16);
 
   return Buffer.concat([...locals, ...central, end]);
+};
+
+/**
+ * Reads a zip made by createZip (stored or deflated files, no ZIP64), for
+ * restoring backups. Every file's checksum is checked.
+ */
+export const readZip = (zip: Buffer): ZipEntry[] => {
+  let end = -1;
+  for (
+    let i = zip.length - 22;
+    i >= Math.max(0, zip.length - 22 - 65535);
+    i--
+  ) {
+    if (zip.readUInt32LE(i) === 0x06054b50) {
+      end = i;
+      break;
+    }
+  }
+  if (end < 0) throw new Error("That isn't a zip file.");
+  const count = zip.readUInt16LE(end + 10);
+  let at = zip.readUInt32LE(end + 16);
+
+  const entries: ZipEntry[] = [];
+  for (let n = 0; n < count; n++) {
+    if (zip.readUInt32LE(at) !== 0x02014b50) {
+      throw new Error("The zip file is damaged.");
+    }
+    const method = zip.readUInt16LE(at + 10);
+    const crc = zip.readUInt32LE(at + 16);
+    const size = zip.readUInt32LE(at + 20);
+    const nameLength = zip.readUInt16LE(at + 28);
+    const extraLength = zip.readUInt16LE(at + 30);
+    const commentLength = zip.readUInt16LE(at + 32);
+    const localOffset = zip.readUInt32LE(at + 42);
+    const name = zip.toString("utf8", at + 46, at + 46 + nameLength);
+    at += 46 + nameLength + extraLength + commentLength;
+
+    const dataStart =
+      localOffset +
+      30 +
+      zip.readUInt16LE(localOffset + 26) +
+      zip.readUInt16LE(localOffset + 28);
+    const body = zip.subarray(dataStart, dataStart + size);
+    const data =
+      method === 8
+        ? inflateRawSync(body)
+        : method === 0
+          ? Buffer.from(body)
+          : null;
+    if (!data) throw new Error(`${name} uses an unsupported compression.`);
+    if (crc32(data) !== crc) throw new Error(`${name} is damaged.`);
+    entries.push({ name, data });
+  }
+  return entries;
 };
