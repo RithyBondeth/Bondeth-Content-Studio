@@ -86,7 +86,8 @@ const searchOpenverse = async (
     extension: "jpg,png",
     aspect_ratio: orientation === "portrait" ? "tall" : "wide",
   });
-  const response = await fetch(
+  const response = await searchFetch(
+    "Openverse",
     `https://api.openverse.org/v1/images/?${params}`,
     { headers: { "User-Agent": USER_AGENT } },
   );
@@ -106,6 +107,36 @@ const searchOpenverse = async (
     alt: result.title ?? query,
     credit: openverseCredit(result),
   }));
+};
+
+/** How long a photo search may take before we stop waiting. */
+const SEARCH_TIMEOUT_MS = 20_000;
+
+/**
+ * A photo library request that gives up after SEARCH_TIMEOUT_MS with a clear
+ * message, since Openverse is sometimes very slow and the search would
+ * otherwise look stuck.
+ */
+const searchFetch = async (
+  library: string,
+  url: string,
+  init: RequestInit,
+): Promise<Response> => {
+  try {
+    return await fetch(url, {
+      ...init,
+      signal: AbortSignal.timeout(SEARCH_TIMEOUT_MS),
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "TimeoutError") {
+      throw new Error(
+        `${library} is slow to answer right now. Try again in a moment, or upload your own photo.`,
+      );
+    }
+    throw new Error(
+      `Couldn't reach ${library}. Check the connection and try again.`,
+    );
+  }
 };
 
 type PexelsPhoto = {
@@ -128,9 +159,11 @@ const searchPexels = async (
     per_page: "20",
     orientation,
   });
-  const response = await fetch(`https://api.pexels.com/v1/search?${params}`, {
-    headers: { Authorization: apiKey },
-  });
+  const response = await searchFetch(
+    "Pexels",
+    `https://api.pexels.com/v1/search?${params}`,
+    { headers: { Authorization: apiKey } },
+  );
   if (!response.ok) {
     throw new Error(
       `Pexels returned ${response.status} ${response.statusText}.`,
