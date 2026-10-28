@@ -29,6 +29,7 @@ import {
 import type { Scene } from "../../../src/spec/schema";
 import type { RenderFile } from "../../../studio/server/projects";
 import type { RenderJob } from "../../../studio/server/render-jobs";
+import { queueLabel } from "./RenderPanel";
 import {
   bundleStatusAction,
   generatePublishKitAction,
@@ -557,9 +558,11 @@ export const PublishPanel = ({
                 onClick={() => void exportCovers()}
               >
                 {active.length
-                  ? coverJob?.status === "bundling"
-                    ? "Preparing…"
-                    : "Exporting…"
+                  ? coverJob?.status === "queued"
+                    ? queueLabel(coverJob)
+                    : coverJob?.status === "bundling"
+                      ? "Preparing…"
+                      : "Exporting…"
                   : cover
                     ? "Export again"
                     : "Export covers"}

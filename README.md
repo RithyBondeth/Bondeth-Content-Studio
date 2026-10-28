@@ -109,7 +109,7 @@ It listens on port 3100. Put it behind a reverse proxy with HTTPS (Caddy, nginx,
 - **Google:** optional. Create an OAuth client in Google Cloud with the redirect URL `<BETTER_AUTH_URL>/api/auth/callback/google`, then set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. The button only appears when both are set.
 - **Keys:** the AI and voice keys are the studio's, shared by everyone. `compose.yaml` sets `STUDIO_KEYS_FROM_ENV=1`, so they come only from `.env`. Only the emails in `ADMIN_EMAILS` can open Settings.
 - **Data:** accounts (`auth.db`), projects, voice-overs, images, and renders live in the `studio-data` volume at `/data`, so rebuilding or replacing the container keeps them. Back it up like any Docker volume.
-- **Rendering:** the image includes Chrome Headless Shell and everything it needs. Renders run on the server one at a time; more CPU cores make them faster.
+- **Rendering:** the image includes Chrome Headless Shell and everything it needs. Renders wait in a queue that survives restarts and takes turns fairly between people; each person sees their place in line and can have up to `RENDER_MAX_QUEUED` (default 3) renders waiting or running. `RENDER_CONCURRENCY` (default 1) sets how many run at once: raise it on a server with many CPU cores. The app is bundled once and reused until the code changes, so renders start straight away.
 
 To update, pull the latest code and run `docker compose up -d --build` again.
 
