@@ -114,6 +114,19 @@ It listens on port 3100. Put it behind a reverse proxy with HTTPS (Caddy, nginx,
 
 - **Backups:** the bucket above already holds media and videos, but projects (plans, scripts, scene edits) and accounts live only on the server. With a second bucket set up, the studio backs those up once a day: one zip per day with `content/` and a consistent copy of `auth.db`, keeping the newest `BACKUP_KEEP` (default 30). Saved API keys are left out. Create a separate bucket (e.g. `bondeth-studio-backup`) and an R2 token for **only that bucket**, so the studio's main token can't touch the backups, then set `BACKUP_S3_BUCKET`, `BACKUP_S3_ACCESS_KEY_ID`, and `BACKUP_S3_SECRET_ACCESS_KEY` (it uses the same `S3_ENDPOINT`).
 
+### On Railway
+
+The repository is ready for [Railway](https://railway.com): `railway.json` builds the `Dockerfile` and checks `/api/health`.
+
+1. Create a project from this GitHub repository.
+2. Add a **volume** mounted at `/data`. The container prepares it and runs the studio as an unprivileged user.
+3. Set the variables from `.env.example` on the service: `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` (the service's public address), `ADMIN_EMAILS`, `RESEND_API_KEY` and `EMAIL_FROM`, the `S3_*` and `BACKUP_S3_*` storage settings, `STUDIO_KEYS_FROM_ENV=1` with the AI keys, and `PORT=3100`.
+4. Generate a domain for the service (port 3100).
+
+For a test with a few people, set `INVITED_EMAILS` to their addresses (comma-separated): only they and the admins can sign in, and anyone else is told the studio is invite-only.
+
+Keep it at one replica: accounts and the render queue live in SQLite on the volume.
+
 ### Restoring a backup
 
 ```bash

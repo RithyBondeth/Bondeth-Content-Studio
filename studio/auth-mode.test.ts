@@ -5,6 +5,7 @@ import {
   hasEmailCodes,
   hasGoogle,
   isAdmin,
+  isInvited,
   safeNext,
 } from "./auth-mode";
 
@@ -71,4 +72,16 @@ test("after signing in, only paths on this site are followed", () => {
   assert.equal(safeNext("//evil.example"), "/");
   assert.equal(safeNext("/\\evil.example"), "/");
   assert.equal(safeNext(undefined), "/");
+});
+
+test("with an invite list, only invited emails and admins can sign in", () => {
+  assert.equal(isInvited("anyone@x.com", {}), true);
+  const env = {
+    INVITED_EMAILS: "Teacher@School.org, second@x.com ",
+    ADMIN_EMAILS: "me@studio.com",
+  };
+  assert.equal(isInvited("teacher@school.org", env), true);
+  assert.equal(isInvited(" SECOND@x.com", env), true);
+  assert.equal(isInvited("me@studio.com", env), true);
+  assert.equal(isInvited("stranger@x.com", env), false);
 });
