@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { existsAnywhere, saved } from "./storage";
 import fs from "node:fs/promises";
 import path from "node:path";
 import type {
@@ -12,7 +13,7 @@ import { resolveVoice, type ResolvedVoice } from "../src/lib/voice";
 import { alignmentToWords, type CharacterAlignment } from "./alignment";
 import { config } from "./config";
 import { getEnv, requireEnv } from "./settings";
-import { exists, publicPath } from "./store";
+import { publicPath } from "./store";
 
 const API_URL = "https://api.elevenlabs.io/v1/text-to-speech";
 
@@ -148,7 +149,7 @@ export const scenesToRecord = async (
   for (const [index, scene] of spec.scenes.entries()) {
     if (isSelfRecorded(scene.audio)) continue;
     const src = sceneAudioSrc(spec, index, mediaDir, voice);
-    if (scene.audio?.src !== src || !(await exists(publicPath(src)))) {
+    if (scene.audio?.src !== src || !(await existsAnywhere(publicPath(src)))) {
       pending.push(index);
     }
   }
@@ -184,7 +185,7 @@ export const addVoiceOver = async (
     // The creator's own recording is kept as it is.
     if (
       isSelfRecorded(scene.audio) ||
-      (scene.audio?.src === src && (await exists(file)))
+      (scene.audio?.src === src && (await existsAnywhere(file)))
     ) {
       scenes.push(scene);
       reused++;
@@ -208,6 +209,7 @@ export const addVoiceOver = async (
 
     await fs.mkdir(path.dirname(file), { recursive: true });
     await fs.writeFile(file, Buffer.from(result.audio_base64, "base64"));
+    await saved(file);
 
     const words = alignmentToWords(result.alignment);
     const lastEnd = result.alignment.character_end_times_seconds.at(-1) ?? 0;
