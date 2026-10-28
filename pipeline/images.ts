@@ -1,10 +1,11 @@
 import { createHash } from "node:crypto";
+import { existsAnywhere, saved } from "./storage";
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { ImageLayout, SceneOf, VideoSpecInput } from "../src/spec/schema";
 import { config } from "./config";
 import { getEnv } from "./settings";
-import { exists, publicPath } from "./store";
+import { publicPath } from "./store";
 
 /** One result from a stock photo search. */
 export type StockImage = {
@@ -187,9 +188,10 @@ export const saveImage = async (
   const hash = createHash("sha256").update(bytes).digest("hex").slice(0, 16);
   const src = path.posix.join(mediaDir, `image-${hash}.${extension}`);
   const file = publicPath(src);
-  if (!(await exists(file))) {
+  if (!(await existsAnywhere(file))) {
     await fs.mkdir(path.dirname(file), { recursive: true });
     await fs.writeFile(file, bytes);
+    await saved(file);
   }
   return src;
 };

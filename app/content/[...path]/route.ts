@@ -1,5 +1,6 @@
 import path from "node:path";
 import { PUBLIC_DIR } from "../../../pipeline/config";
+import { downloadUrl } from "../../../pipeline/storage";
 import { serveFile } from "../../../studio/server/serve-file";
 import { ownsPath } from "../../../studio/server/session";
 
@@ -28,10 +29,12 @@ export const GET = async (
   if (!(await ownsPath(segments))) {
     return new Response("Not found", { status: 404 });
   }
-  return serveFile(
-    request,
-    path.join(PUBLIC_DIR, "content"),
-    segments,
-    CONTENT_TYPES,
-  );
+  const root = path.join(PUBLIC_DIR, "content");
+  // With a bucket, the file comes straight from it.
+  const file = path.resolve(root, ...segments);
+  if (file.startsWith(root + path.sep)) {
+    const url = await downloadUrl(file);
+    if (url) return Response.redirect(url, 302);
+  }
+  return serveFile(request, root, segments, CONTENT_TYPES);
 };

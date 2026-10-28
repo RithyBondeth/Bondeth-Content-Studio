@@ -26,9 +26,15 @@ const FORMAT_INFO: Record<
   landscape: { label: "Landscape", detail: "16:9 · YouTube", icon: Monitor },
 };
 
+/** "Waiting: 2 renders ahead", from the job's place in the queue. */
+export const queueLabel = (job: RenderJob) =>
+  job.ahead
+    ? `Waiting: ${job.ahead} ${job.ahead === 1 ? "render" : "renders"} ahead`
+    : "Starting…";
+
 const jobLabel = (job: RenderJob) =>
   job.status === "queued"
-    ? "Waiting for another render…"
+    ? queueLabel(job)
     : job.status === "bundling"
       ? "Preparing…"
       : `${Math.round(job.progress * 100)}%`;
