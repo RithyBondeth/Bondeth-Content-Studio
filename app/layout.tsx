@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Ubuntu, Ubuntu_Mono } from "next/font/google";
 import Script from "next/script";
+import { canManageKeys } from "../studio/server/session";
+import { KeyAccessProvider } from "./_components/AiChoice";
 import { appearanceScript } from "./_components/Appearance";
 import { ToastProvider } from "./_components/Toast";
 import "./globals.css";
@@ -23,7 +25,7 @@ export const metadata: Metadata = {
     "Turn an idea into a content plan and finished explainer videos.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -42,7 +44,11 @@ export default function RootLayout({
         </Script>
       </head>
       <body className="min-h-screen font-sans">
-        <ToastProvider>{children}</ToastProvider>
+        <ToastProvider>
+          <KeyAccessProvider canSetUp={await canManageKeys()}>
+            {children}
+          </KeyAccessProvider>
+        </ToastProvider>
       </body>
     </html>
   );

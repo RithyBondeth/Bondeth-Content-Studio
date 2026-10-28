@@ -2,7 +2,7 @@
 
 import { PenLine, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, type ReactNode } from "react";
+import { createContext, useContext, useEffect, type ReactNode } from "react";
 import { useToast } from "./Toast";
 import { Button, cx } from "./ui";
 
@@ -53,6 +53,37 @@ export const SETUP = {
 export const settingsHref = (setup: Setup) =>
   `/settings?from=setup#${setup.section}`;
 
+/**
+ * Whether this person can turn AI steps on in Settings. With accounts only
+ * the studio's admins can; everyone else is told the step isn't available
+ * here instead of being sent to a Settings page they can't open.
+ */
+const KeyAccessContext = createContext(true);
+
+export const KeyAccessProvider = ({
+  canSetUp,
+  children,
+}: {
+  canSetUp: boolean;
+  children: ReactNode;
+}) => (
+  <KeyAccessContext.Provider value={canSetUp}>
+    {children}
+  </KeyAccessContext.Provider>
+);
+
+export const useCanSetUp = () => useContext(KeyAccessContext);
+
+/** The small marker on an AI option that isn't on yet. */
+const OffChip = () => {
+  const canSetUp = useCanSetUp();
+  return (
+    <span className="rounded-md border border-line px-1 text-[10px] font-normal text-faint">
+      {canSetUp ? "Set up" : "Off"}
+    </span>
+  );
+};
+
 /** Set once Settings has been opened from here, so coming back refreshes. */
 let awaitingSetup = false;
 let lastRefresh = 0;
@@ -64,6 +95,7 @@ let lastRefresh = 0;
 const useExplainSetup = () => {
   const notify = useToast();
   const router = useRouter();
+  const canSetUp = useCanSetUp();
 
   useEffect(() => {
     const refresh = () => {
@@ -77,6 +109,15 @@ const useExplainSetup = () => {
   }, [router]);
 
   return (option: Pick<AiOption, "setup" | "service">) => {
+    if (!canSetUp) {
+      notify({
+        tone: "info",
+        title: `${option.service ?? "AI"} isn't available here yet`,
+        description:
+          "This studio hasn't turned it on. You can do this step yourself.",
+      });
+      return;
+    }
     awaitingSetup = true;
     const opened = window.open(settingsHref(option.setup), "_blank");
     if (!opened) {
@@ -194,11 +235,7 @@ export const ChoiceButtons = ({
         }
       >
         {ai.label}
-        {ai.available ? null : (
-          <span className="rounded-md border border-line px-1 text-[10px] font-normal text-faint">
-            Set up
-          </span>
-        )}
+        {ai.available ? null : <OffChip />}
       </Button>
     </div>
   );
@@ -250,6 +287,7 @@ export const ChoiceCards = ({
   className?: string;
 }) => {
   const explain = useExplainSetup();
+  const canSetUp = useCanSetUp();
   return (
     <div className={cx("grid gap-3", !stacked && "sm:grid-cols-2", className)}>
       <OptionCard
@@ -297,7 +335,9 @@ export const ChoiceCards = ({
             onClick={() => explain(ai)}
             className="self-start text-left text-xs text-faint underline-offset-4 hover:text-muted hover:underline"
           >
-            Not set up yet. Set it up in Settings
+            {canSetUp
+              ? "Not set up yet. Set it up in Settings"
+              : "Not available on this studio yet"}
           </button>
         )}
       </OptionCard>
@@ -350,11 +390,7 @@ export const AiButton = ({
       }
     >
       {option.label}
-      {option.available ? null : (
-        <span className="rounded-md border border-line px-1 text-[10px] font-normal text-faint">
-          Set up
-        </span>
-      )}
+      {option.available ? null : <OffChip />}
     </Button>
   );
 };

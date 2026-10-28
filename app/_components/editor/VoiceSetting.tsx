@@ -3,7 +3,7 @@
 import { Mic } from "lucide-react";
 import type { VoiceSetting as VoiceValue } from "../../../src/spec/schema";
 import { describeScenes } from "../../../src/lib/voice";
-import { SETUP, SetupLink } from "../AiChoice";
+import { SETUP, SetupLink, useCanSetUp } from "../AiChoice";
 import { Alert } from "../ui";
 import { VoicePicker } from "../VoicePicker";
 
@@ -25,6 +25,7 @@ export const VoiceSetting = ({
   pending: number[] | null;
   onChange: (voice: VoiceValue | undefined) => void;
 }) => {
+  const canSetUp = useCanSetUp();
   const fallback = projectVoice
     ? {
         title: `Project voice: ${projectVoice.name ?? projectVoice.voiceId}`,
@@ -62,11 +63,17 @@ export const VoiceSetting = ({
           You&apos;re the narrator. On each scene, use{" "}
           <span className="text-text">Record my voice</span> or{" "}
           <span className="text-text">Upload</span>, or narrate the whole video
-          in one take below. To have a voice read the script for you instead,{" "}
-          <SetupLink setup={SETUP.voice} service="AI voice">
-            add an ElevenLabs key in Settings
-          </SetupLink>
-          .
+          in one take below.
+          {canSetUp ? (
+            <>
+              {" "}
+              To have a voice read the script for you instead,{" "}
+              <SetupLink setup={SETUP.voice} service="AI voice">
+                add an ElevenLabs key in Settings
+              </SetupLink>
+              .
+            </>
+          ) : null}
         </p>
       )}
       {pending?.length ? (

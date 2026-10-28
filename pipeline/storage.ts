@@ -124,7 +124,28 @@ export const request = async (
   key: string,
   init: RequestInit,
 ): Promise<Response> => {
-  const response = await client(config).fetch(objectUrl(config, key), init);
+  // Signed here but sent with the original body: aws4fetch's own fetch wraps
+  // it in a Request, which Node 22 sends as a stream without Content-Length,
+  // and R2 refuses uploads without one.
+  const signed = await client(config).sign(objectUrl(config, key), init);
+  let response: Response | undefined;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      response = await fetch(signed.url, {
+        method: signed.method,
+        headers: signed.headers,
+        body: init.body ?? null,
+      });
+      // Busy or briefly failing: try a couple more times.
+      if (response.status < 500 && response.status !== 429) break;
+    } catch (error) {
+      if (attempt >= 3) throw error;
+    }
+    if (attempt >= 3) break;
+    await new Promise((resolve) => setTimeout(resolve, 200 * attempt));
+  }
+  if (!response)
+    throw new Error(`Storage ${init.method ?? "GET"} ${key} failed.`);
   if (!response.ok && response.status !== 404) {
     const detail = await response.text().catch(() => "");
     throw new Error(
