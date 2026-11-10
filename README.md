@@ -19,6 +19,24 @@ An AI content studio for educators and explainers: Claude plans the series and w
 
 </div>
 
+<!-- product-images:start -->
+
+## Product preview
+
+<p align="center">
+  <img src="docs/product-images/hero.png" alt="Bondeth Studio — Plan, script, narrate, and render explainers you can still edit." width="100%">
+</p>
+
+<table>
+<tr>
+  <td width="33%"><img src="docs/product-images/feature-01.png" alt="From a thought to a series. — Build a content plan around an audience, themes, and video hooks." width="100%"></td>
+  <td width="33%"><img src="docs/product-images/feature-02.png" alt="Keep control of every scene. — Each stage writes editable JSON before the next step begins." width="100%"></td>
+  <td width="33%"><img src="docs/product-images/feature-03.png" alt="Give your ideas a voice. — Record narration and render animated videos with word-by-word captions." width="100%"></td>
+</tr>
+</table>
+
+<!-- product-images:end -->
+
 ---
 
 ## Why
